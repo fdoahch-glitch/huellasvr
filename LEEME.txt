@@ -1,4 +1,4 @@
-HUELLAS VR · BABYLON.JS + WEBGL 2
+HUELLAS VR · MIGRACIÓN BABYLON.JS / WEBGL 2
 
 Motor único: Babylon.js con WebGL 2. No utiliza A-Frame, Three.js ni WebGPU.
 La experiencia inmersiva utiliza WebXR (immersive-vr) cuando el navegador y el visor lo admiten.
@@ -7,7 +7,7 @@ EJECUCIÓN
 - Publicar la carpeta en un servidor HTTPS.
 - Abrir index.html.
 - Seleccionar Explorar o Usar con visor VR.
-- Mundos: ?mundo=patagonia, ?mundo=stegouros, ?mundo=aysen, ?mundo=arackar o ?mundo=atacamatitan.
+- Para cambiar de mundo usar ?mundo=patagonia, ?mundo=stegouros, ?mundo=aysen, ?mundo=arackar o ?mundo=atacamatitan.
 - Calidad: ?q=alta, ?q=media o ?q=baja.
 
 CONTROLES
@@ -15,4 +15,11 @@ CONTROLES
 - Móvil: arrastrar para mirar; tocar el terreno para caminar; tocar un dinosaurio para abrir su ficha.
 - VR: botón VR; requiere HTTPS, navegador compatible con WebXR y visor compatible.
 
-Recursos originales del proyecto VR19: img/ y models/. Código de escena: js/main.js.
+ESTRUCTURA DE RECURSOS
+img/       panoramas, texturas y mapas de altura originales.
+models/    modelos GLB originales, dinosaurios y vegetación.
+css/       interfaz.
+js/        lógica Babylon.js.
+
+La escena crea el terreno, agua, cordilleras, vegetación, dinosaurios animados y partículas en Babylon.js.
+El motor se inicializa con WebGL 2 y detiene el inicio si el dispositivo no ofrece WebGL 2.
