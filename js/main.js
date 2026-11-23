@@ -1,4 +1,4 @@
-/* Huellas VR · Babylon.js + WebGL 2 + WebXR. Sin A-Frame, Three.js ni WebGPU. */
+/* Huellas VR · motor Babylon.js, renderizado WebGL 2 y experiencia WebXR. */
 (() => {
 'use strict';
 const $=id=>document.getElementById(id),canvas=$('renderCanvas'),params=new URLSearchParams(location.search);
