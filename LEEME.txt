@@ -23,3 +23,11 @@ js/        lógica Babylon.js.
 
 La escena crea el terreno, agua, cordilleras, vegetación, dinosaurios animados y partículas en Babylon.js.
 El motor se inicializa con WebGL 2 y detiene el inicio si el dispositivo no ofrece WebGL 2.
+
+
+RESTAURACIÓN DE LA EXPERIENCIA ORIGINAL v19
+- Portada inicial con selección de los cinco mundos independientes.
+- Atacamatitan / Tolar, Arackar / Hornitos, Gonkoken / costa de Dorotea, Stegouros / bosque de Dorotea y Chilesaurus / Toqui.
+- Decoración 3D diferenciada por mundo; se conservan los modelos y texturas originales.
+- Los GLB tienen clips Idle, Walk, Run y Neck_Look. El motor reproduce un clip de estado a la vez, no todos simultáneamente.
+- La escala y orientación se calculan con el eje horizontal de mayor longitud para evitar dinosaurios desproporcionados.
