@@ -117,7 +117,7 @@ function addMountains(){
  const smooth=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);};
  const NA=Q>=.6?520:300,NR=Q>=.6?64:40,R0=136,R1=320,count=(NA+1)*NR;
  const positions=new Float32Array(count*3),colors=new Float32Array(count*4),indices=[];
- const heights=new Float32Array(count),tmp=new BABYLON.Color3(),rock=new BABYLON.Color3.FromHexString(M.rock),rock2=new BABYLON.Color3.FromHexString(M.rock2||M.rock),forest=new BABYLON.Color3.FromHexString(M.forest);
+ const heights=new Float32Array(count),rock=BABYLON.Color3.FromHexString(M.rock),rock2=BABYLON.Color3.FromHexString(M.rock2||M.rock),forest=BABYLON.Color3.FromHexString(M.forest);
  const strata=M.strata?M.strata.map(c=>BABYLON.Color3.FromHexString(c)):null;let maxH=0;
  for(let j=0;j<NR;j++){
   const tr=j/(NR-1),radius=R0+(R1-R0)*Math.pow(tr,.85);
@@ -140,7 +140,6 @@ function addMountains(){
  const normals=new Float32Array(count*3);BABYLON.VertexData.ComputeNormals(positions,indices,normals);
  for(let k=0;k<count;k++){
   const x=positions[k*3],y=heights[k],z=positions[k*3+2],ny=normals[k*3+1],slope=1-ny,hn=y/(maxH||1),n1=fbm(x*.05,z*.05,3),n2=noise(x*.3,z*.3);
-  if(strata){const si=Math.floor(y*.22+n1*3.2+x*.004)%strata.length;tmp.copyFrom(strata[(si+strata.length)%strata.length]);tmp=tmp;tmp.copyFrom(strata[(si+strata.length)%strata.length]);tmp=tmp;}
   let c;
   if(strata){c=strata[(Math.floor(y*.22+n1*3.2+x*.004)%strata.length+strata.length)%strata.length].clone();c=BABYLON.Color3.Lerp(c,rock,slope*.5);const forestZone=(1-smooth(M.forestH*.5,M.forestH,y+n1*8))*(1-smooth(.35,.7,slope));c=BABYLON.Color3.Lerp(c,forest,forestZone*.85);}
   else{const blend=smooth(M.forestF-.1,M.forestF+.12,hn+(n1-.5)*.25+slope*.25);c=BABYLON.Color3.Lerp(forest,BABYLON.Color3.Lerp(rock,rock2,n2),blend);}
