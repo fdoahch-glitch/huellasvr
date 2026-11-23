@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#173c30"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>Huellas VR · Dinosaurios chilenos</title><link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.babylonjs.com/babylon.js"></script><script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+<script defer src="js/main.js"></script>
+</head>
+<body><canvas id="renderCanvas" touch-action="none"></canvas>
+<div id="fade"></div><section id="loader"><div class="card"><div class="mark">HUELLAS <span>VR</span></div><h1>Dinosaurios chilenos</h1><p>Explora los paisajes donde vivieron.</p><div class="progress"><i id="progressFill"></i></div><p id="loadText">Preparando el mundo…</p><div id="startButtons" class="hidden"><button id="explore" class="primary">Explorar</button><button id="visor">👓 Usar con visor VR</button></div><small>En móvil puedes explorar con el dedo o utilizar un visor compatible.</small></div></section>
+<div id="hud" class="hidden"><div class="brand">HUELLAS VR</div><div class="actions"><button id="vrButton">👓 VR</button><button id="timeButton">☀️</button><button id="rainButton">🌧</button><button id="soundButton">🔊</button><button id="qualityButton">⚙</button></div><div class="hint">Arrastra para mirar · toca el suelo para caminar · toca un dinosaurio para conocerlo</div></div>
+<div id="info" class="hidden"><button id="closeInfo">×</button><h2 id="infoTitle"></h2><p id="infoBody"></p></div>
+<div id="sensorNotice" class="hidden"><div><h2>Activa el movimiento del visor</h2><p>Permite el acceso a los sensores de movimiento en tu navegador y vuelve a intentarlo.</p><button id="retrySensors">Reintentar</button><button id="continueTouch">Continuar sin sensores</button></div></div>
+<div id="rotate" class="hidden"><div>📱<p>Gira el teléfono en horizontal para utilizar el visor.</p></div></div>
+<div id="worldLabel"></div>
+</body></html>
