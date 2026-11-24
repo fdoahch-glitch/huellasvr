@@ -39,6 +39,12 @@ La ejecución automatizada `45348814252` abrió los cinco mundos con perfil `baj
 | Stegouros | 10 | 794 | 51 | 5 |
 | Aysén | 8 | 934 | 55 | 8 |
 
+## Costes añadidos que requieren medición
+
+- La máscara de pendiente/distancia se calcula sobre una cuadrícula de 256×256 texels durante la composición inicial del terreno. Debe medirse el tiempo CPU de arranque en Android.
+- Havok crea un colisionador de malla estático para terreno y montañas, más un conjunto limitado de cilindros para troncos/árboles/rocas grandes. Debe medirse el coste de inicialización y consultas físicas por mundo.
+- La cámara XR ahora pasa por el controlador físico; falta medir latencia y estabilidad en visor.
+
 ## No medido todavía
 
 | Métrica | Android | PC |
