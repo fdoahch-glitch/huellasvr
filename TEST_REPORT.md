@@ -10,24 +10,37 @@
 - Se inspeccionó la estructura GLB original de Atacamatitan; el esqueleto sitúa la cabeza hacia el eje local +X.
 - Se comprobó en el código que la cámara de escritorio aún tiene `applyGravity=false` y `checkCollisions=false`, y que no hay inicialización Havok en el arranque actual.
 
+## Prueba automatizada de navegador ejecutada
+
+Workflow GitHub Actions: [run 45348814252](https://github.com/fdoahch-glitch/huellasvr/actions/runs/45348814252) — **success**.
+
+- Chromium headless con WebGL2/SwiftShader en Ubuntu 24.04.
+- Los cinco mundos cargaron correctamente en perfil `baja`.
+- Se comprobó que cada mundo expone mallas, texturas y manada de dinosaurios.
+- Se confirmó que Havok Physics V2, el controlador cápsula y al menos un colisionador estático se inicializan.
+- Se reprodujeron `Idle`, `Walk`, `Run` y `Neck_Look` en una instancia por mundo; el test comprobó desplazamiento durante `Walk` y `Run` cuando había una ruta válida.
+- La auditoría estática de Node.js también terminó correctamente.
+
+**Límite:** la prueba no demuestra que cada instancia de cada manada esté libre de deslizamiento, que las patas se apoyen visualmente, ni que el personaje resuelva impactos/escalones en todos los objetos. Tampoco valida WebXR en visor ni rendimiento de hardware físico.
+
 ## Cambios que requieren validación después del commit
 
 | Prueba | Resultado |
 |---|---|
-| Sintaxis del motor modificado | Pendiente de CI |
-| Reconocimiento de clips con sufijo | Implementado en código; pendiente ejecución Babylon |
-| Crossfade Idle/Walk/Run/Neck_Look | Implementado en código; pendiente visualización |
-| Atacamatitan mirando en sentido de avance | Corrección aplicada; pendiente navegador |
+| Sintaxis del motor modificado | Aprobada por CI |
+| Reconocimiento de clips con sufijo | Aprobado en Chromium mediante las pruebas de animación |
+| Crossfade Idle/Walk/Run/Neck_Look | Aprobado en Chromium mediante las pruebas de animación |
+| Atacamatitan mirando en sentido de avance | Ángulo corregido; movimiento Walk/Run automatizado, orientación visual anatómica pendiente |
 | Orientación de Arackar, Gonkoken, Stegouros y Chilesaurus | Configuración explícita; pendiente navegador |
 | Montañas apoyadas sobre el terreno | Muestreo mejorado; pendiente capturas de los cinco mundos |
 | Carga de los cinco panoramas y texturas | Pendiente navegador |
-| Havok / gravedad / colisiones | No implementado todavía |
+| Havok / gravedad / colisiones | Havok y controlador inicializados en Chromium; respuesta de colisión/pendientes pendiente |
 | WebXR immersive-vr en visor | No probado; requiere hardware compatible |
 | Android y PC a 60 FPS | No probado; requiere hardware y benchmark |
 
 ## Limitaciones de esta ejecución
 
-No se dispone aquí de una sesión de navegador gráfico con WebGL2/WebXR ni de un visor VR conectado. Por ello no se reportan screenshots, FPS, resultados físicos ni una sesión WebXR como si hubieran sido ejecutados. La auditoría estática existente no reemplaza esas pruebas.
+Se ejecutó Chromium headless con WebGL2/SwiftShader y se cargaron los cinco mundos. No se dispone de Android/PC físico ni de visor VR conectado. Por ello no se reportan pruebas WebXR inmersivas, estabilidad térmica ni rendimiento de GPU física. Los FPS de CI son métricas de software rendering y no benchmarks de dispositivo. La auditoría estática existente no reemplaza esas pruebas.
 
 ## Siguiente puerta de calidad
 
