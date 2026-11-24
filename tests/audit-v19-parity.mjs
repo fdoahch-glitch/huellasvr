@@ -250,6 +250,7 @@ check('Panorama esencial se espera y registra fallos',()=>{
  assert.ok(main.includes('Panorama equirectangular listo:'));
  assert.ok(main.includes('Falló panorama:'));
  assert.ok(main.includes('sky:{ready:skyReady,error:skyError,url:WORLD.sky}'));
+ assert.ok(main.includes('camera.maxZ=1200'),'El plano lejano debe incluir el domo de 450 unidades');
 });
 
 check('Mapas del terreno con carga verificada',()=>{
