@@ -34,6 +34,8 @@ try{
    const t=document.querySelector('#loadText')?.textContent||'';
    return t.includes('¡Mundo listo!')||t.includes('No se pudo iniciar el mundo');
   },{timeout:180000});
+  await page.locator('#explore').click();
+  await page.waitForFunction(()=>!document.querySelector('#hud')?.classList.contains('hidden'),{timeout:5000});
   await page.waitForTimeout(1200);
   await page.screenshot({path:path.join(resultsDir,world+'.png'),fullPage:false});
   const state=await page.evaluate(()=>{
