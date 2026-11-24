@@ -280,12 +280,12 @@ async function addVegetation(){
     meshes.forEach(mesh=>{
      mesh.isPickable=false;mesh.checkCollisions=false;
      const mats=mesh.material?[mesh.material,...(mesh.material.subMaterials||[])]:[];
-     mats.forEach(m=>{if(!m)return;if(a.tint){const tint=BABYLON.Color3.FromHexString(a.tint);if(m.diffuseColor)m.diffuseColor.multiplyInPlace(tint);if(m.albedoColor)m.albedoColor.multiplyInPlace(tint);}if(a.bright){if(m.diffuseColor)m.diffuseColor.scaleInPlace(a.bright);if(m.albedoColor)m.albedoColor.scaleInPlace(a.bright);}if(m.roughness!==undefined)m.roughness=Math.max(.85,m.roughness);if(m.metallic!==undefined)m.metallic=0;});
+     mats.forEach(m=>{if(!m)return;if(a.tint){const tint=BABYLON.Color3.FromHexString(a.tint);if(m.diffuseColor)m.diffuseColor.multiplyInPlace(tint);if(m.albedoColor)m.albedoColor.multiplyInPlace(tint);}if(a.bright){if(m.diffuseColor)m.diffuseColor.scaleInPlace(a.bright);if(m.albedoColor)m.albedoColor.scaleInPlace(a.bright);}if(m.roughness!==undefined)m.roughness=Math.max(.85,m.roughness);if(m.metallic!==undefined)m.metallic=0;if(m.environmentIntensity!==undefined)m.environmentIntensity=0;});
     });materialsAdjusted=true;
    }
-   const width=a.size[0]+rng(p.index*7+31)*(a.size[1]-a.size[0]),scale=width/dimensions.base,squash=a.squash||1;
-   root.position.set(p.x-dimensions.cx*scale,terrainHeightAt(p.x,p.z)-dimensions.minY*scale-(a.sink||0)*dimensions.height*scale*squash,p.z-dimensions.cz*scale);
-   root.scaling.set(scale,scale*squash,scale);
+   const width=a.size[0]+rng(p.index*7+31)*(a.size[1]-a.size[0]),scale=width/dimensions.base,squash=a.squash||1,vertical=.85+rng(p.index*7+37)*.3,sy=scale*squash*vertical;
+   root.position.set(p.x-dimensions.cx*scale,terrainHeightAt(p.x,p.z)-dimensions.minY*sy-(a.sink||0)*dimensions.height*sy,p.z-dimensions.cz*scale);
+   root.scaling.set(scale,sy,scale);
    root.rotation.set((rng(p.index*7+41)-.5)*(a.tilt||0),rng(p.index*7+43)*Math.PI*2,(rng(p.index*7+47)-.5)*(a.tilt||0));
    meshes.forEach(mesh=>{mesh.isPickable=false;mesh.checkCollisions=false;});
   }
