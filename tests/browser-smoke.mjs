@@ -103,7 +103,7 @@ try{
    },clip,{timeout:10000});
    await page.waitForTimeout(300);
    if((clip==='Walk'||clip==='Run')&&before.movementPathFound){
-    await page.waitForTimeout(1400);
+    await page.evaluate(()=>window.__HUELLAS_VR_TEST__.advanceDinoSimulation(8));
     const after=await page.evaluate(()=>window.__HUELLAS_VR_DIAGNOSTICS__().dinoStates[0].position);
     const moved=Math.hypot(after.x-before.position.x,after.z-before.position.z);
     if(moved<.02){const debug=await page.evaluate(()=>window.__HUELLAS_VR_DIAGNOSTICS__().dinoStates[0]);throw new Error(world+' no desplazó el dinosaurio durante '+clip+' (distancia '+moved+'): '+JSON.stringify({before,after,debug}));}
