@@ -325,7 +325,7 @@ check('Mejoras visuales Babylon.js/WebGL2: perfiles, PBR, sombras y postprocesad
 
 
 check('LOD dinámico por distancia, modelos dobles y animaciones adaptativas',()=>{
- for(const token of ['function updateDinoLod(d,t)','d.highVisual.setEnabled(next===\'high\')','d.lowVisual.setEnabled(next===\'low\')','distanceSq>72*72','distanceSq>55*55','d.activeClip?.pause?.()','d.activeClip?.play?.()','DINO_TURN_ANGLES'])assert.ok(main.includes(token),'Falta LOD/animación '+token);
+ for(const token of ['function updateDinoLod(d,t)','d.highVisual.setEnabled(next===\'high\')','d.lowVisual.setEnabled(next===\'low\')','distanceSq>72*72','distanceSq>55*55','d.activeClip?.pause?.()','d.activeClip?.play?.(true)','DINO_TURN_ANGLES'])assert.ok(main.includes(token),'Falta LOD/animación '+token);
  assert.doesNotMatch(main,/index\s*>=\s*5/);
 });
 check('IA de bebida precalculada y cuadrícula espacial reutilizable',()=>{
