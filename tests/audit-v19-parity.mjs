@@ -281,3 +281,19 @@ check('Mejoras visuales Babylon.js/WebGL2: perfiles, PBR, sombras y postprocesad
  assert.ok(main.includes('state===BABYLON.WebXRState.IN_XR')&&main.includes('ssrPipeline.isEnabled=false')&&main.includes('volumetricLight.isEnabled=false'),'Los efectos avanzados deben apagarse al entrar en VR');
  assert.ok(!main.includes('THREE.WebGLRenderer'));
 });
+
+
+check('Optimización de rendimiento: colisiones espaciales e IA LOD',()=>{
+ for(const token of ['function buildEnvironmentCollisionGrid()','function rebuildDinoCollisionGrid()','function nearbyGridItems(','collisionGridReady?nearbyGridItems','playerDistance>65','d.nextLodUpdate=t+200'])assert.ok(main.includes(token),'Falta optimización '+token);
+});
+check('Preparación completa del mundo antes de habilitar la experiencia',()=>{
+ assert.ok(main.includes('await scene.whenReadyAsync()'),'La carga no espera texturas y materiales');
+ assert.ok(main.includes('buildEnvironmentCollisionGrid()'),'No se prepara el índice espacial antes de entrar');
+ assert.ok(main.includes("setProgress(.96,'Finalizando texturas, iluminación y materiales…')"));
+ assert.ok(main.indexOf('await scene.whenReadyAsync()')<main.indexOf("setProgress(1,'¡Mundo listo!')"));
+});
+check('Recursos compartidos y un solo bucle de renderizado',()=>{
+ assert.ok(main.includes('particleTextureCache'),'La textura de partículas no se comparte');
+ assert.ok(main.includes('if(!renderLoopStarted){engine.runRenderLoop(renderLoop);renderLoopStarted=true;}'));
+ assert.ok(main.includes('antialias:false'),'El antialias del contexto no debe duplicar el MSAA del pipeline');
+});
