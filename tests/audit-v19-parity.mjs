@@ -52,7 +52,7 @@ check('Tamaños, cantidades y velocidades de manada del original v19',()=>{
   assert.ok(main.includes(' '+key+':{center:'),'Falta configuración de manada '+key);
   assert.ok(main.includes('sizes:['+d.sizes.join(',')+']'),'Tamaños incorrectos '+key);
   assert.ok(main.includes(key+':'+d.count),'Cantidad incorrecta '+key);
-  assert.ok(main.includes(key+':{walk:'+d.gait.split(',')[0].split(':')[1]+',run:'+d.gait.split(',')[1].split(':')[1]),'Perfil de marcha incorrecto '+key);
+  const gaitId=key==='patagonia'?'gonkoken':key==='aysen'?'chilesaurus':key;assert.ok(main.includes(gaitId+':{walk:'+d.gait.split(',')[0].split(':')[1]+',run:'+d.gait.split(',')[1].split(':')[1]),'Perfil de marcha incorrecto '+key);
  }
  assert.match(main,/function updateHerdMode/);assert.match(main,/function herdDrinkTarget/);
  for(const state of ['graze','drink','rest'])assert.ok(main.includes("'"+state+"'"));
