@@ -9,6 +9,7 @@ const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=u
 const server=createServer((req,res)=>{
  let pathname;
  try{pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);}catch{res.writeHead(400).end('Bad request');return;}
+ if(pathname.endsWith('/'))pathname+='index.html';
  const file=path.resolve(root,'.'+pathname);
  if(!file.startsWith(root+path.sep)&&file!==root){res.writeHead(403).end('Forbidden');return;}
  if(!existsSync(file)||!statSync(file).isFile()){res.writeHead(404).end('Not found');return;}
