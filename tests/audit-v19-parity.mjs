@@ -71,6 +71,12 @@ check('Terreno, mezcla de texturas, montañas, ríos y lagunas',()=>{
 check('Controles WebXR, suelo local y seguimiento',()=>{
  for(const token of ['immersive-vr','local-floor','onInitialXRPoseSetObservable','onStateChangedObservable','onControllerAddedObservable','WebXRFeatureName.MOVEMENT'])assert.ok(main.includes(token),'Falta '+token);
 });
+check('Inicialización de iluminación sin referencias obsoletas',()=>{
+ assert.ok(main.includes('sunLight.shadowMinZ=1'));
+ assert.ok(main.includes('sunLight.shadowMaxZ=420'));
+ assert.ok(main.includes('sunLight.shadowFrustumSize=210'));
+ assert.doesNotMatch(main,/(?<![\\w$])sun\\.(?:shadowMinZ|shadowMaxZ|shadowFrustumSize)/);
+});
 check('Clima, ciclo horario y sonido',()=>{
  for(const token of ['function cycleTimeOfDay()','function initAmbientAudio()','function updateEnvironment(dt)','rainSystem'])assert.ok(main.includes(token),'Falta '+token);
 });
