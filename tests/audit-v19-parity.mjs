@@ -277,5 +277,7 @@ check('Mejoras visuales Babylon.js/WebGL2: perfiles, PBR, sombras y postprocesad
  assert.ok(main.includes("!['ultra','alta'].includes(quality)")&&main.includes('mobileDevice'),'SSAO debe limitarse a escritorio de alta calidad');
  assert.ok(main.includes('removeSSAO()')&&main.includes('addSSAO()'),'SSAO debe liberarse en VR y restaurarse al salir');
  assert.ok(main.includes('createParticleSystem(\'ambient-dust\',VP.particles)')&&main.includes("createParticleSystem('rain',rainCapacity)"),'Polvo y lluvia deben usar GPU con fallback');
- assert.ok(main.includes("quality!=='ultra'||mobileDevice"),'SSR/rayos deben limitarse a perfil ultra en escritorio');\n assert.ok(main.includes('state===BABYLON.WebXRState.IN_XR')&&main.includes('ssrPipeline.isEnabled=false')&&main.includes('volumetricLight.isEnabled=false'),'Los efectos avanzados deben apagarse al entrar en VR');\n assert.ok(!main.includes('THREE.WebGLRenderer'));
+ assert.ok(main.includes("quality!=='ultra'||mobileDevice"),'SSR/rayos deben limitarse a perfil ultra en escritorio');
+ assert.ok(main.includes('state===BABYLON.WebXRState.IN_XR')&&main.includes('ssrPipeline.isEnabled=false')&&main.includes('volumetricLight.isEnabled=false'),'Los efectos avanzados deben apagarse al entrar en VR');
+ assert.ok(!main.includes('THREE.WebGLRenderer'));
 });
