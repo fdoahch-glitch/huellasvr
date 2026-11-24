@@ -41,3 +41,15 @@ Los commits están en GitHub. La auditoría estática y la prueba de navegador C
 ## Panel de diagnóstico ampliado
 
 El panel `?debug=1` usa `SceneInstrumentation` y `EngineInstrumentation` cuando están disponibles. Muestra FPS, tiempo de actualización JavaScript, frame/render/física, draw calls, GPU frame time, mallas activas, texturas, partículas, heap JS, versión WebGL, resolución, estado de panorama/terreno, Havok, soporte, colisionadores, posición del jugador y clips activos de dinosaurios. VRAM se marca como no disponible en el navegador; el tiempo GPU se muestra como N/D cuando el navegador no expone el timer query.
+
+## Restauración visual y colisiones — nueva tanda
+
+- Se eliminó la máscara de detalle del terreno dependiente de la posición inicial de la cámara. Ahora la cobertura de arena, grava y roca se deriva de la pendiente y una variación procedural estable, por lo que el detalle no desaparece a partir de una distancia fija ni queda anclado a la posición de inicio.
+- Se elevó moderadamente la lectura de la fotografía base con saturación, contraste y exposición controladas, conservando el panorama y las texturas originales.
+- El terreno usa `PBRMaterial` con albedo compuesto, normal map, metalness 0 y roughness alta; conserva `StandardMaterial` únicamente como compatibilidad si la clase PBR no está disponible.
+- Montañas y agua pasan a materiales PBR cuando Babylon los expone. Las montañas participan en el mapa de sombras y mantienen su geometría/colores geológicos procedurales.
+- El agua conserva las formas de ríos y lagunas y usa un material PBR de baja metalicidad y rugosidad controlada, con animación de textura existente.
+- Se registran zonas de colisión de árboles/rocas y se añade evitación de colisiones para la locomoción de dinosaurios, incluyendo separación entre individuos. No sustituye un cuerpo Havok articulado por dinosaurio: las manadas siguen locomoción cinemática y evitan los obstáculos antes de mover su raíz.
+- Se amplió el diagnóstico de terreno para mostrar el tipo de material PBR y comprobar el píxel del albedo.
+
+**Pendiente de validar en Chromium:** asignación/render real del PBR en los cinco mundos, prueba automatizada de la zona de colisión, estabilidad visual del agua y sombras. La auditoría estática no equivale a prueba de escena.
