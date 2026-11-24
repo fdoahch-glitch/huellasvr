@@ -823,7 +823,7 @@ function installDiagnostics(){
   world:worldKey,quality,fps:Math.round(engine?.getFps?.()||0),
   meshes:scene?.meshes?.length||0,activeMeshes:scene?.getActiveMeshes?.().length||0,
   textures:engine?.getLoadedTexturesCache?.().length||0,dinosaurs:dinoRoots.length,
-  vegetationAssets:assetCache.size,particles:scene?.particleSystems?.length||0,dinoStates:dinoRoots.map(d=>({id:d.id,clip:d.clipName,active:!!d.activeClip,playing:!!d.activeClip?.isPlaying,forwardYaw:d.baseYaw,position:{x:+d.root.position.x.toFixed(2),y:+d.root.position.y.toFixed(2),z:+d.root.position.z.toFixed(2)}})),cpuUpdateMs:Math.round(cpuUpdateMs*100)/100,cpuUpdateAvgMs:Math.round(cpuUpdateAvgMs*100)/100,heapMB:performance.memory?Math.round(performance.memory.usedJSHeapSize/1048576):null,
+  vegetationAssets:assetCache.size,particles:scene?.particleSystems?.length||0,dinoStates:dinoRoots.map(d=>({id:d.id,clip:d.clipName,active:!!d.activeClip,playing:!!d.activeClip?.isPlaying,state:d.state,heading:d.heading,speed:d.actualSpeed,target:d.target?{x:+d.target.x.toFixed(2),z:+d.target.z.toFixed(2)}:null,forwardYaw:d.baseYaw,position:{x:+d.root.position.x.toFixed(2),y:+d.root.position.y.toFixed(2),z:+d.root.position.z.toFixed(2)}})),cpuUpdateMs:Math.round(cpuUpdateMs*100)/100,cpuUpdateAvgMs:Math.round(cpuUpdateAvgMs*100)/100,heapMB:performance.memory?Math.round(performance.memory.usedJSHeapSize/1048576):null,
   xrState:xr?.baseExperience?.state??'desktop'
  });
  window.__HUELLAS_VR_DIAGNOSTICS__=snapshot;
@@ -836,7 +836,7 @@ function installDiagnostics(){
      const radius=(d.length||DINO[d.id].length)*.3;let found=false;
      for(let k=0;k<32&&!found;k++){
       const angle=k*Math.PI/16,sx=Math.sin(angle),cz=Math.cos(angle);
-      for(const distance of [2,3,4,5,6]){
+      for(const distance of [6,5,4,3,2]){
        const x=d.root.position.x+sx*distance,z=d.root.position.z+cz*distance;
        const support=[[x,z],[x+sx*radius,z+cz*radius],[x-sx*radius,z-cz*radius]];
        if(support.every(p=>terrainValidAt(p[0],p[1]))){d.heading=angle;d.target={x,z};d.goal='test';d.state='walk';found=true;break;}
