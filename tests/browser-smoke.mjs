@@ -91,6 +91,10 @@ try{
   if(!state.diagnostics.physics?.enabled||!state.diagnostics.physics?.controller||state.diagnostics.physics.colliders<1)throw new Error(world+' no inicializó Havok Physics V2: '+JSON.stringify(state.diagnostics.physics));
   await page.waitForFunction(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().physics?.support==='grounded',{polling:100,timeout:15000});
   if(state.diagnostics.dinosaurs!==15)throw new Error(world+' debe cargar exactamente 15 dinosaurios; cargó '+state.diagnostics.dinosaurs);
+  if(state.diagnostics.dinoLod?.available!==15)throw new Error(world+' no cargó los 15 modelos LOD reducidos: '+JSON.stringify(state.diagnostics.dinoLod));
+  const lodCheck=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.lodCheck?.());
+  if(!lodCheck||lodCheck.count!==15||lodCheck.farLow!==15||lodCheck.nearHigh!==15||lodCheck.available!==15)throw new Error(world+' no cambió los 15 modelos por distancia con histéresis: '+JSON.stringify(lodCheck));
+  await page.waitForTimeout(350);
   if(!state.diagnostics.dinoStates?.length||state.diagnostics.dinoStates.some(d=>!d.active||!d.clip))throw new Error(world+' tiene dinosaurios sin AnimationGroup activo: '+JSON.stringify(state.diagnostics.dinoStates));
   const herdCheck=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.dinoBehaviorCheck?.());
   if(!herdCheck||herdCheck.count!==state.diagnostics.dinosaurs||herdCheck.overlaps!==0)throw new Error(world+' presenta superposición entre dinosaurios al iniciar: '+JSON.stringify(herdCheck));
