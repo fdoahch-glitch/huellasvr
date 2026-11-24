@@ -469,9 +469,9 @@ function animateDinos(t,dt){
  const gait={
   atacamatitan:{walk:.10,run:.50,reverse:false},
   arackar:{walk:.16,run:.72,reverse:false},
-  patagonia:{walk:.08,run:1.0,reverse:false},
+  gonkoken:{walk:.08,run:1.0,reverse:false},
   stegouros:{walk:.22,run:.60,reverse:true},
-  aysen:{walk:.45,run:2.2,reverse:false}
+  chilesaurus:{walk:.45,run:2.2,reverse:false}
  };
  dinoRoots.forEach(d=>{
   const root=d.root,groundY=terrainHeightAt(root.position.x,root.position.z);
@@ -487,7 +487,7 @@ function animateDinos(t,dt){
      const samples=[ [x,z],[x+Math.cos(a)*DINO[d.id].length*.3,z+Math.sin(a)*DINO[d.id].length*.3],[x-Math.cos(a)*DINO[d.id].length*.3,z-Math.sin(a)*DINO[d.id].length*.3] ];
      if(samples.every(p=>terrainValidAt(p[0],p[1])))candidate={x,z};
     }
-    if(candidate){d.target=candidate;d.running=rand(Math.floor(t*10)+d.phase*37)<({atacamatitan:.035,arackar:.09,patagonia:.08,stegouros:.16,aysen:.22}[d.id]||.06);d.state='walk';}
+    if(candidate){d.target=candidate;d.running=rand(Math.floor(t*10)+d.phase*37)<({atacamatitan:.035,arackar:.09,gonkoken:.08,stegouros:.16,chilesaurus:.22}[d.id]||.06);d.state='walk';}
     else d.timer=2;
    }
   }
