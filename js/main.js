@@ -35,7 +35,7 @@ const HERD_CONFIG = {
 const requested = (params.get('mundo') || 'atacamatitan').toLowerCase();
 const worldKey = WORLDS[requested] ? requested : 'valle';
 const WORLD = WORLDS[worldKey];
-let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, lightingBase=null, timeMode='dia', skyLife=null;
+let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, lightingBase=null, timeMode='dia', skyLife=null, nightInsectGain=null;
 const setProgress=(v,t)=>{$('progressFill').style.width=Math.round(v*100)+'%';$('loadText').textContent=t;};
 function mat(name,color,rough=.9){const m=new BABYLON.StandardMaterial(name,scene);m.diffuseColor=BABYLON.Color3.FromHexString(color);m.specularColor=new BABYLON.Color3(.08,.08,.08);m.roughness=rough;return m;}
 function rand(seed){let x=Math.sin(seed*127.1+311.7)*43758.5453;return x-Math.floor(x);}
@@ -71,11 +71,28 @@ function addSkyLife(){
   const wingGeo=(side)=>{const mesh=new BABYLON.Mesh('pterosaur-wing-'+i+'-'+side,scene),vd=new BABYLON.VertexData(),sgn=side==='L'?1:-1;vd.positions=[0,0,0,sgn*1.65,0,-.08,sgn*1.9,0,-.58,sgn*.22,0,-.36];vd.indices=[0,1,2,0,2,3];const n=[];BABYLON.VertexData.ComputeNormals(vd.positions,vd.indices,n);vd.normals=n;vd.applyToMesh(mesh,true);mesh.parent=root;mesh.position.x=side==='L'?.08:-.08;const m=new BABYLON.StandardMaterial('pterosaur-wing-mat-'+i+'-'+side,scene);m.diffuseColor=new BABYLON.Color3(.25,.22,.19);m.specularColor=new BABYLON.Color3(0,0,0);m.backFaceCulling=false;mesh.material=m;return mesh;};
   const left=wingGeo('L'),right=wingGeo('R');pterosaurs.push({root,left,right,phase:rnd()*Math.PI*2,radius:34+rnd()*28,height:18+rnd()*14,speed:(.035+rnd()*.025)*(i%2?1:-1),offset:rnd()*Math.PI*2});
  }
- skyLife={anchor,clouds,cloudTex,starMat,moonMat,pterosaurs,cloudRotation:0};
+ const motesCount=quality==='baja'?0:90,motePositions=new Float32Array(motesCount*3);
+ for(let i=0;i<motesCount;i++){motePositions[i*3]=(rnd()-.5)*30;motePositions[i*3+1]=rnd()*7;motePositions[i*3+2]=(rnd()-.5)*30;}
+ const motes=new BABYLON.Mesh('floating-atmosphere-motes',scene),moteData=new BABYLON.VertexData();moteData.positions=Array.from(motePositions);moteData.applyToMesh(motes,true);motes.parent=anchor;motes.isPickable=false;
+ const moteMat=new BABYLON.StandardMaterial('floating-motes-material',scene);moteMat.pointsCloud=true;moteMat.pointSize=3;moteMat.emissiveColor=new BABYLON.Color3(1,.88,.62);moteMat.disableLighting=true;moteMat.alpha=.42;motes.material=moteMat;
+ const butterflies=[];
+ if(quality!=='baja'&&['arackar','patagonia','stegouros','aysen'].includes(worldKey))for(let i=0;i<9;i++){
+  const root=new BABYLON.TransformNode('ambient-butterfly-'+i,scene),wingMat=new BABYLON.StandardMaterial('butterfly-wing-material-'+i,scene);wingMat.diffuseColor=i%2?new BABYLON.Color3(1,.76,.25):new BABYLON.Color3(1,.94,.72);wingMat.emissiveColor=wingMat.diffuseColor.scale(.28);wingMat.backFaceCulling=false;
+  const left=BABYLON.MeshBuilder.CreatePlane('butterfly-left-'+i,{width:.12,height:.15,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene),right=BABYLON.MeshBuilder.CreatePlane('butterfly-right-'+i,{width:.12,height:.15,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);left.parent=root;right.parent=root;left.position.x=.055;right.position.x=-.055;left.rotation.y=Math.PI/2;right.rotation.y=-Math.PI/2;left.material=wingMat;right.material=wingMat;
+  butterflies.push({root,left,right,phase:rnd()*6.28,speed:.5+rnd()*.6,x:(rnd()-.5)*24,z:-6+(rnd()-.5)*24,height:.8+rnd()*1.6});
+ }
+ const rays=[];
+ if(quality!=='baja')for(let i=0;i<7;i++){const ray=BABYLON.MeshBuilder.CreatePlane('sunbeam-'+i,{width:4+rnd()*5,height:34+rnd()*14,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene),rm=new BABYLON.StandardMaterial('sunbeam-material-'+i,scene),tex=new BABYLON.DynamicTexture('sunbeam-gradient-'+i,{width:32,height:256},scene,false);const g=tex.getContext(),grad=g.createLinearGradient(0,0,32,0);grad.addColorStop(0,'rgba(255,240,200,0)');grad.addColorStop(.5,'rgba(255,240,200,.38)');grad.addColorStop(1,'rgba(255,240,200,0)');g.fillStyle=grad;g.fillRect(0,0,32,256);tex.update();rm.diffuseTexture=tex;rm.opacityTexture=tex;rm.emissiveTexture=tex;rm.disableLighting=true;rm.backFaceCulling=false;rm.alpha=.1;rm.transparencyMode=BABYLON.Material.MATERIAL_ALPHABLEND;ray.material=rm;ray.parent=anchor;const a=rnd()*Math.PI*2,r=18+rnd()*32;ray.position.set(Math.cos(a)*r,15,Math.sin(a)*r-10);ray.rotation.y=rnd()*3;ray.isPickable=false;rays.push({mesh:ray,phase:rnd()*6.28,base:.05+rnd()*.07});}
+ skyLife={anchor,clouds,cloudTex,starMat,moonMat,pterosaurs,motes,motePositions,butterflies,rays,cloudRotation:0};
 }
 function updateSkyLife(dt){
  if(!skyLife||!camera)return;
  skyLife.anchor.position.copyFrom(camera.position);skyLife.clouds.rotation.y+=dt*.0009;skyLife.cloudTex.uOffset=(skyLife.cloudTex.uOffset+dt*.000004)%1;
+ const daylight=timeMode==='noche'?0:1,weather=raining?.15:1,seconds=performance.now()*.001;
+ const moteArr=skyLife.motes.getVerticesData(BABYLON.VertexBuffer.PositionKind);if(moteArr){for(let i=0;i<skyLife.motePositions.length/3;i++){moteArr[i*3]=skyLife.motePositions[i*3]+Math.sin(seconds*.4+i)*1.2;moteArr[i*3+1]=(skyLife.motePositions[i*3+1]+seconds*.08)%7;moteArr[i*3+2]=skyLife.motePositions[i*3+2]+Math.cos(seconds*.35+i*2)*1.2;}skyLife.motes.updateVerticesData(BABYLON.VertexBuffer.PositionKind,moteArr);}
+ skyLife.motes.setEnabled(daylight>.1&&!raining&&quality!=='baja');
+ skyLife.rays.forEach(r=>{r.mesh.material.alpha=r.base*(.6+.4*Math.sin(seconds*.3+r.phase))*daylight*weather*(timeMode==='atardecer'?1.6:1);r.mesh.setEnabled(r.mesh.material.alpha>.004);});
+ skyLife.butterflies.forEach(b=>{b.phase+=dt*.001*b.speed;const x=b.x+Math.sin(b.phase*.9)*5,z=b.z+Math.cos(b.phase*.7)*5;b.root.position.set(camera.position.x+x,terrainHeightAt(x,z)+b.height+Math.sin(b.phase*3)*.3,camera.position.z+z);b.root.rotation.y=b.phase*.9+1.5;const flap=Math.sin(seconds*18+b.phase*9)*.9;b.left.rotation.z=flap;b.right.rotation.z=-flap;b.root.setEnabled(daylight>.3&&!raining);});
  const nightAlpha=timeMode==='noche'?1:0;
  skyLife.starMat.alpha+=(nightAlpha-skyLife.starMat.alpha)*(1-Math.exp(-dt*1.8));
  skyLife.moonMat.alpha+=(nightAlpha-skyLife.moonMat.alpha)*(1-Math.exp(-dt*1.8));
@@ -223,6 +240,7 @@ function updateEnvironment(dt){
  scene.fogColor=BABYLON.Color3.Lerp(scene.fogColor,fogTarget,k);
  scene.fogDensity+=(lightingBase.fogDensity*(raining?1.4:1)-scene.fogDensity)*(1-Math.exp(-dt*1.4));
  if(rainGain&&audioContext)rainGain.gain.setTargetAtTime(raining&&soundOn?.12:0,audioContext.currentTime,.25);
+ if(nightInsectGain&&audioContext)nightInsectGain.gain.setTargetAtTime(timeMode==='noche'&&!raining&&soundOn?.008:0,audioContext.currentTime,.35);
  if(rainSystem&&camera){rainSystem.emitter.copyFrom(camera.position);rainSystem.emitter.y+=15;}
 }
 function initAmbientAudio(){
@@ -238,6 +256,7 @@ function initAmbientAudio(){
   const rainSource=audioContext.createBufferSource();rainSource.buffer=buffer;rainSource.loop=true;
   const rainFilter=audioContext.createBiquadFilter();rainFilter.type='highpass';rainFilter.frequency.value=1600;
   rainGain=audioContext.createGain();rainGain.gain.value=0;rainSource.connect(rainFilter);rainFilter.connect(rainGain);rainGain.connect(audioMaster);rainSource.start();
+  const insect=audioContext.createOscillator(),insectGate=audioContext.createGain(),insectLfo=audioContext.createOscillator(),insectLfoGain=audioContext.createGain();insect.type='sine';insect.frequency.value=4300;insectGate.gain.value=0;insectLfo.type='square';insectLfo.frequency.value=13;insectLfoGain.gain.value=.0035;insectLfo.connect(insectLfoGain);insectLfoGain.connect(insectGate.gain);insect.connect(insectGate);nightInsectGain=insectGate;insectGate.connect(audioMaster);insect.start();insectLfo.start();
  }catch(error){console.warn('Audio ambiental no disponible',error);}
 }
 document.addEventListener('pointerdown',initAmbientAudio,{passive:true});
