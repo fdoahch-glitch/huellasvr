@@ -36,7 +36,7 @@ const species={
 function glbAnimations(file){
  const b=fs.readFileSync(path.join(root,file));assert.equal(b.toString('utf8',0,4),'glTF',file+' no es GLB');
  let off=12;
- while(off<b.length){const size=b.readUInt32LE(off),type=b.readUInt32LE(off+4);off+=8;const chunk=b.subarray(off,off+size);off+=size;if(type===0x4e4f534a)return JSON.parse(chunk.toString('utf8').replace(/\\0+$/,''));}
+if(type===0x4e4f534a)return JSON.parse(chunk.toString('utf8').replace(/\0+$/,'').trimEnd());}
  throw new Error('GLB sin bloque JSON: '+file);
 }
 check('Todos los modelos de dinosaurio y sus animaciones originales',()=>{
@@ -70,7 +70,7 @@ check('Clima, ciclo horario y sonido',()=>{
  for(const token of ['function cycleTimeOfDay()','function initAmbientAudio()','function updateEnvironment(dt)','rainSystem'])assert.ok(main.includes(token),'Falta '+token);
 });
 check('Todos los recursos GLB referenciados existen',()=>{
- const refs=[...new Set([...main.matchAll(/['"](models\\/[^'"]+\\.glb)['"]/g)].map(m=>m[1]))];
+ const refs=[...new Set([...main.matchAll(/['"](models\/[^'"]+\.glb)['"]/g)].map(m=>m[1]))];
  assert.ok(refs.length>=15,'Inventario GLB inesperadamente incompleto');
  for(const file of refs)assert.ok(exists(file),'Falta '+file);
 });
