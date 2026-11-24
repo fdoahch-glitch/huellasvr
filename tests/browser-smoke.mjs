@@ -49,6 +49,7 @@ try{
     const d=window.__HUELLAS_VR_DIAGNOSTICS__?.().dinoStates?.[0];
     return d&&d.clip===name&&d.active&&d.playing;
    },clip,{timeout:10000});
+   await page.waitForTimeout(300);
    if((clip==='Walk'||clip==='Run')&&before.movementPathFound){
     await page.waitForTimeout(800);
     const after=await page.evaluate(()=>window.__HUELLAS_VR_DIAGNOSTICS__().dinoStates[0].position);
