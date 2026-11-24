@@ -39,7 +39,7 @@ const worldKey = WORLDS[requested] ? requested : 'valle';
 const WORLD = WORLDS[worldKey];
 let havokInstance=null,physicsPlugin=null,physicsController=null,physicsAggregates=[],environmentCollisionZones=[],physicsReady=false,physicsLastSupport='not-started',skyReady=false,skyError=null,terrainPhotoReady=false,terrainNormalReady=false,terrainTextureError=null;
 let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, visualPipeline=null, ssaoPipeline=null, ssrPipeline=null, volumetricLight=null, environmentTexture=null, environmentReady=false, environmentError=null, particleBackend='cpu', soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, waterGain=null, lightingBase=null, timeMode='dia', skyLife=null, nightInsectGain=null, rainBlend=0, xrGazeActor=null, xrGazeSince=0, xrGazeFired=false;
-let orientationEnabled=false,orientationBase=null,orientationHandler=null,stereoEnabled=false,stereoWakeLock=null,stereoTapTimes=[],cpuUpdateMs=0,cpuUpdateAvgMs=0,renderLoop=null,contextLost=false,renderPausedForVisibility=false;
+let orientationEnabled=false,orientationBase=null,orientationHandler=null,stereoEnabled=false,stereoWakeLock=null,stereoTapTimes=[],cpuUpdateMs=0,cpuUpdateAvgMs=0,renderLoop=null,contextLost=false,renderPausedForVisibility=false,renderLoopStarted=false,particleTextureCache=null,collisionCellSize=12,environmentCollisionGrid=new Map(),dinoCollisionGrid=new Map(),collisionGridReady=false;
 const setProgress=(v,t)=>{$('progressFill').style.width=Math.round(v*100)+'%';$('loadText').textContent=t;};
 function mat(name,color,rough=.9){const m=new BABYLON.StandardMaterial(name,scene);m.diffuseColor=BABYLON.Color3.FromHexString(color);m.specularColor=new BABYLON.Color3(.08,.08,.08);m.roughness=rough;return m;}
 function tuneVisualMaterials(root,foliage=false){
@@ -645,7 +645,7 @@ function createParticleSystem(name,capacity){
  }
  particleBackend='cpu';return new BABYLON.ParticleSystem(name,capacity,scene);
 }
-function makeParticleTexture(){const tex=new BABYLON.DynamicTexture('procedural-particle',64,scene,false);const c=tex.getContext(),g=c.createRadialGradient(32,32,1,32,32,31);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.25,'rgba(255,255,255,.75)');g.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=g;c.fillRect(0,0,64,64);tex.update(false);return tex;}
+function makeParticleTexture(){if(particleTextureCache&&!particleTextureCache.isDisposed())return particleTextureCache;const tex=new BABYLON.DynamicTexture('procedural-particle',64,scene,false);const c=tex.getContext(),g=c.createRadialGradient(32,32,1,32,32,31);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.25,'rgba(255,255,255,.75)');g.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=g;c.fillRect(0,0,64,64);tex.update(false);particleTextureCache=tex;return tex;}
 function addParticles(){const p=createParticleSystem('ambient-dust',VP.particles);p.particleTexture=makeParticleTexture();p.emitter=new BABYLON.Vector3(0,2,-15);p.minEmitBox=new BABYLON.Vector3(-42,0,-42);p.maxEmitBox=new BABYLON.Vector3(42,15,42);p.color1=new BABYLON.Color4(.9,.78,.55,.25);p.color2=new BABYLON.Color4(.7,.85,.75,.12);p.minSize=.025;p.maxSize=.11;p.minLifeTime=5;p.maxLifeTime=12;p.emitRate=quality==='baja'?8:quality==='media'?20:quality==='ultra'?42:32;p.direction1=new BABYLON.Vector3(-.1,.1,-.1);p.direction2=new BABYLON.Vector3(.1,.3,.1);p.minEmitPower=.05;p.maxEmitPower=.3;p.updateSpeed=.01;p.start();}
 async function initPhysics(){
  if(typeof window.HavokPhysics!=='function')throw new Error('No se cargó HavokPhysics_umd.js.');
@@ -802,12 +802,11 @@ function herdDrinkTarget(d,index){
  candidates.sort((a,b)=>a.score-b.score);
  return candidates.length?{x:candidates[0].x,z:candidates[0].z}:null;
 }
-function isDinoPositionBlocked(d,x,z){
- const bodyRadius=dinoSpacingRadius(d);
- for(const zone of environmentCollisionZones){const min=bodyRadius+zone.radius;if((x-zone.x)*(x-zone.x)+(z-zone.z)*(z-zone.z)<min*min)return {blocked:true,kind:zone.kind};}
- for(const other of dinoRoots){if(other===d||!other.root)continue;const min=bodyRadius+dinoSpacingRadius(other)+.45;const dx=x-other.root.position.x,dz=z-other.root.position.z;if(dx*dx+dz*dz<min*min)return {blocked:true,kind:'dinosaur'};}
- return {blocked:false,kind:null};
-}
+function collisionCellKey(x,z){return Math.floor(x/collisionCellSize)+','+Math.floor(z/collisionCellSize);}
+function buildEnvironmentCollisionGrid(){environmentCollisionGrid.clear();for(const zone of environmentCollisionZones){const key=collisionCellKey(zone.x,zone.z);let bucket=environmentCollisionGrid.get(key);if(!bucket)environmentCollisionGrid.set(key,bucket=[]);bucket.push(zone);}collisionGridReady=true;}
+function rebuildDinoCollisionGrid(){dinoCollisionGrid.clear();for(const actor of dinoRoots){if(!actor.root)continue;const p=actor.root.position,key=collisionCellKey(p.x,p.z);let bucket=dinoCollisionGrid.get(key);if(!bucket)dinoCollisionGrid.set(key,bucket=[]);bucket.push(actor);}}
+function nearbyGridItems(grid,x,z,radius){const out=[],minX=Math.floor((x-radius)/collisionCellSize),maxX=Math.floor((x+radius)/collisionCellSize),minZ=Math.floor((z-radius)/collisionCellSize),maxZ=Math.floor((z+radius)/collisionCellSize);for(let gx=minX;gx<=maxX;gx++)for(let gz=minZ;gz<=maxZ;gz++){const bucket=grid.get(gx+','+gz);if(bucket)out.push(...bucket);}return out;}
+function isDinoPositionBlocked(d,x,z){const bodyRadius=dinoSpacingRadius(d),zones=collisionGridReady?nearbyGridItems(environmentCollisionGrid,x,z,bodyRadius+10):environmentCollisionZones;for(const zone of zones){const min=bodyRadius+zone.radius,dx=x-zone.x,dz=z-zone.z;if(dx*dx+dz*dz<min*min)return {blocked:true,kind:zone.kind};}const actors=dinoCollisionGrid.size?nearbyGridItems(dinoCollisionGrid,x,z,10):dinoRoots;for(const other of actors){if(other===d||!other.root)continue;const min=bodyRadius+dinoSpacingRadius(other)+.45,dx=x-other.root.position.x,dz=z-other.root.position.z;if(dx*dx+dz*dz<min*min)return {blocked:true,kind:'dinosaur'};}return {blocked:false,kind:null};}
 function choosePlayerApproach(d,index,t){
  if(!camera||t<d.nextCuriosityAt||d.curiosity<.2)return false;
  d.nextCuriosityAt=t+12000+rand(index*227+Math.floor(t/1000))*18000;
@@ -862,13 +861,18 @@ function tryDinoFlee(d,index,t){
  d.target={x,z};d.goal='flee';d.state='walk';d.running=true;d.lookUntil=0;d.socialUntil=0;d.socialPartner=null;return true;
 }
 function animateDinos(t,dt){
- const step=Math.min(.05,Math.max(0,dt||0)),herd=HERD_CONFIG[worldKey];
+ const frameStep=Math.min(.05,Math.max(0,dt||0)),herd=HERD_CONFIG[worldKey];
+ rebuildDinoCollisionGrid();
  dinoRoots.forEach((d,index)=>{
   const root=d.root,L=d.length||DINO[d.id].length,profile=({
    atacamatitan:{walk:.10,run:.50,},arackar:{walk:.16,run:.72,},
    gonkoken:{walk:.08,run:1,},stegouros:{walk:.22,run:.60,},
    chilesaurus:{walk:.45,run:2.2,}
   })[d.id]||{walk:.1,run:.5,reverse:false};
+  const playerDistance=camera?Math.hypot(camera.position.x-root.position.x,camera.position.z-root.position.z):0;
+  if(playerDistance>65&&d.state==='idle'&&!d.testClip&&!d.transitionFrom&&t<(d.nextLodUpdate||0))return;
+  const step=playerDistance>65&&d.state==='idle'&&!d.testClip?Math.min(.25,Math.max(frameStep,(t-(d.lastLodUpdate||t-200))/1000)):frameStep;
+  if(playerDistance>65&&d.state==='idle'&&!d.testClip){d.lastLodUpdate=t;d.nextLodUpdate=t+200;}
   tryDinoFlee(d,index,t);
   if(d.state==='social'||d.state==='play')updateDinoSocial(d,t,step);
   if(d.state==='graze'||d.state==='drink'||d.state==='rest'){d.timer-=step;if(d.timer<=0){d.state='idle';d.timer=1+rand(index*19+Math.floor(t))*2;d.goal=null;d.actualSpeed=0;}}
@@ -1024,7 +1028,7 @@ function installDiagnostics(){
   const gpuCounter=engineInstrumentation?.gpuFrameTimeCounter;
   return {
    world:worldKey,quality,fps:Number.isFinite(engine?.getFps?.())?Math.round(engine.getFps()):0,
-   meshes:scene?.meshes?.length||0,activeMeshes:scene?.getActiveMeshes?.().length||0,
+   meshes:scene?.meshes?.length||0,activeMeshes:scene?.getActiveMeshes?.().length||0,collisionBuckets:{environment:environmentCollisionGrid.size,dinosaurs:dinoCollisionGrid.size},renderLoopStarted,
    textures:engine?.getLoadedTexturesCache?.().length||0,dinosaurs:dinoRoots.length,
    vegetationAssets:assetCache.size,particles:scene?.particleSystems?.length||0,visual:{pipeline:!!visualPipeline,bloom:!!visualPipeline?.bloomEnabled,ssao:!!ssaoPipeline,ssr:!!ssrPipeline&&!!ssrPipeline.isEnabled,volumetric:!!volumetricLight&&!!volumetricLight.isEnabled,environment:!!environmentTexture,environmentReady,environmentError,clearCoat:scene.materials.some(m=>!!m.clearCoat?.isEnabled),foliageSheen:scene.materials.some(m=>!!m.sheen?.isEnabled),thinInstances:scene.meshes.some(m=>m.hasThinInstances),particleBackend,shadowMap:VP.shadow,anisotropy:VP.anisotropy,profile:quality},
    dinoStates:dinoRoots.map(d=>({id:d.id,clip:d.clipName,active:!!d.activeClip,playing:!!d.activeClip?.isPlaying,state:d.state,goal:d.goal,personality:d.personality,juvenile:d.juvenile,socialPartner:d.socialPartner?.root?.name||null,heading:d.heading,speed:d.actualSpeed,target:d.target?{x:+d.target.x.toFixed(2),z:+d.target.z.toFixed(2)}:null,forwardYaw:d.baseYaw,position:{x:+d.root.position.x.toFixed(2),y:+d.root.position.y.toFixed(2),z:+d.root.position.z.toFixed(2)}})),
@@ -1085,15 +1089,16 @@ function installDiagnostics(){
 let initStage='preparación';
 async function init(){
  if(!params.has('mundo'))return; // La portada no debe crear una escena 3D ni cargar modelos antes de elegir mundo.
- try{initStage='creación del motor WebGL2';engine=new BABYLON.Engine(canvas,true,{disableWebGL2Support:false,doNotHandleContextLost:false,preserveDrawingBuffer:false,stencil:true,antialias:true,adaptToDeviceRatio:true});if(!engine.webGLVersion||engine.webGLVersion<2)throw new Error('Este dispositivo no ofrece WebGL 2.');
+ try{initStage='creación del motor WebGL2';engine=new BABYLON.Engine(canvas,false,{disableWebGL2Support:false,doNotHandleContextLost:false,preserveDrawingBuffer:false,stencil:true,antialias:false,adaptToDeviceRatio:true});if(!engine.webGLVersion||engine.webGLVersion<2)throw new Error('Este dispositivo no ofrece WebGL 2.');
   engine.onContextLostObservable.add(()=>{contextLost=true;lastTime=0;console.warn('WebGL2 perdió el contexto; esperando recuperación del navegador.');});
   engine.onContextRestoredObservable.add(()=>{contextLost=false;lastTime=0;console.info('Contexto WebGL2 restaurado.');});
  scene=new BABYLON.Scene(engine);installDiagnostics();scene.clearColor=new BABYLON.Color4(.65,.76,.77,1);scene.collisionsEnabled=true;scene.fogMode=BABYLON.Scene.FOGMODE_EXP2;scene.fogColor=BABYLON.Color3.FromHexString(WORLD.fog);scene.fogDensity=({atacamatitan:.0038,arackar:.0042,patagonia:.0052,stegouros:.0085,aysen:.006,valle:.006}[worldKey]||.0038);
  camera=new BABYLON.UniversalCamera('player-camera',new BABYLON.Vector3(0,1.65,12),scene);camera.minZ=.08;camera.maxZ=320;camera.fov=.92;camera.speed=.35;camera.inertia=.82;camera.angularSensibility=3800;camera.attachControl(canvas,true);camera.keysUp.push(87);camera.keysDown.push(83);camera.keysLeft.push(65);camera.keysRight.push(68);camera.applyGravity=false;camera.checkCollisions=false;camera.ellipsoid=new BABYLON.Vector3(.35,.85,.35);
  initStage='terreno y mapa de altura';setProgress(.08,'Creando el paisaje…');initStage='carga del panorama '+WORLD.sky;await addSky();addSkyLife();addLighting();await addTerrain();camera.position.y=1.65+terrainHeightAt(0,12);initStage='inicialización de Havok Physics V2';await initPhysics();initDinoFootFX();addWater();addSandBars();addMountains();initStage='carga de dinosaurios';setProgress(.2,'Cargando dinosaurios…');
  const ids=WORLD.dinos,baseHerd={atacamatitan:22,arackar:24,patagonia:22,stegouros:18,aysen:28,valle:5}[worldKey]||5,herdSize=Math.max(3,Math.round(baseHerd*Q)),totalDinos=ids.length*herdSize;let loadedDinos=0;for(const id of ids){for(let n=0;n<herdSize;n++){initStage='dinosaurio '+id+' ('+(n+1)+'/'+herdSize+')';await spawnDino(id,n,herdSize,null);loadedDinos++;setProgress(.2+.53*loadedDinos/totalDinos,'Cargando '+DINO[id].name+' · '+loadedDinos+'/'+totalDinos+'…');}}
- initStage='vegetación y modelos ambientales';setProgress(.76,'Poblando el paisaje…');await addVegetation();initStage='bosques y atmósfera';addForest3D();setProgress(.9,'Preparando atmósfera…');addParticles();addVisualPipeline();bindControls();scene.onBeforeRenderObservable.add(()=>{const updateStart=performance.now(),now=updateStart,dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;movePlayer(dt);updateHerdMode(dt);animateDinos(now,dt);updateDinoFootFX(dt);updateEnvironment(dt);updateXRGaze();for(const item of waterTextures)item.tex.uOffset=(item.tex.uOffset+dt*item.speed+1)%1;cpuUpdateMs=performance.now()-updateStart;cpuUpdateAvgMs+=(cpuUpdateMs-cpuUpdateAvgMs)*.08;});
- renderLoop=()=>{if(!contextLost&&scene&&scene.activeCamera)scene.render();};engine.runRenderLoop(renderLoop);
+ initStage='vegetación y modelos ambientales';setProgress(.76,'Poblando el paisaje…');await addVegetation();buildEnvironmentCollisionGrid();initStage='bosques y atmósfera';addForest3D();setProgress(.9,'Preparando atmósfera e iluminación…');addParticles();addVisualPipeline();bindControls();scene.onBeforeRenderObservable.add(()=>{const updateStart=performance.now(),now=updateStart,dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;movePlayer(dt);updateHerdMode(dt);animateDinos(now,dt);updateDinoFootFX(dt);updateEnvironment(dt);updateXRGaze();for(const item of waterTextures)item.tex.uOffset=(item.tex.uOffset+dt*item.speed+1)%1;cpuUpdateMs=performance.now()-updateStart;cpuUpdateAvgMs+=(cpuUpdateMs-cpuUpdateAvgMs)*.08;});
+ initStage='espera de texturas, shaders y materiales del mundo';setProgress(.96,'Finalizando texturas, iluminación y materiales…');await scene.whenReadyAsync();
+ renderLoop=()=>{if(!contextLost&&scene&&scene.activeCamera)scene.render();};if(!renderLoopStarted){engine.runRenderLoop(renderLoop);renderLoopStarted=true;}
   document.addEventListener('visibilitychange',()=>{const inXR=xr?.baseExperience?.state===BABYLON.WebXRState.IN_XR;if(document.hidden&&!inXR){if(!renderPausedForVisibility){engine.stopRenderLoop(renderLoop);renderPausedForVisibility=true;}audioContext?.suspend?.().catch(()=>{});}else{lastTime=0;if(renderPausedForVisibility){engine.runRenderLoop(renderLoop);renderPausedForVisibility=false;}if(audioContext?.state==='suspended')audioContext.resume().catch(()=>{});}});
   window.addEventListener('pagehide',()=>{if(xr?.baseExperience?.state!==BABYLON.WebXRState.IN_XR)audioContext?.suspend?.().catch(()=>{});});window.addEventListener('pageshow',()=>{lastTime=0;if(!document.hidden&&renderPausedForVisibility){engine.runRenderLoop(renderLoop);renderPausedForVisibility=false;}});
   window.addEventListener('resize',()=>engine.resize());setProgress(1,'¡Mundo listo!');$('startButtons').classList.remove('hidden');
