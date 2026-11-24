@@ -35,7 +35,7 @@ const HERD_CONFIG = {
 const requested = (params.get('mundo') || 'atacamatitan').toLowerCase();
 const worldKey = WORLDS[requested] ? requested : 'valle';
 const WORLD = WORLDS[worldKey];
-let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, lightingBase=null, timeMode='dia', skyLife=null, nightInsectGain=null, xrGazeActor=null, xrGazeSince=0, xrGazeFired=false;
+let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, waterGain=null, lightingBase=null, timeMode='dia', skyLife=null, nightInsectGain=null, xrGazeActor=null, xrGazeSince=0, xrGazeFired=false;
 const setProgress=(v,t)=>{$('progressFill').style.width=Math.round(v*100)+'%';$('loadText').textContent=t;};
 function mat(name,color,rough=.9){const m=new BABYLON.StandardMaterial(name,scene);m.diffuseColor=BABYLON.Color3.FromHexString(color);m.specularColor=new BABYLON.Color3(.08,.08,.08);m.roughness=rough;return m;}
 function rand(seed){let x=Math.sin(seed*127.1+311.7)*43758.5453;return x-Math.floor(x);}
@@ -92,7 +92,7 @@ function updateSkyLife(dt){
  const moteArr=skyLife.motes.getVerticesData(BABYLON.VertexBuffer.PositionKind);if(moteArr){for(let i=0;i<skyLife.motePositions.length/3;i++){moteArr[i*3]=skyLife.motePositions[i*3]+Math.sin(seconds*.4+i)*1.2;moteArr[i*3+1]=(skyLife.motePositions[i*3+1]+seconds*.08)%7;moteArr[i*3+2]=skyLife.motePositions[i*3+2]+Math.cos(seconds*.35+i*2)*1.2;}skyLife.motes.updateVerticesData(BABYLON.VertexBuffer.PositionKind,moteArr);}
  skyLife.motes.setEnabled(daylight>.1&&!raining&&quality!=='baja');
  skyLife.rays.forEach(r=>{r.mesh.material.alpha=r.base*(.6+.4*Math.sin(seconds*.3+r.phase))*daylight*weather*(timeMode==='atardecer'?1.6:1);r.mesh.setEnabled(r.mesh.material.alpha>.004);});
- skyLife.butterflies.forEach(b=>{b.phase+=dt*.001*b.speed;const x=b.x+Math.sin(b.phase*.9)*5,z=b.z+Math.cos(b.phase*.7)*5;b.root.position.set(camera.position.x+x,terrainHeightAt(x,z)+b.height+Math.sin(b.phase*3)*.3,camera.position.z+z);b.root.rotation.y=b.phase*.9+1.5;const flap=Math.sin(seconds*18+b.phase*9)*.9;b.left.rotation.z=flap;b.right.rotation.z=-flap;b.root.setEnabled(daylight>.3&&!raining);});
+ skyLife.butterflies.forEach(b=>{b.phase+=dt*.001*b.speed;const x=b.x+Math.sin(b.phase*.9)*5,z=b.z+Math.cos(b.phase*.7)*5;b.root.position.set(camera.position.x+x,terrainHeightAt(camera.position.x+x,camera.position.z+z)+b.height+Math.sin(b.phase*3)*.3,camera.position.z+z);b.root.rotation.y=b.phase*.9+1.5;const flap=Math.sin(seconds*18+b.phase*9)*.9;b.left.rotation.z=flap;b.right.rotation.z=-flap;b.root.setEnabled(daylight>.3&&!raining);});
  const nightAlpha=timeMode==='noche'?1:0;
  skyLife.starMat.alpha+=(nightAlpha-skyLife.starMat.alpha)*(1-Math.exp(-dt*1.8));
  skyLife.moonMat.alpha+=(nightAlpha-skyLife.moonMat.alpha)*(1-Math.exp(-dt*1.8));
@@ -241,6 +241,7 @@ function updateEnvironment(dt){
  scene.fogDensity+=(lightingBase.fogDensity*(raining?1.4:1)-scene.fogDensity)*(1-Math.exp(-dt*1.4));
  if(rainGain&&audioContext)rainGain.gain.setTargetAtTime(raining&&soundOn?.12:0,audioContext.currentTime,.25);
  if(nightInsectGain&&audioContext)nightInsectGain.gain.setTargetAtTime(timeMode==='noche'&&!raining&&soundOn?.008:0,audioContext.currentTime,.35);
+ if(waterGain&&audioContext)waterGain.gain.setTargetAtTime(((WORLD.rivers||[]).length||(WORLD.lagoons||[]).length)&&soundOn?.12:0,audioContext.currentTime,.6);
  if(rainSystem&&camera){rainSystem.emitter.copyFrom(camera.position);rainSystem.emitter.y+=15;}
 }
 function initAmbientAudio(){
@@ -257,6 +258,9 @@ function initAmbientAudio(){
   const rainFilter=audioContext.createBiquadFilter();rainFilter.type='highpass';rainFilter.frequency.value=1600;
   rainGain=audioContext.createGain();rainGain.gain.value=0;rainSource.connect(rainFilter);rainFilter.connect(rainGain);rainGain.connect(audioMaster);rainSource.start();
   const insect=audioContext.createOscillator(),insectGate=audioContext.createGain(),insectLfo=audioContext.createOscillator(),insectLfoGain=audioContext.createGain();insect.type='sine';insect.frequency.value=4300;insectGate.gain.value=0;insectLfo.type='square';insectLfo.frequency.value=13;insectLfoGain.gain.value=.0035;insectLfo.connect(insectLfoGain);insectLfoGain.connect(insectGate.gain);insect.connect(insectGate);nightInsectGain=insectGate;insectGate.connect(audioMaster);insect.start();insectLfo.start();
+  const waterFilter=audioContext.createBiquadFilter();waterFilter.type='lowpass';waterFilter.frequency.value=900;const waterSource=audioContext.createBufferSource();waterSource.buffer=buffer;waterSource.loop=true;waterGain=audioContext.createGain();waterGain.gain.value=0;waterSource.connect(waterFilter);waterFilter.connect(waterGain);waterGain.connect(audioMaster);waterSource.start();
+  const waterLfo=audioContext.createOscillator(),waterLfoGain=audioContext.createGain();waterLfo.frequency.value=.7;waterLfoGain.gain.value=.035;waterLfo.connect(waterLfoGain);waterLfoGain.connect(waterGain.gain);waterLfo.start();
+  if(dinoRoots.length)setInterval(()=>{if(!soundOn||!audioContext||audioContext.state!=='running')return;const call=audioContext.createOscillator(),filter=audioContext.createBiquadFilter(),gain=audioContext.createGain();call.type='sawtooth';call.frequency.setValueAtTime(70+Math.random()*40,audioContext.currentTime);call.frequency.exponentialRampToValueAtTime(45+Math.random()*20,audioContext.currentTime+1.6);filter.type='lowpass';filter.frequency.value=260;gain.gain.setValueAtTime(0,audioContext.currentTime);gain.gain.linearRampToValueAtTime(.12,audioContext.currentTime+.3);gain.gain.linearRampToValueAtTime(0,audioContext.currentTime+1.7);call.connect(filter);filter.connect(gain);gain.connect(audioMaster);call.start();call.stop(audioContext.currentTime+1.8);},12000);
  }catch(error){console.warn('Audio ambiental no disponible',error);}
 }
 document.addEventListener('pointerdown',initAmbientAudio,{passive:true});
