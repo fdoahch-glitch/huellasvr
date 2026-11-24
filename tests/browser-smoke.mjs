@@ -71,6 +71,9 @@ try{
   if(!socialCheck?.started)throw new Error(world+' no pudo iniciar una interacción entre dinosaurios: '+JSON.stringify(socialCheck));
   if(!approachCheck?.started)throw new Error(world+' no pudo iniciar un acercamiento al jugador: '+JSON.stringify(approachCheck));
   console.log('HERD',world,JSON.stringify({herdCheck,socialCheck,approachCheck}));
+  await page.waitForTimeout(2200);
+  const movingHerdCheck=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.dinoBehaviorCheck?.());
+  if(!movingHerdCheck||movingHerdCheck.overlaps!==0)throw new Error(world+' perdió la separación durante el movimiento: '+JSON.stringify(movingHerdCheck));
   if(state.diagnostics.meshes<10||state.diagnostics.textures<1)throw new Error(world+' no generó mallas/texturas suficientes: '+JSON.stringify(state.diagnostics));
   for(const clip of ['Idle','Walk','Run','Neck_Look']){
    const before=await page.evaluate(name=>window.__HUELLAS_VR_TEST__.setAnimation(name),clip);
