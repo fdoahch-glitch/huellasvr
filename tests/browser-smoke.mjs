@@ -27,7 +27,7 @@ try{
   const pageErrors=[];
   page.on('pageerror',e=>pageErrors.push(String(e.stack||e)));
   page.on('console',m=>{if(m.type()==='error')pageErrors.push('console: '+m.text());});
-  const url='http://127.0.0.1:4173/?mundo='+world+'&q=baja&test=1';
+  const url='http://127.0.0.1:4173/?mundo='+world+'&q=baja&test=1&debug=1';
   console.log('LOAD',world,url);
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>{
@@ -44,6 +44,7 @@ try{
   });
   if(!state.message.includes('¡Mundo listo!'))throw new Error(world+' no inició: '+state.message);
   if(!state.diagnostics)throw new Error(world+' no expuso el diagnóstico');
+  const panel=await page.locator('#huellasPerfDiagnostics').textContent();if(!panel||!panel.includes('Draw calls')||!panel.includes('Havok'))throw new Error(world+' no mostró el panel de diagnóstico completo');
   if(!state.diagnostics.sky?.ready||state.diagnostics.sky.error)throw new Error(world+' no cargó el panorama '+JSON.stringify(state.diagnostics.sky));
   const expectedSky={atacamatitan:'img/atacamatitan_sky.jpg',arackar:'img/arackar_sky.jpg',patagonia:'img/gonkoken_sky.jpg',stegouros:'img/stegouros_sky.jpg',aysen:'img/aysen_sky.jpg'};
   if(state.diagnostics.sky.url!==expectedSky[world])throw new Error(world+' asignó un panorama incorrecto: '+state.diagnostics.sky.url);
