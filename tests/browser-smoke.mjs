@@ -78,6 +78,11 @@ try{
   if(!state.diagnostics.terrain?.photo||!state.diagnostics.terrain?.normal||state.diagnostics.terrain.error)throw new Error(world+' no cargó las texturas esenciales del terreno '+JSON.stringify(state.diagnostics.terrain));
   if(!state.diagnostics.terrain.diffuseReady||state.diagnostics.terrain.uvCount<6||!state.diagnostics.terrain.photoSample)throw new Error(world+' textura del terreno no enlazada al mesh: '+JSON.stringify(state.diagnostics.terrain));
   if(!String(state.diagnostics.terrain.materialType||'').includes('PBR'))throw new Error(world+' no usa material PBR en el terreno: '+state.diagnostics.terrain.materialType);
+  if(state.diagnostics.dinosaurs!==15)throw new Error(world+' debe cargar exactamente 15 dinosaurios en '+testQuality+'; cargó '+state.diagnostics.dinosaurs);
+  if(state.diagnostics.dinoLod?.available!==15)throw new Error(world+' no cargó los 15 modelos LOD reducidos: '+JSON.stringify(state.diagnostics.dinoLod));
+  const lodCheckAll=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.lodCheck?.());
+  if(!lodCheckAll||lodCheckAll.count!==15||lodCheckAll.farLow!==15||lodCheckAll.nearHigh!==15||lodCheckAll.available!==15)throw new Error(world+' no cambia los 15 modelos por distancia en '+testQuality+': '+JSON.stringify(lodCheckAll));
+  await page.waitForTimeout(350);
   if(visualMode){
    const visual=state.diagnostics.terrain||{};
    if(['atacamatitan','patagonia','stegouros','aysen'].includes(world)&&visual.riverBankMeshes<2)throw new Error(world+' no generó las orillas del río original: '+visual.riverBankMeshes);
