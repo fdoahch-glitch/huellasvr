@@ -225,7 +225,7 @@ async function spawnDino(id,index,total,center){
  root.position.set(spot.x,terrainHeightAt(spot.x,spot.z),spot.z);
  root.rotation.y=baseYaw+(data.flip?Math.PI:0);
  root.getChildMeshes().forEach(m=>{m.isPickable=true;m.metadata={...(m.metadata||{}),dinoId:id};pickables.push(m);});
- dinoRoots.push({root,id,clips,clipName:idle?.name||'',baseYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},heading:rand(index+71)*Math.PI*2,target:null,state:'idle',timer:2+rand(index+82)*5,radius:Math.min(4,1.5+rand(index+8)*2),running:false});
+ dinoRoots.push({root,id,clips,clipName:idle?.name||'',baseYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},heading:rand(index+71)*Math.PI*2,target:null,state:'idle',timer:2+rand(index+82)*5,radius:Math.min(4,1.5+rand(index+8)*2),running:false,lastFootstep:0,stepDistance:0,footSide:1,footprints:[],lastFootPos:root.position.clone()});
  return root;
 }
 async function addVegetation(){
@@ -376,9 +376,41 @@ function movePlayer(dt){
  if(!safe){moving=false;target=null;return;}
  camera.position.x=nx;camera.position.z=nz;camera.position.y=terrainHeightAt(nx,nz)+1.65;
 }
+function emitDinoFootFX(d,dx,dz,travelled){
+ const L=DINO[d.id].length,groundY=terrainHeightAt(d.root.position.x,d.root.position.z);
+ d.stepDistance=(d.stepDistance||0)+travelled;
+ const stride=Math.max(.35,L*.22);
+ if(d.stepDistance<stride)return;
+ d.stepDistance=0;d.footSide*=-1;
+ const len=Math.hypot(dx,dz)||1,side=d.footSide*L*.09;
+ const x=d.root.position.x-(dz/len)*side,z=d.root.position.z+(dx/len)*side;
+ if(L>=2.5){
+  const matName='footprint-'+d.id;
+  let material=scene.getMaterialByName(matName);
+  if(!material){material=new BABYLON.StandardMaterial(matName,scene);material.diffuseColor=new BABYLON.Color3(.16,.12,.09);material.alpha=.22;material.specularColor=new BABYLON.Color3(0,0,0);material.disableLighting=false;}
+  const mark=BABYLON.MeshBuilder.CreateDisc('dino-footprint',{radius:Math.max(.12,L*.055),tessellation:12},scene);
+  mark.rotation.x=Math.PI/2;mark.rotation.z=Math.atan2(dx,dz);mark.position.set(x,groundY+.018,z);mark.material=material;mark.isPickable=false;
+  d.footprints.push({mesh:mark,age:0});if(d.footprints.length>12){const old=d.footprints.shift();old.mesh.dispose();}
+ }
+ if(!d.dustFX){
+  d.dustFX=new BABYLON.ParticleSystem('dino-dust-'+d.id,70,scene);d.dustFX.particleTexture=makeParticleTexture();
+  d.dustFX.minLifeTime=.25;d.dustFX.maxLifeTime=.65;d.dustFX.minSize=.06;d.dustFX.maxSize=Math.max(.12,L*.035);
+  d.dustFX.color1=new BABYLON.Color4(.65,.52,.37,.28);d.dustFX.color2=new BABYLON.Color4(.82,.72,.56,.12);
+  d.dustFX.direction1=new BABYLON.Vector3(-.2,.35,-.2);d.dustFX.direction2=new BABYLON.Vector3(.2,.8,.2);
+  d.dustFX.minEmitPower=.15;d.dustFX.maxEmitPower=.55;d.dustFX.emitRate=0;d.dustFX.manualEmitCount=0;d.dustFX.emitter=new BABYLON.Vector3(x,groundY+.08,z);
+ }
+ d.dustFX.emitter.set(x,groundY+.08,z);d.dustFX.manualEmitCount=d.running?16:8;d.dustFX.start();
+}
 function animateDinos(t,dt){
  const step=Math.min(.05,Math.max(0,dt||0));
- const gait={atacamatitan:.72,arackar:.9,patagonia:.55,stegouros:.5,aysen:.85};
+ // Valores calibrados desde GAIT del original v19 (m/s por metro de longitud).
+ const gait={
+  atacamatitan:{walk:.10,run:.50,reverse:false},
+  arackar:{walk:.16,run:.72,reverse:false},
+  patagonia:{walk:.08,run:1.0,reverse:false},
+  stegouros:{walk:.22,run:.60,reverse:true},
+  aysen:{walk:.45,run:2.2,reverse:false}
+ };
  dinoRoots.forEach(d=>{
   const root=d.root,groundY=terrainHeightAt(root.position.x,root.position.z);
   if(t<d.lookUntil){d.state='look';}
@@ -404,20 +436,21 @@ function animateDinos(t,dt){
     const desired=Math.atan2(dx,dz);let delta=desired-d.heading;
     while(delta>Math.PI)delta-=Math.PI*2;while(delta< -Math.PI)delta+=Math.PI*2;
     d.heading+=Math.sign(delta)*Math.min(Math.abs(delta),1.4*step);
-    const speed=DINO[d.id].length*(gait[d.id]||.65)*Math.min(1,Math.max(.35,1-Math.abs(delta)*.35));
+    const profile=gait[d.id]||gait.atacamatitan,mode=d.running?'run':'walk',speed=DINO[d.id].length*profile[mode]*Math.min(1,Math.max(.35,1-Math.abs(delta)*.35));
     const nx=root.position.x+Math.sin(d.heading)*speed*step,nz=root.position.z+Math.cos(d.heading)*speed*step;
     const r=DINO[d.id].length*.3;
     const support=[[nx,nz],[nx+Math.sin(d.heading)*r,nz+Math.cos(d.heading)*r],[nx-Math.sin(d.heading)*r,nz-Math.cos(d.heading)*r]];
     if(support.every(p=>terrainValidAt(p[0],p[1]))){
      const heights=support.map(p=>terrainHeightAt(p[0],p[1]));
-     root.position.x=nx;root.position.z=nz;root.position.y=Math.min(...heights);
+     const travelled=Math.hypot(nx-root.position.x,nz-root.position.z);root.position.x=nx;root.position.z=nz;root.position.y=Math.min(...heights);emitDinoFootFX(d,Math.sin(d.heading),Math.cos(d.heading),travelled);
     }else{d.state='idle';d.target=null;d.timer=2.5;}
    }
   }else root.position.y=groundY;
+  if(d.footprints?.length){for(let i=d.footprints.length-1;i>=0;i--){const fp=d.footprints[i];fp.age+=step;if(fp.age>18){fp.mesh.dispose();d.footprints.splice(i,1);}else fp.mesh.material.alpha=.22*(1-fp.age/18);}}
   const desired=d.state==='look'?'Neck_Look':d.state==='walk'?(d.running?'Run':'Walk'):'Idle';
   if(d.clipName!==desired){
    const clip=d.clips.find(a=>a.name.toLowerCase()===desired.toLowerCase());
-   if(clip){d.clips.forEach(a=>{if(a!==clip)a.stop();});clip.start(true);d.clipName=desired;}
+   if(clip){d.clips.forEach(a=>{if(a!==clip)a.stop();});const profile=gait[d.id]||gait.atacamatitan;clip.speedRatio=desired==='Walk'?(profile.walk/.10):desired==='Run'?(profile.run/.50):1;clip.start(true);d.clipName=desired;}
   }
   if(d.state==='walk')root.rotation.y=d.heading+d.baseYaw+(DINO[d.id].flip?Math.PI:0);
   else root.rotation.y=d.heading+d.baseYaw+(DINO[d.id].flip?Math.PI:0);
