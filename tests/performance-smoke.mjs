@@ -22,10 +22,10 @@ try{
  for(const world of ['atacamatitan','arackar','patagonia','stegouros','aysen']){
   const page=await browser.newPage({viewport:{width:1280,height:800}});
   const errors=[];page.on('pageerror',e=>errors.push(String(e)));
-  await page.goto('http://127.0.0.1:4174/?mundo='+world+'&q=ultra&test=1&debug=1',{waitUntil:'domcontentloaded',timeout:60000});
+  await page.goto('http://127.0.0.1:4174/?mundo='+world+'&q=alta&test=1&debug=1',{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>{const t=document.querySelector('#loadText')?.textContent||'';return t.includes('¡Mundo listo!')||t.includes('No se pudo iniciar el mundo');},{polling:100,timeout:90000});
   const msg=await page.locator('#loadText').textContent();
-  if(!msg.includes('¡Mundo listo!'))throw new Error(world+' no pudo cargar en ULTRA: '+msg);
+  if(!msg.includes('¡Mundo listo!'))throw new Error(world+' no pudo cargar en ALTA: '+msg);
   const renderer=await page.evaluate(()=>{
    const gl=document.querySelector('#renderCanvas')?.getContext('webgl2');
    const ext=gl?.getExtension('WEBGL_debug_renderer_info');
@@ -39,13 +39,13 @@ try{
   await page.waitForTimeout(12000);
   const d=await page.evaluate(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.());
   const row={world,renderer,fps:d?.fps,frameP95Ms:d?.frameP95Ms,frameP99Ms:d?.frameP99Ms,fps1PercentLow:d?.fps1PercentLow,gpuFrameTimeMs:d?.gpuFrameTimeMs,cpuUpdateAvgMs:d?.cpuUpdateAvgMs,drawCalls:d?.drawCalls};
-  results.push(row);console.log('ULTRA_HARDWARE',JSON.stringify(row));
+  results.push(row);console.log('ALTA_HARDWARE',JSON.stringify(row));
   if(!d||!Number.isFinite(d.frameP95Ms)||d.frameP95Ms>16.7||!Number.isFinite(d.fps1PercentLow)||d.fps1PercentLow<55)throw new Error(world+' no alcanzó el objetivo sostenido de 60 FPS: '+JSON.stringify(row));
   if(errors.length)throw new Error(world+' errores de navegador: '+errors.join(' | '));
   await page.close();
  }
- if(hardwareValidated)console.log('ULTRA_60FPS_HARDWARE_PASS',JSON.stringify(results));
- else console.log('ULTRA_60FPS_HARDWARE_PENDING: ejecutar este benchmark en PC/Android con GPU física; CI solo dispone de renderizado por software.');
-}catch(e){failed=true;console.error('ULTRA_PERFORMANCE_FAIL',e);}
+ if(hardwareValidated)console.log('ALTA_60FPS_HARDWARE_PASS',JSON.stringify(results));
+ else console.log('ALTA_60FPS_HARDWARE_PENDING: ejecutar este benchmark en PC/Android con GPU física; CI solo dispone de renderizado por software.');
+}catch(e){failed=true;console.error('ALTA_PERFORMANCE_FAIL',e);}
 finally{await browser?.close();server.close();}
 if(failed)process.exit(1);
