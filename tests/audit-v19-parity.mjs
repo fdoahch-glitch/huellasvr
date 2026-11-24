@@ -74,6 +74,16 @@ check('Controles WebXR, suelo local y seguimiento',()=>{
 check('Clima, ciclo horario y sonido',()=>{
  for(const token of ['function cycleTimeOfDay()','function initAmbientAudio()','function updateEnvironment(dt)','rainSystem'])assert.ok(main.includes(token),'Falta '+token);
 });
+check('Selección de la instancia exacta de dinosaurio',()=>{
+ assert.ok(main.includes('const actor=dinoRoots.find(item=>item.root===node)'));
+ assert.ok(main.includes('showInfo(actor.id,actor)'));
+});
+check('Dinosaurios beben junto a las orillas reales de cada escena',()=>{
+ assert.ok(main.includes('const from=d.root.position,candidates=[]'));
+ assert.ok(main.includes('waterDistanceAt(x,z)'));
+ assert.ok(main.includes('river.w*.5+1.15'));
+ assert.ok(main.includes('WORLD.lagoons||[]'));
+});
 check('Optimización de vegetación y diagnóstico de rendimiento',()=>{
  assert.ok(main.includes('BABYLON.Mesh.MergeMeshes'));assert.ok(main.includes('__HUELLAS_VR_DIAGNOSTICS__'));
  assert.ok(main.includes('media: .6, baja: .3'));assert.ok(main.includes('mobileDevice ||'));
