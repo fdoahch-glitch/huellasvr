@@ -26,13 +26,14 @@ try{
   const pageErrors=[];
   page.on('pageerror',e=>pageErrors.push(String(e.stack||e)));
   page.on('console',m=>{if(m.type()==='error')pageErrors.push('console: '+m.text());});
-  const url='http://127.0.0.1:4173/?mundo='+world+'&q=baja';
+  const url='http://127.0.0.1:4173/?mundo='+world+'&q=baja&test=1';
   console.log('LOAD',world,url);
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>{
    const t=document.querySelector('#loadText')?.textContent||'';
    return t.includes('¡Mundo listo!')||t.includes('No se pudo iniciar el mundo');
   },{timeout:180000});
+  await page.waitForTimeout(1200);
   const state=await page.evaluate(()=>{
    const d=window.__HUELLAS_VR_DIAGNOSTICS__?.();
    return {message:document.querySelector('#loadText')?.textContent||'',diagnostics:d||null};
@@ -42,6 +43,19 @@ try{
   if(state.diagnostics.dinosaurs<3)throw new Error(world+' cargó menos de tres dinosaurios');
   if(!state.diagnostics.dinoStates?.length||state.diagnostics.dinoStates.some(d=>!d.active||!d.clip))throw new Error(world+' tiene dinosaurios sin AnimationGroup activo: '+JSON.stringify(state.diagnostics.dinoStates));
   if(state.diagnostics.meshes<10||state.diagnostics.textures<1)throw new Error(world+' no generó mallas/texturas suficientes: '+JSON.stringify(state.diagnostics));
+  for(const clip of ['Idle','Walk','Run','Neck_Look']){
+   const before=await page.evaluate(name=>window.__HUELLAS_VR_TEST__.setAnimation(name),clip);
+   await page.waitForFunction(name=>{
+    const d=window.__HUELLAS_VR_DIAGNOSTICS__?.().dinoStates?.[0];
+    return d&&d.clip===name&&d.active&&d.playing;
+   },clip,{timeout:10000});
+   if((clip==='Walk'||clip==='Run')&&before.movementPathFound){
+    await page.waitForTimeout(800);
+    const after=await page.evaluate(()=>window.__HUELLAS_VR_DIAGNOSTICS__().dinoStates[0].position);
+    const moved=Math.hypot(after.x-before.position.x,after.z-before.position.z);
+    if(moved<.02)throw new Error(world+' no desplazó el dinosaurio durante '+clip+' (distancia '+moved+')');
+   }
+  }
   if(pageErrors.length)throw new Error(world+' errores de navegador: '+pageErrors.slice(0,8).join('\n'));
   console.log('PASS',world,JSON.stringify({fps:state.diagnostics.fps,meshes:state.diagnostics.meshes,textures:state.diagnostics.textures,dinosaurs:state.diagnostics.dinosaurs,clips:[...new Set(state.diagnostics.dinoStates.map(d=>d.clip))]}));
   await page.close();
