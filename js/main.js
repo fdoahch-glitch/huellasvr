@@ -11,11 +11,11 @@ const mobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');
 const quality = qualityParam || (mobileDevice || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 3 ? 'media' : 'alta');
 const Q = { alta: 1, media: .6, baja: .3 }[quality] || 1;
 const DINO = {
- atacamatitan:{name:'Atacamatitan',file:'models/atacamatitan.glb',low:'models/lo_atacamatitan.glb',length:14,flip:false,text:'Titanosaurio del Cretácico superior. Sus huesos aparecieron en el desierto de Atacama, cerca de Conchi Viejo.'},
- arackar:{name:'Arackar',file:'models/arackar.glb',low:'models/lo_arackar.glb',length:7,flip:false,text:'Titanosaurio de Atacama. Su nombre viene del kunza, la lengua de los atacameños. El ejemplar hallado medía unos 6 m.'},
- gonkoken:{name:'Gonkoken',file:'models/gonkoken.glb',low:'models/lo_gonkoken.glb',length:4,flip:true,text:'Dinosaurio pico de pato de la Patagonia chilena. Vivió hace unos 71 millones de años y medía entre 3,5 y 4 m.'},
- chilesaurus:{name:'Chilesaurus',file:'models/chilesaurus.glb',low:'models/lo_chilesaurus.glb',length:3,flip:true,text:'Vivió hace unos 147 millones de años y comía plantas. Lo descubrió Diego Suárez, un niño de 7 años.'},
- stegouros:{name:'Stegouros',file:'models/stegouros.glb',low:'models/lo_stegouros.glb',length:2,flip:true,text:'Vivió hace unos 74 millones de años en la Patagonia chilena. Medía cerca de 2 m y su cola tenía siete pares de placas.'}
+ atacamatitan:{name:'Atacamatitan',file:'models/atacamatitan.glb',low:'models/lo_atacamatitan.glb',length:14,forwardYaw:-Math.PI/2,text:'Titanosaurio del Cretácico superior. Sus huesos aparecieron en el desierto de Atacama, cerca de Conchi Viejo.'},
+ arackar:{name:'Arackar',file:'models/arackar.glb',low:'models/lo_arackar.glb',length:7,forwardYaw:Math.PI/2,text:'Titanosaurio de Atacama. Su nombre viene del kunza, la lengua de los atacameños. El ejemplar hallado medía unos 6 m.'},
+ gonkoken:{name:'Gonkoken',file:'models/gonkoken.glb',low:'models/lo_gonkoken.glb',length:4,forwardYaw:-Math.PI/2,text:'Dinosaurio pico de pato de la Patagonia chilena. Vivió hace unos 71 millones de años y medía entre 3,5 y 4 m.'},
+ chilesaurus:{name:'Chilesaurus',file:'models/chilesaurus.glb',low:'models/lo_chilesaurus.glb',length:3,forwardYaw:-Math.PI/2,text:'Vivió hace unos 147 millones de años y comía plantas. Lo descubrió Diego Suárez, un niño de 7 años.'},
+ stegouros:{name:'Stegouros',file:'models/stegouros.glb',low:'models/lo_stegouros.glb',length:2,forwardYaw:-Math.PI/2,text:'Vivió hace unos 74 millones de años en la Patagonia chilena. Medía cerca de 2 m y su cola tenía siete pares de placas.'}
 };
 const WORLDS = {
  valle:{title:'Valle de Huellas',sky:'img/valle.jpg',ground:'img/valle_c.jpg',height:'img/valle_h.png',fog:'#988e78',hemi:'#ffffff',sun:'#fff1d6',dinos:['atacamatitan','arackar','gonkoken','chilesaurus','stegouros'],terrainMeta:[-.4045716,.4045716,-.4901887,.4901887,0,.4671936],terrainWidth:190,trees:55,ferns:40,rocks:40},
@@ -338,27 +338,32 @@ function fitRoot(root,targetLength){
  root.metadata=root.metadata||{};root.metadata.visualPivot=visual;root.metadata.visualScale=scale;root.metadata.visualLength=span*scale;root.metadata.visualHeight=(max.y-min.y)*scale;root.metadata.floorAligned=true;
  return baseYaw;
 }
+function resolveDinoClip(clips,semantic){
+ const target=String(semantic).toLowerCase().replace(/[^a-z]/g,'');
+ const normalized=name=>String(name||'').toLowerCase().replace(/(?:[-_ ]\\d+)+$/,'').replace(/[^a-z]/g,'');
+ return clips.find(group=>normalized(group.name)===target)||clips.find(group=>normalized(group.name).startsWith(target))||null;
+}
 async function spawnDino(id,index,total,center){
  const data=DINO[id],path=(quality==='baja'||index>=5)?data.low:data.file;
  let container;try{container=await loadContainer(path);}catch(e){if(path!==data.file)container=await loadContainer(data.file);else throw e;}
  const root=new BABYLON.TransformNode('dino-'+id+'-'+index,scene);
  const instances=container.instantiateModelsToScene(n=>n+'-'+index,false,{doNotInstantiate:true});
  instances.rootNodes.forEach(n=>n.parent=root);
- const clips=instances.animationGroups||[],idle=clips.find(a=>a.name.toLowerCase()==='idle')||clips[0];
+ const clips=instances.animationGroups||[],idle=resolveDinoClip(clips,'Idle')||clips[0];
  clips.forEach(a=>{if(a!==idle)a.stop();});
- if(idle)idle.start(true);
+ if(idle){idle.start(true);idle.setWeightForAllAnimatables?.(1);}
  root.metadata={dinoId:id};
  const herd=HERD_CONFIG[worldKey],sizes=herd?.sizes||[],baseSize=sizes[index]??(sizes.length?sizes[index%sizes.length]*(.82+((index*37)%17)/70):data.length*(index===0?1:.82+rand(index+2)*.12));
- const targetLength=+baseSize.toFixed(2),baseYaw=fitRoot(root,targetLength);
+ const targetLength=+baseSize.toFixed(2);fitRoot(root,targetLength);const forwardYaw=data.forwardYaw??0;
  const preferred=center||herd?.center||{x:0,z:-15};
  const angle=index*2.4+.7,radius=6+(index%6)*2;
  const seedX=preferred.x+Math.cos(angle)*radius,seedZ=preferred.z+Math.sin(angle)*radius;
  const spot=findFlatDinoPosition(seedX,seedZ,index,6)||findFlatDinoPosition(preferred.x,preferred.z,index);
  if(!spot||!terrainValidAt(spot.x,spot.z))throw new Error('No se encontró suelo firme para '+data.name);
  root.position.set(spot.x,terrainHeightAt(spot.x,spot.z),spot.z);
- root.rotation.y=baseYaw+(data.flip?Math.PI:0);
+ root.rotation.y=forwardYaw;
  root.getChildMeshes().forEach(m=>{m.isPickable=true;m.receiveShadows=true;m.metadata={...(m.metadata||{}),dinoId:id};pickables.push(m);shadowGenerator?.addShadowCaster(m,true);});root.metadata.targetLength=targetLength;
- dinoRoots.push({root,id,length:targetLength,clips,clipName:idle?.name||'',baseYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},herdCenter:{...preferred},heading:rand(index+71)*Math.PI*2,target:null,goal:null,state:'idle',timer:2+rand(index+82)*5,radius:Math.min(4,1.5+rand(index+8)*2),running:false,restLook:false,drankStamp:-1,lastFootstep:0,stepDistance:0,actualSpeed:0,footDistance:0,dustDistance:0,footSide:1,lastFootPos:root.position.clone()});
+ dinoRoots.push({root,id,length:targetLength,clips,clipName:idle?'Idle':'',activeClip:idle||null,transitionFrom:null,transitionElapsed:0,baseYaw:forwardYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},herdCenter:{...preferred},heading:rand(index+71)*Math.PI*2,target:null,goal:null,state:'idle',timer:2+rand(index+82)*5,radius:Math.min(4,1.5+rand(index+8)*2),running:false,restLook:false,drankStamp:-1,lastFootstep:0,stepDistance:0,actualSpeed:0,footDistance:0,dustDistance:0,footSide:1,lastFootPos:root.position.clone()});
  return root;
 }
 const VEGETATION_QUALITY={alta:1,media:.6,baja:.3}[quality]||1;
@@ -463,6 +468,12 @@ function addMountains(){
   aysen:{bands:[[150,205,22],[205,262,52],[258,318,96]],forest:'#3d5a33',forestH:999,forestF:.5,rock:'#4e4f52',rock2:'#3e4044',haze:'#b4babc',seed:41,open:{ang:-Math.PI/2,w:.5,k:[1,.6,0]},volcano:{ang:-1.15,d:250,h:150,rad:125,col:'#3a3634',smoke:1}}
  };
  const M=MTN[key];if(!M)return;
+ const mountainBaseAt=(x,z)=>{
+  if(terrainValidAt(x,z))return terrainHeightAt(x,z);
+  const radius=Math.hypot(x,z)||1,stepX=x/radius,stepZ=z/radius;
+  for(let inward=2;inward<=36;inward+=2){const sx=x-stepX*inward,sz=z-stepZ*inward;if(terrainValidAt(sx,sz))return terrainHeightAt(sx,sz);}
+  return 0;
+ };
  const hash=(x,y)=>{const v=Math.sin(x*127.1+y*311.7+M.seed*74.7)*43758.5453;return v-Math.floor(v);};
  const noise=(x,y)=>{const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);return (hash(xi,yi)*(1-u)+hash(xi+1,yi)*u)*(1-v)+(hash(xi,yi+1)*(1-u)+hash(xi+1,yi+1)*u)*v;};
  const ridged=(x,y,o)=>{let sum=0,amp=.5,freq=1,weight=1;for(let i=0;i<o;i++){let n=1-Math.abs(noise(x*freq,y*freq)*2-1);n*=n;sum+=n*amp*weight;weight=Math.min(1,n*2);freq*=2.03;amp*=.5;}return sum;};
@@ -472,7 +483,7 @@ function addMountains(){
  const positions=new Float32Array(count*3),colors=new Float32Array(count*4),indices=[],heights=new Float32Array(count);
  const strata=M.strata?M.strata.map(c=>BABYLON.Color3.FromHexString(c)):null,rock=BABYLON.Color3.FromHexString(M.rock),rock2=BABYLON.Color3.FromHexString(M.rock2||M.rock),forest=BABYLON.Color3.FromHexString(M.forest);let maxH=0;
  for(let j=0;j<NR;j++){const tr=j/(NR-1),radius=R0+(R1-R0)*Math.pow(tr,.85);
-  for(let i=0;i<=NA;i++){const theta=i/NA*Math.PI*2,x=Math.cos(theta)*radius,z=Math.sin(theta)*radius,k=j*(NA+1)+i;const edgeX=x*150/radius,edgeZ=z*150/radius,edgeY=terrainHeightAt(edgeX,edgeZ),outerBase=edgeY-12*smooth(150,205,radius);let h=radius<=150?terrainHeightAt(x,z):outerBase;
+  for(let i=0;i<=NA;i++){const theta=i/NA*Math.PI*2,x=Math.cos(theta)*radius,z=Math.sin(theta)*radius,k=j*(NA+1)+i;const edgeX=x*150/radius,edgeZ=z*150/radius,edgeY=mountainBaseAt(edgeX,edgeZ),outerBase=edgeY-12*smooth(150,205,radius);let h=radius<=150?mountainBaseAt(x,z):outerBase;
    M.bands.forEach((band,bi)=>{const mid=(band[0]+band[1])*.5,half=(band[1]-band[0])*.5,profile=Math.max(0,1-Math.pow((radius-mid)/(half*1.25),2)),sc=.009+bi*.0015,n=ridged(x*sc+bi*17,z*sc-bi*9,5),big=fbm(x*.004+bi*3,z*.004,2);let amp=band[2]*(.55+big)*n*profile*1.55*smooth(142,174,radius);if(M.open){const d=Math.atan2(Math.sin(theta-M.open.ang),Math.cos(theta-M.open.ang));amp*=1-M.open.k[bi]*Math.exp(-Math.pow(d/M.open.w,2));}h=Math.max(h,h*.4+amp);});
    if(h>0)h=118*Math.tanh(h/118);
    if(M.volcano){const V=M.volcano,vx=Math.cos(V.ang)*V.d,vz=Math.sin(V.ang)*V.d,dist=Math.hypot(x-vx,z-vz);if(dist<V.rad){let cone=V.h*Math.pow(1-dist/V.rad,1.2)*(.92+.16*fbm(x*.05,z*.05,2));if(dist<V.rad*.09)cone-=(V.rad*.09-dist)*.8;h=Math.max(h,cone);}}
@@ -668,9 +679,9 @@ function animateDinos(t,dt){
  const step=Math.min(.05,Math.max(0,dt||0)),herd=HERD_CONFIG[worldKey];
  dinoRoots.forEach((d,index)=>{
   const root=d.root,L=d.length||DINO[d.id].length,profile=({
-   atacamatitan:{walk:.10,run:.50,reverse:false},arackar:{walk:.16,run:.72,reverse:false},
-   gonkoken:{walk:.08,run:1,reverse:false},stegouros:{walk:.22,run:.60,reverse:true},
-   chilesaurus:{walk:.45,run:2.2,reverse:false}
+   atacamatitan:{walk:.10,run:.50,},arackar:{walk:.16,run:.72,},
+   gonkoken:{walk:.08,run:1,},stegouros:{walk:.22,run:.60,},
+   chilesaurus:{walk:.45,run:2.2,}
   })[d.id]||{walk:.1,run:.5,reverse:false};
   if(t<d.lookUntil)d.state='look';
   else if(d.state==='look'){d.state='idle';d.timer=1.5;d.target=null;d.goal=null;d.actualSpeed=0;}
@@ -730,16 +741,15 @@ function animateDinos(t,dt){
   }else if(d.state!=='walk')root.position.y=terrainHeightAt(root.position.x,root.position.z);
   const desired=d.state==='look'||d.state==='drink'||(d.state==='rest'&&d.restLook)?'Neck_Look':d.state==='walk'?(d.running?'Run':'Walk'):'Idle';
   if(d.clipName!==desired){
-   const clip=d.clips.find(a=>a.name.toLowerCase()===desired.toLowerCase());
-   if(clip){d.clips.forEach(a=>{if(a!==clip)a.stop();});clip.start(true);d.clipName=desired;}
+   const clip=resolveDinoClip(d.clips,desired);
+   if(clip&&clip!==d.activeClip){d.transitionFrom=d.activeClip||null;d.transitionElapsed=0;clip.start(true);clip.setWeightForAllAnimatables?.(0);d.activeClip=clip;d.clipName=desired;}
   }
-  const active=d.clips.find(a=>a.name.toLowerCase()===desired.toLowerCase());
-  if(active){
-   const gaitBase=profile[d.running?'run':'walk'];
-   const ratio=d.state==='walk'&&d.actualSpeed>0?Math.max(.35,Math.min(1.5,d.actualSpeed/(L*gaitBase))):1;
-   active.speedRatio=(desired==='Walk'&&profile.reverse?-ratio:ratio);
+  if(d.activeClip){
+   const gaitBase=profile[d.running?'run':'walk']||profile.walk||.1;
+   const ratio=d.state==='walk'&&d.actualSpeed>0?Math.max(.35,Math.min(1.5,d.actualSpeed/(L*gaitBase))):1;d.activeClip.speedRatio=ratio;
+   if(d.transitionFrom){d.transitionElapsed+=step;const blend=Math.min(1,d.transitionElapsed/.24);d.activeClip.setWeightForAllAnimatables?.(blend);d.transitionFrom.setWeightForAllAnimatables?.(1-blend);if(blend>=1){d.transitionFrom.stop();d.transitionFrom=null;d.activeClip.setWeightForAllAnimatables?.(1);}}
   }
-  root.rotation.y=d.heading+d.baseYaw+(DINO[d.id].flip?Math.PI:0);
+  root.rotation.y=d.heading+d.baseYaw;
  });
 }
 async function enterXR(){try{
