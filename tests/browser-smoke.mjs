@@ -84,7 +84,8 @@ try{
    const visual=state.diagnostics.terrain||{};
    if(visual.riverBankMeshes!==0)throw new Error(world+' generó bancos de río que el original v19 desactiva: '+visual.riverBankMeshes);
    if(visual.cloudDomeDiameter<490||visual.cloudDomeDiameter>505)throw new Error(world+' la cúpula de nubes quedó fuera de la esfera del cielo: '+visual.cloudDomeDiameter);
-   if(visual.proceduralForestMeshes<3)throw new Error(world+' no activó el sistema de bosque 3D replicado de v19: '+visual.proceduralForestMeshes);
+   if(visual.proceduralForestMeshes!==0)throw new Error(world+' conserva copas procedurales separadas de sus troncos: '+visual.proceduralForestMeshes);
+   if(!visual.skyDomeVisible||!visual.skyDomeAtCamera)throw new Error(world+' no renderiza el skybox centrado en cámara: '+JSON.stringify({visible:visual.skyDomeVisible,atCamera:visual.skyDomeAtCamera}));
   }
   if(!visualMode){
   const collision=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.collisionCheck?.());if(!collision?.havok||collision.aggregates<1||collision.environmentZones<1||!collision.probeBlocked)throw new Error(world+' no valida colisión con obstáculos: '+JSON.stringify(collision));
