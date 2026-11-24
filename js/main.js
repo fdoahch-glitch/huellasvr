@@ -811,7 +811,7 @@ function choosePlayerApproach(d,index,t){
  if(!camera||t<d.nextCuriosityAt||d.curiosity<.2)return false;
  d.nextCuriosityAt=t+12000+rand(index*227+Math.floor(t/1000))*18000;
  const dx=camera.position.x-d.root.position.x,dz=camera.position.z-d.root.position.z,dist=Math.hypot(dx,dz);
- if(dist<3.5||dist>18)return false;
+ if(dist<3.5||dist>28)return false;
  const active=dinoRoots.filter(a=>a!==d&&a.goal==='approach'&&a.state==='walk'&&a.target&&a.socialUntil>t).length;
  if(active>=(d.juvenile?2:1)||rand(index*233+Math.floor(t/7000))>d.curiosity)return false;
  // El destino se busca con la misma regla en todos los mundos y perfiles.
