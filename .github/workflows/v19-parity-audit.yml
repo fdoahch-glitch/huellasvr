@@ -35,8 +35,7 @@ jobs:
         run: node tests/audit-v19-parity.mjs
       - name: Instalar Playwright y Chromium
         run: |
-          npm init -y
-          npm install --no-audit --no-fund playwright@1.55.0
+          npm install --no-audit --no-fund
           npx playwright install chromium
       - name: Probar los cinco mundos en Chromium con WebGL2
         run: node tests/browser-smoke.mjs
