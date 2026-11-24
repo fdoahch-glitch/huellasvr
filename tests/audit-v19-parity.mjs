@@ -27,11 +27,11 @@ check('Cinco escenas separadas y selección de mundo',()=>{
  }
 });
 const species={
- atacamatitan:{full:'models/atacamatitan.glb',low:'models/lo_atacamatitan.glb',sizes:[10,9.8,9.5,9.2,9,8.8,8.5,8.2,7.5,7,6.5,6,5.5,4.5,4,3.6,3.2,2.8,2.5,2.2,2,1.8],count:22,gait:'walk:.10,run:.50'},
- arackar:{full:'models/arackar.glb',low:'models/lo_arackar.glb',sizes:[8,7.8,7.5,7.2,7,6.8,6.5,6.2,5.5,5.2,5,4.5,4,3.2,2.8,2.5,2.3,2.1,1.9,1.7,1.5,1.3,1.2],count:24,gait:'walk:.16,run:.72'},
- patagonia:{full:'models/gonkoken.glb',low:'models/lo_gonkoken.glb',sizes:[4,3.8,3.6,3.4,3.2,3,2.8,2.6,2.3,2,1.8,1.5,1.3],count:22,gait:'walk:.08,run:1'},
- stegouros:{full:'models/stegouros.glb',low:'models/lo_stegouros.glb',sizes:[2,1.9,1.8,1.7,1.6,1.5,1.4,1.2,1,.9,.8],count:18,gait:'walk:.22,run:.60'},
- aysen:{full:'models/chilesaurus.glb',low:'models/lo_chilesaurus.glb',sizes:[3,2.9,2.8,2.7,2.6,2.5,2.4,2.2,2.1,2,1.9,1.8,1.6,1.5,1.4,1.3,1.2,1.1,1,.9,.8,.7],count:28,gait:'walk:.45,run:2.2'}
+ atacamatitan:{full:'models/atacamatitan.glb',low:'models/lo_atacamatitan.glb',sizes:[10,9.8,9.5,9.2,9,8.8,8.5,8.2,7.5,7,6.5,6,5.5,4.5,4,3.6,3.2,2.8,2.5,2.2,2,1.8],count:12,gait:'walk:.10,run:.50'},
+ arackar:{full:'models/arackar.glb',low:'models/lo_arackar.glb',sizes:[8,7.8,7.5,7.2,7,6.8,6.5,6.2,5.5,5.2,5,4.5,4,3.2,2.8,2.5,2.3,2.1,1.9,1.7,1.5,1.3,1.2],count:13,gait:'walk:.16,run:.72'},
+ patagonia:{full:'models/gonkoken.glb',low:'models/lo_gonkoken.glb',sizes:[4,3.8,3.6,3.4,3.2,3,2.8,2.6,2.3,2,1.8,1.5,1.3],count:12,gait:'walk:.08,run:1'},
+ stegouros:{full:'models/stegouros.glb',low:'models/lo_stegouros.glb',sizes:[2,1.9,1.8,1.7,1.6,1.5,1.4,1.2,1,.9,.8],count:10,gait:'walk:.22,run:.60'},
+ aysen:{full:'models/chilesaurus.glb',low:'models/lo_chilesaurus.glb',sizes:[3,2.9,2.8,2.7,2.6,2.5,2.4,2.2,2.1,2,1.9,1.8,1.6,1.5,1.4,1.3,1.2,1.1,1,.9,.8,.7],count:14,gait:'walk:.45,run:2.2'}
 };
 function glbAnimations(file){
  const b=fs.readFileSync(path.join(root,file));
