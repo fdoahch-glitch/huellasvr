@@ -39,7 +39,7 @@ const worldKey = WORLDS[requested] ? requested : 'valle';
 const WORLD = WORLDS[worldKey];
 let havokInstance=null,physicsPlugin=null,physicsController=null,physicsAggregates=[],environmentCollisionZones=[],physicsReady=false,physicsLastSupport='not-started',skyReady=false,skyError=null,terrainPhotoReady=false,terrainNormalReady=false,terrainTextureError=null;
 let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, visualPipeline=null, ssaoPipeline=null, ssrPipeline=null, volumetricLight=null, environmentTexture=null, environmentReady=false, environmentError=null, particleBackend='cpu', soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, waterGain=null, lightingBase=null, timeMode='dia', skyLife=null, nightInsectGain=null, rainBlend=0, xrGazeActor=null, xrGazeSince=0, xrGazeFired=false;
-let orientationEnabled=false,orientationBase=null,orientationHandler=null,stereoEnabled=false,stereoWakeLock=null,stereoTapTimes=[],cpuUpdateMs=0,cpuUpdateAvgMs=0,renderLoop=null,contextLost=false,renderPausedForVisibility=false,renderLoopStarted=false,particleTextureCache=null,collisionCellSize=12,environmentCollisionGrid=new Map(),dinoCollisionGrid=new Map(),collisionGridReady=false;
+let orientationEnabled=false,orientationBase=null,orientationHandler=null,stereoEnabled=false,stereoWakeLock=null,stereoTapTimes=[],cpuUpdateMs=0,cpuUpdateAvgMs=0,cpuStageMs={player:0,herd:0,dinosaurs:0,footFx:0,environment:0,gaze:0,water:0,total:0},frameTimeSamples=[],lastPerfFrameAt=0,ambientAudioMixKey='',renderLoop=null,contextLost=false,renderPausedForVisibility=false,renderLoopStarted=false,particleTextureCache=null,collisionCellSize=12,environmentCollisionGrid=new Map(),dinoCollisionGrid=new Map(),collisionGridReady=false;
 const setProgress=(v,t)=>{$('progressFill').style.width=Math.round(v*100)+'%';$('loadText').textContent=t;};
 function mat(name,color,rough=.9){const m=new BABYLON.StandardMaterial(name,scene);m.diffuseColor=BABYLON.Color3.FromHexString(color);m.specularColor=new BABYLON.Color3(.08,.08,.08);m.roughness=rough;return m;}
 function tuneVisualMaterials(root,foliage=false){
@@ -264,27 +264,34 @@ const TIME_OF_DAY={
  atardecer:{hemi:.8,sun:.8,sky:[1,.7,.54],hemiColor:'#ffc79a',sunColor:'#ff9a55',fog:'#c88c64',icon:'🌅'},
  noche:{hemi:.3,sun:.12,sky:[.1,.14,.28],hemiColor:'#7a90d4',sunColor:'#8fa4ff',fog:'#0e1526',icon:'🌙'}
 };
+const ENVIRONMENT_COLOR_CACHE={rainFog:BABYLON.Color3.FromHexString('#8d949c'),modes:Object.fromEntries(Object.entries(TIME_OF_DAY).map(([key,value])=>[key,{hemi:value.hemiColor?BABYLON.Color3.FromHexString(value.hemiColor):BABYLON.Color3.FromHexString(WORLD.hemi),sun:value.sunColor?BABYLON.Color3.FromHexString(value.sunColor):BABYLON.Color3.FromHexString(WORLD.sun),fog:value.fog?BABYLON.Color3.FromHexString(value.fog):null,sky:new BABYLON.Color3(...value.sky)}]))};
+const ENVIRONMENT_COLOR_SCRATCH={hemi:new BABYLON.Color3(),sun:new BABYLON.Color3(),skyTarget:new BABYLON.Color3(),sky:new BABYLON.Color3(),fogTarget:new BABYLON.Color3(),fog:new BABYLON.Color3()};
 function cycleTimeOfDay(){
  const modes=Object.keys(TIME_OF_DAY);timeMode=modes[(modes.indexOf(timeMode)+1)%modes.length];
  const button=$('timeButton');if(button)button.textContent=TIME_OF_DAY[timeMode].icon;
 }
+function syncAmbientAudioMix(){
+ if(!audioContext)return;
+ const key=[soundOn,raining,timeMode].join('|');if(key===ambientAudioMixKey)return;
+ if(rainGain)rainGain.gain.setTargetAtTime(raining&&soundOn?.12:0,audioContext.currentTime,.25);
+ if(nightInsectGain)nightInsectGain.gain.setTargetAtTime(timeMode==='noche'&&!raining&&soundOn?.008:0,audioContext.currentTime,.35);
+ if(waterGain)waterGain.gain.setTargetAtTime(((WORLD.rivers||[]).length||(WORLD.lagoons||[]).length)&&soundOn?.12:0,audioContext.currentTime,.6);
+ ambientAudioMixKey=key;
+}
 function updateEnvironment(dt){
  updateSkyLife(dt);
  if(!lightingBase||!hemiLight||!sunLight)return;
- const t=TIME_OF_DAY[timeMode]||TIME_OF_DAY.dia,k=1-Math.exp(-Math.max(0,dt)*2.2);rainBlend+=(Number(raining)-rainBlend)*(1-Math.exp(-Math.max(0,dt)*.8));
+ const t=TIME_OF_DAY[timeMode]||TIME_OF_DAY.dia,c=ENVIRONMENT_COLOR_CACHE.modes[timeMode]||ENVIRONMENT_COLOR_CACHE.modes.dia,k=1-Math.exp(-Math.max(0,dt)*2.2);rainBlend+=(Number(raining)-rainBlend)*(1-Math.exp(-Math.max(0,dt)*.8));
  hemiLight.intensity+=(lightingBase.hemi*t.hemi*(1-.3*rainBlend)-hemiLight.intensity)*k;
  sunLight.intensity+=(lightingBase.sun*t.sun*(1-.6*rainBlend)-sunLight.intensity)*k;
- const hc=t.hemiColor?BABYLON.Color3.FromHexString(t.hemiColor):BABYLON.Color3.FromHexString(WORLD.hemi),sc=t.sunColor?BABYLON.Color3.FromHexString(t.sunColor):BABYLON.Color3.FromHexString(WORLD.sun);
- hemiLight.diffuse=BABYLON.Color3.Lerp(hemiLight.diffuse,hc,k);sunLight.diffuse=BABYLON.Color3.Lerp(sunLight.diffuse,sc,k);
- const skyTarget=new BABYLON.Color3(t.sky[0]*(1-.38*rainBlend),t.sky[1]*(1-.38*rainBlend),t.sky[2]*(1-.3*rainBlend));
- if(skyMaterial)skyMaterial.emissiveColor=BABYLON.Color3.Lerp(skyMaterial.emissiveColor,skyTarget,k);
- const fogTarget=t.fog?BABYLON.Color3.FromHexString(t.fog):lightingBase.fog;
- const rainFog=BABYLON.Color3.FromHexString('#8d949c'),fogWeather=BABYLON.Color3.Lerp(fogTarget,rainFog,rainBlend*.5*(timeMode==='noche'?.2:1));
- scene.fogColor=BABYLON.Color3.Lerp(scene.fogColor,fogWeather,k);
+ BABYLON.Color3.LerpToRef(hemiLight.diffuse,c.hemi,k,ENVIRONMENT_COLOR_SCRATCH.hemi);hemiLight.diffuse.copyFrom(ENVIRONMENT_COLOR_SCRATCH.hemi);
+ BABYLON.Color3.LerpToRef(sunLight.diffuse,c.sun,k,ENVIRONMENT_COLOR_SCRATCH.sun);sunLight.diffuse.copyFrom(ENVIRONMENT_COLOR_SCRATCH.sun);
+ const skyTarget=ENVIRONMENT_COLOR_SCRATCH.skyTarget;skyTarget.r=c.sky.r*(1-.38*rainBlend);skyTarget.g=c.sky.g*(1-.38*rainBlend);skyTarget.b=c.sky.b*(1-.3*rainBlend);
+ if(skyMaterial){BABYLON.Color3.LerpToRef(skyMaterial.emissiveColor,skyTarget,k,ENVIRONMENT_COLOR_SCRATCH.sky);skyMaterial.emissiveColor.copyFrom(ENVIRONMENT_COLOR_SCRATCH.sky);}
+ const fogTarget=c.fog||lightingBase.fog;BABYLON.Color3.LerpToRef(fogTarget,ENVIRONMENT_COLOR_CACHE.rainFog,rainBlend*.5*(timeMode==='noche'?.2:1),ENVIRONMENT_COLOR_SCRATCH.fogTarget);
+ BABYLON.Color3.LerpToRef(scene.fogColor,ENVIRONMENT_COLOR_SCRATCH.fogTarget,k,ENVIRONMENT_COLOR_SCRATCH.fog);scene.fogColor.copyFrom(ENVIRONMENT_COLOR_SCRATCH.fog);
  scene.fogDensity+=(lightingBase.fogDensity*(1+1.4*rainBlend)-scene.fogDensity)*(1-Math.exp(-dt*1.4));
- if(rainGain&&audioContext)rainGain.gain.setTargetAtTime(raining&&soundOn?.12:0,audioContext.currentTime,.25);
- if(nightInsectGain&&audioContext)nightInsectGain.gain.setTargetAtTime(timeMode==='noche'&&!raining&&soundOn?.008:0,audioContext.currentTime,.35);
- if(waterGain&&audioContext)waterGain.gain.setTargetAtTime(((WORLD.rivers||[]).length||(WORLD.lagoons||[]).length)&&soundOn?.12:0,audioContext.currentTime,.6);
+ syncAmbientAudioMix();
  if(rainSystem&&camera){rainSystem.emitter.copyFrom(camera.position);rainSystem.emitter.y+=15;}
 }
 function initAmbientAudio(){
@@ -1052,6 +1059,7 @@ function installDiagnostics(){
    if(BABYLON.EngineInstrumentation){engineInstrumentation=new BABYLON.EngineInstrumentation(engine);engineInstrumentation.captureGPUFrameTime=true;}
   }catch(error){console.warn('[Huellas VR] Instrumentación no disponible:',error);}
  }
+ const percentile=(values,p)=>{if(!values.length)return null;const sorted=values.slice().sort((a,b)=>a-b);return Math.round(sorted[Math.min(sorted.length-1,Math.ceil((p/100)*sorted.length)-1)]*100)/100;};
  const snapshot=()=>{
   const p=physicsController?.getPosition?.()||camera?.position;
   const gpuCounter=engineInstrumentation?.gpuFrameTimeCounter;
@@ -1061,7 +1069,7 @@ function installDiagnostics(){
    textures:engine?.getLoadedTexturesCache?.().length||0,dinosaurs:dinoRoots.length,
    vegetationAssets:assetCache.size,particles:scene?.particleSystems?.length||0,visual:{pipeline:!!visualPipeline,bloom:!!visualPipeline?.bloomEnabled,ssao:!!ssaoPipeline,ssr:!!ssrPipeline&&!!ssrPipeline.isEnabled,volumetric:!!volumetricLight&&!!volumetricLight.isEnabled,environment:!!environmentTexture,environmentReady,environmentError,clearCoat:scene.materials.some(m=>!!m.clearCoat?.isEnabled),foliageSheen:scene.materials.some(m=>!!m.sheen?.isEnabled),thinInstances:scene.meshes.some(m=>m.hasThinInstances),particleBackend,shadowMap:VP.shadow,anisotropy:VP.anisotropy,profile:quality},
    dinoStates:dinoRoots.map(d=>({id:d.id,clip:d.clipName,active:!!d.activeClip,playing:!!d.activeClip?.isPlaying,state:d.state,goal:d.goal,personality:d.personality,juvenile:d.juvenile,socialPartner:d.socialPartner?.root?.name||null,heading:d.heading,speed:d.actualSpeed,target:d.target?{x:+d.target.x.toFixed(2),z:+d.target.z.toFixed(2)}:null,forwardYaw:d.baseYaw,position:{x:+d.root.position.x.toFixed(2),y:+d.root.position.y.toFixed(2),z:+d.root.position.z.toFixed(2)}})),
-   cpuUpdateMs:Math.round(cpuUpdateMs*100)/100,cpuUpdateAvgMs:Math.round(cpuUpdateAvgMs*100)/100,
+   cpuUpdateMs:Math.round(cpuUpdateMs*100)/100,cpuUpdateAvgMs:Math.round(cpuUpdateAvgMs*100)/100,cpuStagesMs:{...cpuStageMs},frameP50Ms:percentile(frameTimeSamples,50),frameP95Ms:percentile(frameTimeSamples,95),frameP99Ms:percentile(frameTimeSamples,99),fps1PercentLow:frameTimeSamples.length?Math.round(1000/Math.max(.01,percentile(frameTimeSamples,95))):null,frameSamples:frameTimeSamples.length,
    frameTimeMs:sceneInstrumentation?.frameTimeCounter?.current??null,renderTimeMs:sceneInstrumentation?.renderTimeCounter?.current??null,physicsTimeMs:sceneInstrumentation?.physicsTimeCounter?.current??null,drawCalls:sceneInstrumentation?.drawCallsCounter?.current??null,
    gpuFrameTimeMs:gpuCounter&&Number.isFinite(gpuCounter.current)?Math.round(gpuCounter.current/1e6*100)/100:null,
    heapMB:performance.memory?Math.round(performance.memory.usedJSHeapSize/1048576):null,
@@ -1145,7 +1153,7 @@ async function init(){
  camera=new BABYLON.UniversalCamera('player-camera',new BABYLON.Vector3(0,1.65,12),scene);camera.minZ=.08;camera.maxZ=320;camera.fov=.92;camera.speed=.35;camera.inertia=.82;camera.angularSensibility=3800;camera.attachControl(canvas,true);camera.keysUp.push(87);camera.keysDown.push(83);camera.keysLeft.push(65);camera.keysRight.push(68);camera.applyGravity=false;camera.checkCollisions=false;camera.ellipsoid=new BABYLON.Vector3(.35,.85,.35);
  initStage='terreno y mapa de altura';setProgress(.08,'Creando el paisaje…');initStage='carga del panorama '+WORLD.sky;await addSky();addSkyLife();addLighting();await addTerrain();camera.position.y=1.65+terrainHeightAt(0,12);initStage='inicialización de Havok Physics V2';await initPhysics();initDinoFootFX();addWater();addSandBars();addMountains();initStage='carga de dinosaurios';setProgress(.2,'Cargando dinosaurios…');
  const ids=WORLD.dinos,totalDinos=10,basePerSpecies=Math.floor(totalDinos/ids.length),extraDinos=totalDinos%ids.length;let loadedDinos=0;for(let speciesIndex=0;speciesIndex<ids.length;speciesIndex++){const id=ids[speciesIndex],herdSize=basePerSpecies+(speciesIndex<extraDinos?1:0);for(let n=0;n<herdSize;n++){initStage='dinosaurio '+id+' ('+(n+1)+'/'+herdSize+')';await spawnDino(id,n,herdSize,null);loadedDinos++;setProgress(.2+.53*loadedDinos/totalDinos,'Cargando '+DINO[id].name+' · '+loadedDinos+'/'+totalDinos+'…');}}
- initStage='vegetación y modelos ambientales';setProgress(.76,'Poblando el paisaje…');await addVegetation();buildEnvironmentCollisionGrid();initStage='bosques y atmósfera';addForest3D();setProgress(.9,'Preparando atmósfera e iluminación…');addParticles();addVisualPipeline();bindControls();scene.onBeforeRenderObservable.add(()=>{const updateStart=performance.now(),now=updateStart,dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;movePlayer(dt);updateHerdMode(dt);animateDinos(now,dt);updateDinoFootFX(dt);updateEnvironment(dt);updateXRGaze();for(const item of waterTextures)item.tex.uOffset=(item.tex.uOffset+dt*item.speed+1)%1;cpuUpdateMs=performance.now()-updateStart;cpuUpdateAvgMs+=(cpuUpdateMs-cpuUpdateAvgMs)*.08;});
+ initStage='vegetación y modelos ambientales';setProgress(.76,'Poblando el paisaje…');await addVegetation();buildEnvironmentCollisionGrid();initStage='bosques y atmósfera';addForest3D();setProgress(.9,'Preparando atmósfera e iluminación…');addParticles();addVisualPipeline();bindControls();scene.onBeforeRenderObservable.add(()=>{const now=performance.now(),debugPerf=params.get('debug')==='1',updateStart=now,dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;if(debugPerf){if(lastPerfFrameAt){frameTimeSamples.push(now-lastPerfFrameAt);if(frameTimeSamples.length>300)frameTimeSamples.shift();}lastPerfFrameAt=now;}let stage=updateStart;movePlayer(dt);if(debugPerf){let mark=performance.now();cpuStageMs.player=mark-stage;stage=mark;}updateHerdMode(dt);if(debugPerf){let mark=performance.now();cpuStageMs.herd=mark-stage;stage=mark;}animateDinos(now,dt);if(debugPerf){let mark=performance.now();cpuStageMs.dinosaurs=mark-stage;stage=mark;}updateDinoFootFX(dt);if(debugPerf){let mark=performance.now();cpuStageMs.footFx=mark-stage;stage=mark;}updateEnvironment(dt);if(debugPerf){let mark=performance.now();cpuStageMs.environment=mark-stage;stage=mark;}updateXRGaze();if(debugPerf){let mark=performance.now();cpuStageMs.gaze=mark-stage;stage=mark;}for(const item of waterTextures)item.tex.uOffset=(item.tex.uOffset+dt*item.speed+1)%1;if(debugPerf){let mark=performance.now();cpuStageMs.water=mark-stage;}cpuUpdateMs=performance.now()-updateStart;cpuUpdateAvgMs+=(cpuUpdateMs-cpuUpdateAvgMs)*.08;if(debugPerf)cpuStageMs.total=cpuUpdateMs;});
  renderLoop=()=>{if(!contextLost&&scene&&scene.activeCamera)scene.render();};if(!renderLoopStarted){engine.runRenderLoop(renderLoop);renderLoopStarted=true;}
  initStage='espera de texturas, shaders y materiales del mundo';setProgress(.96,'Finalizando texturas, iluminación y materiales…');await scene.whenReadyAsync();
   document.addEventListener('visibilitychange',()=>{const inXR=xr?.baseExperience?.state===BABYLON.WebXRState.IN_XR;if(document.hidden&&!inXR){if(!renderPausedForVisibility){engine.stopRenderLoop(renderLoop);renderPausedForVisibility=true;}audioContext?.suspend?.().catch(()=>{});}else{lastTime=0;if(renderPausedForVisibility){engine.runRenderLoop(renderLoop);renderPausedForVisibility=false;}if(audioContext?.state==='suspended')audioContext.resume().catch(()=>{});}});
