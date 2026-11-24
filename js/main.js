@@ -743,6 +743,7 @@ function animateDinos(t,dt){
   if(d.clipName!==desired){
    const clip=resolveDinoClip(d.clips,desired);
    if(clip&&clip!==d.activeClip){if(d.transitionFrom&&d.transitionFrom!==d.activeClip)d.transitionFrom.stop();d.transitionFrom=d.activeClip||null;d.transitionElapsed=0;clip.start(true);clip.setWeightForAllAnimatables?.(0);d.activeClip=clip;d.clipName=desired;}
+   else if(clip===d.activeClip)d.clipName=desired;
   }
   if(d.activeClip){
    const gaitBase=profile[d.running?'run':'walk']||profile.walk||.1;
