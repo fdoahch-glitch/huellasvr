@@ -1104,5 +1104,5 @@ async function init(){
   window.addEventListener('resize',()=>engine.resize());setProgress(1,'¡Mundo listo!');$('startButtons').classList.remove('hidden');
  }catch(err){console.error('Fallo al iniciar Huellas VR en '+initStage,err);const detail=String(err?.stack||err?.message||err).split('\n').slice(0,6).join('\n');$('loadText').style.whiteSpace='pre-wrap';$('loadText').textContent='No se pudo iniciar el mundo ['+initStage+']: '+(err?.message||String(err))+'\n'+detail;$('startButtons').classList.remove('hidden');$('explore').textContent='Volver al inicio';$('visor').disabled=true;$('explore').onclick=()=>{location.href=location.pathname;};}
 }
-window.addEventListener('DOMContentLoaded',init);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
