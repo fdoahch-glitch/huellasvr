@@ -219,3 +219,9 @@ check('Panorama esencial se espera y registra fallos',()=>{
  assert.ok(main.includes('Falló panorama:'));
  assert.ok(main.includes('sky:{ready:skyReady,error:skyError,url:WORLD.sky}'));
 });
+
+check('Mapas del terreno con carga verificada',()=>{
+ assert.ok(main.includes('terrainNormalReady=true'));
+ assert.ok(main.includes('No se pudo cargar el mapa normal'));
+ assert.ok(main.includes('terrain:{photo:terrainPhotoReady,normal:terrainNormalReady,error:terrainTextureError'));
+});
