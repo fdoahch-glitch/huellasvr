@@ -69,7 +69,7 @@ function addSky(){
 function addSkyLife(){
  const anchor=new BABYLON.TransformNode('environment-sky-anchor',scene);
  const cloudTex=new BABYLON.DynamicTexture('moving-cloud-texture',{width:2048,height:512},scene,false,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
- const ctx=cloudTex.getContext();ctx.clearRect(0,0,2048,512);
+ const ctx=cloudTex.getContext();cloudTex.hasAlpha=true;ctx.clearRect(0,0,2048,512);
  let seed=77;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
  for(let i=0;i<46;i++){const x=rnd()*2048,y=65+rnd()*360,w=75+rnd()*190,h=16+rnd()*42;
   for(let k=0;k<7;k++){const px=x+(rnd()-.5)*w,py=y+(rnd()-.5)*h,r=w*(.16+rnd()*.18),g=ctx.createRadialGradient(px,py,1,px,py,r);
