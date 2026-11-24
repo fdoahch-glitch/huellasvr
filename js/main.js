@@ -42,6 +42,18 @@ let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, visualPipe
 let orientationEnabled=false,orientationBase=null,orientationHandler=null,stereoEnabled=false,stereoWakeLock=null,stereoTapTimes=[],cpuUpdateMs=0,cpuUpdateAvgMs=0,renderLoop=null,contextLost=false,renderPausedForVisibility=false;
 const setProgress=(v,t)=>{$('progressFill').style.width=Math.round(v*100)+'%';$('loadText').textContent=t;};
 function mat(name,color,rough=.9){const m=new BABYLON.StandardMaterial(name,scene);m.diffuseColor=BABYLON.Color3.FromHexString(color);m.specularColor=new BABYLON.Color3(.08,.08,.08);m.roughness=rough;return m;}
+function tuneVisualMaterials(root){
+ if(!root?.getChildMeshes)return;
+ for(const mesh of root.getChildMeshes(false)){
+  const materials=mesh.material?.getClassName?.()==='MultiMaterial'?(mesh.material.subMaterials||[]):[mesh.material];
+  for(const material of materials){if(!material)continue;
+   if('roughness' in material)material.roughness=Math.max(material.roughness??.8,.72);
+   if('metallic' in material)material.metallic=Math.min(material.metallic??0,.08);
+   if(material.specularColor)material.specularColor=BABYLON.Color3.Lerp(material.specularColor,new BABYLON.Color3(.12,.12,.12),.22);
+   for(const key of ['albedoTexture','diffuseTexture','bumpTexture','opacityTexture','emissiveTexture','metallicTexture']){const tex=material[key];if(tex&&'anisotropicFilteringLevel' in tex)tex.anisotropicFilteringLevel=Math.min(12,VP.anisotropy);}
+  }
+ }
+}
 function rand(seed){let x=Math.sin(seed*127.1+311.7)*43758.5453;return x-Math.floor(x);}
 function addSky(){
  const sky=BABYLON.MeshBuilder.CreateSphere('sky-dome',{diameter:500,segments:32},scene);sky.isPickable=false;sky.infiniteDistance=true;
@@ -375,7 +387,7 @@ async function spawnDino(id,index,total,center){
  if(idle){idle.start(true);idle.setWeightForAllAnimatables?.(1);}
  root.metadata={dinoId:id};
  const herd=HERD_CONFIG[worldKey],sizes=herd?.sizes||[],sizeIndex=sizes.length>1&&total>1?Math.round(index*(sizes.length-1)/(total-1)):index,baseSize=sizes[sizeIndex]??(sizes.length?sizes[index%sizes.length]*(.82+((index*37)%17)/70):data.length*(index===0?1:.82+rand(index+2)*.12));
- const targetLength=+baseSize.toFixed(2);fitRoot(root,targetLength);const forwardYaw=data.forwardYaw??0;
+ const targetLength=+baseSize.toFixed(2);fitRoot(root,targetLength);tuneVisualMaterials(root);const forwardYaw=data.forwardYaw??0;
  const preferred=center||herd?.center||{x:0,z:-15};
  const angle=index*2.4+.7,radius=6+(index%6)*2;
  const seedX=preferred.x+Math.cos(angle)*radius,seedZ=preferred.z+Math.sin(angle)*radius;
@@ -434,7 +446,7 @@ async function addVegetation(){
    const p=placed[i],instances=container.instantiateModelsToScene(n=>n+'-veg-'+si+'-'+i,false,{doNotInstantiate:false});
    const root=new BABYLON.TransformNode('world-vegetation-'+si+'-'+i,scene);
    const visualPivot=new BABYLON.TransformNode('vegetation-pivot-'+si+'-'+i,scene);visualPivot.parent=root;
-   instances.rootNodes.forEach(node=>node.parent=visualPivot);root.computeWorldMatrix(true);
+   instances.rootNodes.forEach(node=>{node.parent=visualPivot;tuneVisualMaterials(node);});root.computeWorldMatrix(true);
    const meshes=root.getChildMeshes(false);
    if(!dimensions){
     let min=new BABYLON.Vector3(Infinity,Infinity,Infinity),max=new BABYLON.Vector3(-Infinity,-Infinity,-Infinity);
@@ -961,7 +973,7 @@ async function toggleMobileStereo(){
 }
 function updateStereoOrientation(){if(stereoEnabled)$('rotate').classList.toggle('hidden',window.innerHeight<=window.innerWidth);}
 
-function bindControls(){window.addEventListener('resize',updateStereoOrientation);window.addEventListener('orientationchange',updateStereoOrientation);window.addEventListener('keydown',event=>{if(event.key==='Escape'&&stereoEnabled)toggleMobileStereo();});window.addEventListener('touchstart',()=>{if(!stereoEnabled)return;const now=performance.now();stereoTapTimes=stereoTapTimes.filter(t=>now-t<1200);stereoTapTimes.push(now);if(stereoTapTimes.length>=3)toggleMobileStereo();},{passive:true});$('exitHint').onclick=()=>toggleMobileStereo();scene.onPointerObservable.add(pi=>{if(pi.type===BABYLON.PointerEventTypes.POINTERPICK)onPick(pi.pickInfo);});canvas.addEventListener('pointerdown',()=>{if(camera.inputs.attached.pointers){}},{passive:true});$('explore').onclick=()=>startExperience(false);$('visor').onclick=()=>startExperience(true);$('vrButton').onclick=enterXR;$('sensorButton').onclick=toggleMobileOrientation;$('stereoButton').onclick=toggleMobileStereo;$('closeInfo').onclick=closeInfo;$('timeButton').onclick=cycleTimeOfDay;$('rainButton').onclick=()=>{raining=!raining;$('rainButton').textContent=raining?'🌧️':'🌧';if(raining){if(!rainSystem){const rainCapacity=quality==='alta'?900:quality==='media'?520:260;rainSystem=new BABYLON.ParticleSystem('rain',rainCapacity,scene);rainSystem.particleTexture=makeParticleTexture();rainSystem.emitter=new BABYLON.Vector3(0,18,-10);rainSystem.minEmitBox=new BABYLON.Vector3(-55,0,-55);rainSystem.maxEmitBox=new BABYLON.Vector3(55,0,55);rainSystem.color1=new BABYLON.Color4(.65,.75,.9,.5);rainSystem.color2=new BABYLON.Color4(.8,.85,1,.35);rainSystem.minSize=.025;rainSystem.maxSize=.05;rainSystem.minLifeTime=1;rainSystem.maxLifeTime=2;rainSystem.emitRate=quality==='alta'?620:quality==='media'?360:180;rainSystem.direction1=new BABYLON.Vector3(0,-1,0);rainSystem.direction2=new BABYLON.Vector3(.2,-1,.2);rainSystem.minEmitPower=8;rainSystem.maxEmitPower=13;}rainSystem.start();}else rainSystem?.stop();};$('soundButton').onclick=()=>{soundOn=!soundOn;$('soundButton').textContent=soundOn?'🔊':'🔇';if(audioMaster&&audioContext)audioMaster.gain.setTargetAtTime(soundOn?.18:0,audioContext.currentTime,.12);};$('qualityButton').onclick=()=>{const next=quality==='alta'?'media':quality==='media'?'baja':'alta';location.search=new URLSearchParams({...Object.fromEntries(params),q:next}).toString();};$('retrySensors').onclick=()=>enterXR();$('continueTouch').onclick=()=>{$('sensorNotice').classList.add('hidden');};}
+function bindControls(){window.addEventListener('resize',updateStereoOrientation);window.addEventListener('orientationchange',updateStereoOrientation);window.addEventListener('keydown',event=>{if(event.key==='Escape'&&stereoEnabled)toggleMobileStereo();});window.addEventListener('touchstart',()=>{if(!stereoEnabled)return;const now=performance.now();stereoTapTimes=stereoTapTimes.filter(t=>now-t<1200);stereoTapTimes.push(now);if(stereoTapTimes.length>=3)toggleMobileStereo();},{passive:true});$('exitHint').onclick=()=>toggleMobileStereo();scene.onPointerObservable.add(pi=>{if(pi.type===BABYLON.PointerEventTypes.POINTERPICK)onPick(pi.pickInfo);});canvas.addEventListener('pointerdown',()=>{if(camera.inputs.attached.pointers){}},{passive:true});$('explore').onclick=()=>startExperience(false);$('visor').onclick=()=>startExperience(true);$('vrButton').onclick=enterXR;$('sensorButton').onclick=toggleMobileOrientation;$('stereoButton').onclick=toggleMobileStereo;$('closeInfo').onclick=closeInfo;$('timeButton').onclick=cycleTimeOfDay;$('rainButton').onclick=()=>{raining=!raining;$('rainButton').textContent=raining?'🌧️':'🌧';if(raining){if(!rainSystem){const rainCapacity=quality==='alta'?900:quality==='media'?520:260;rainSystem=new BABYLON.ParticleSystem('rain',rainCapacity,scene);rainSystem.particleTexture=makeParticleTexture();rainSystem.emitter=new BABYLON.Vector3(0,18,-10);rainSystem.minEmitBox=new BABYLON.Vector3(-55,0,-55);rainSystem.maxEmitBox=new BABYLON.Vector3(55,0,55);rainSystem.color1=new BABYLON.Color4(.65,.75,.9,.5);rainSystem.color2=new BABYLON.Color4(.8,.85,1,.35);rainSystem.minSize=.025;rainSystem.maxSize=.05;rainSystem.minLifeTime=1;rainSystem.maxLifeTime=2;rainSystem.emitRate=quality==='alta'?620:quality==='media'?360:180;rainSystem.direction1=new BABYLON.Vector3(0,-1,0);rainSystem.direction2=new BABYLON.Vector3(.2,-1,.2);rainSystem.minEmitPower=8;rainSystem.maxEmitPower=13;}rainSystem.start();}else rainSystem?.stop();};$('soundButton').onclick=()=>{soundOn=!soundOn;$('soundButton').textContent=soundOn?'🔊':'🔇';if(audioMaster&&audioContext)audioMaster.gain.setTargetAtTime(soundOn?.18:0,audioContext.currentTime,.12);};$('qualityButton').onclick=()=>{const next=quality==='ultra'?'alta':quality==='alta'?'ultra':quality==='media'?'baja':'media';location.search=new URLSearchParams({...Object.fromEntries(params),q:next}).toString();};$('retrySensors').onclick=()=>enterXR();$('continueTouch').onclick=()=>{$('sensorNotice').classList.add('hidden');};}
 async function startExperience(withVR){$('loader').style.opacity='0';setTimeout(()=>$('loader').classList.add('hidden'),750);$('hud').classList.remove('hidden');$('worldLabel').textContent=WORLD.title;if(withVR)await enterXR();}
 function installDiagnostics(){
  let sceneInstrumentation=null,engineInstrumentation=null;
