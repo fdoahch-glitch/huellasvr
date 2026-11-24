@@ -279,7 +279,8 @@ check('Vegetación 3D utiliza los GLB originales de v19 sin bosque procedural du
  assert.ok(!main.includes('addForest3D();'),'No debe dibujar copas procedurales separadas de sus troncos');
  assert.ok(main.includes('WORLD.forestN?.adult'),'La densidad de araucarias adultas debe conservar la cifra v19');
  assert.ok(main.includes('WORLD.forestN?.young'),'La densidad de araucarias jóvenes debe conservar la cifra v19');
- assert.ok(main.includes("CreateDisc('butterfly-left-"),'Las alas ambientales no deben ser paneles rectangulares');
+ assert.ok(main.includes("CreateSphere('butterfly-left-"),'Las alas ambientales deben usar geometría 3D, no paneles planos');
+ assert.ok(main.includes("z:-18-rnd()*18"),'Las mariposas deben permanecer fuera del primer plano de cámara');
 });
 
 check('Colisión dinámica de dinosaurios con obstáculos y manada',()=>{
