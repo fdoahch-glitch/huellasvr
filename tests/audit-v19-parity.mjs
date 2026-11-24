@@ -34,9 +34,14 @@ const species={
  aysen:{full:'models/chilesaurus.glb',low:'models/lo_chilesaurus.glb',sizes:[3,2.9,2.8,2.7,2.6,2.5,2.4,2.2,2.1,2,1.9,1.8,1.6,1.5,1.4,1.3,1.2,1.1,1,.9,.8,.7],count:28,gait:'walk:.45,run:2.2'}
 };
 function glbAnimations(file){
- const b=fs.readFileSync(path.join(root,file));assert.equal(b.toString('utf8',0,4),'glTF',file+' no es GLB');
+ const b=fs.readFileSync(path.join(root,file));
+ assert.equal(b.toString('utf8',0,4),'glTF',file+' no es GLB');
  let off=12;
-if(type===0x4e4f534a)return JSON.parse(chunk.toString('utf8').replace(/\0+$/,'').trimEnd());}
+ while(off<b.length){
+  const size=b.readUInt32LE(off),type=b.readUInt32LE(off+4);off+=8;
+  const chunk=b.subarray(off,off+size);off+=size;
+  if(type===0x4e4f534a)return JSON.parse(chunk.toString('utf8').replace(/\0+$/,'').trimEnd());
+ }
  throw new Error('GLB sin bloque JSON: '+file);
 }
 check('Todos los modelos de dinosaurio y sus animaciones originales',()=>{
