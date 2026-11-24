@@ -40,6 +40,7 @@ try{
   });
   if(!state.message.includes('¡Mundo listo!'))throw new Error(world+' no inició: '+state.message);
   if(!state.diagnostics)throw new Error(world+' no expuso el diagnóstico');
+  if(!state.diagnostics.physics?.enabled||!state.diagnostics.physics?.controller||state.diagnostics.physics.colliders<1)throw new Error(world+' no inicializó Havok Physics V2: '+JSON.stringify(state.diagnostics.physics));
   if(state.diagnostics.dinosaurs<3)throw new Error(world+' cargó menos de tres dinosaurios');
   if(!state.diagnostics.dinoStates?.length||state.diagnostics.dinoStates.some(d=>!d.active||!d.clip))throw new Error(world+' tiene dinosaurios sin AnimationGroup activo: '+JSON.stringify(state.diagnostics.dinoStates));
   if(state.diagnostics.meshes<10||state.diagnostics.textures<1)throw new Error(world+' no generó mallas/texturas suficientes: '+JSON.stringify(state.diagnostics));
