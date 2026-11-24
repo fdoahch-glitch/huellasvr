@@ -937,17 +937,31 @@ function animateDinos(t,dt){
     else{d.state='idle';d.timer=2+rand(index*131+Math.floor(t))*4;}
     d.target=null;d.running=false;d.actualSpeed=0;
    }else{
-    const desired=Math.atan2(dx,dz);let delta=desired-d.heading;
-    while(delta>Math.PI)delta-=Math.PI*2;while(delta< -Math.PI)delta+=Math.PI*2;
-    d.heading+=Math.sign(delta)*Math.min(Math.abs(delta),1.4*step);
-    const nominal=L*(d.running?profile.run:profile.walk),turnFactor=Math.abs(delta)<.6?1:.45,speed=nominal*turnFactor;
-    const nx=root.position.x+Math.sin(d.heading)*speed*step,nz=root.position.z+Math.cos(d.heading)*speed*step,r=L*.3;
-    const support=[[nx,nz],[nx+Math.sin(d.heading)*r,nz+Math.cos(d.heading)*r],[nx-Math.sin(d.heading)*r,nz-Math.cos(d.heading)*r]];
-    const obstacle=isDinoPositionBlocked(d,nx,nz);if(!obstacle.blocked&&support.every(p=>terrainValidAt(p[0],p[1]))){
-     const heights=support.map(p=>terrainHeightAt(p[0],p[1])),travelled=Math.hypot(nx-root.position.x,nz-root.position.z);
-     root.position.x=nx;root.position.z=nz;root.position.y=Math.min(...heights);d.actualSpeed=step>0?travelled/step:0;
+    const desired=Math.atan2(dx,dz),nominal=L*(d.running?profile.run:profile.walk),r=L*.3;
+    const turnAngles=[0,.22,-.22,.44,-.44,.68,-.68,.94,-.94,1.2,-1.2,1.55,-1.55,Math.PI];
+    let chosenStep=null,lastBlocked=null;
+    for(const offset of turnAngles){
+     const angle=desired+offset,nx=root.position.x+Math.sin(angle)*nominal*step,nz=root.position.z+Math.cos(angle)*nominal*step;
+     const support=[[nx,nz],[nx+Math.sin(angle)*r,nz+Math.cos(angle)*r],[nx-Math.sin(angle)*r,nz-Math.cos(angle)*r]];
+     const obstacle=isDinoPositionBlocked(d,nx,nz);
+     if(obstacle.blocked){lastBlocked=obstacle.kind;continue;}
+     if(!support.every(p=>terrainValidAt(p[0],p[1])))continue;
+     chosenStep={angle,nx,nz,support};break;
+    }
+    if(chosenStep){
+     let delta=chosenStep.angle-d.heading;while(delta>Math.PI)delta-=Math.PI*2;while(delta< -Math.PI)delta+=Math.PI*2;
+     d.heading+=Math.sign(delta)*Math.min(Math.abs(delta),1.8*step);
+     const heights=chosenStep.support.map(p=>terrainHeightAt(p[0],p[1])),travelled=Math.hypot(chosenStep.nx-root.position.x,chosenStep.nz-root.position.z);
+     root.position.x=chosenStep.nx;root.position.z=chosenStep.nz;root.position.y=Math.min(...heights);d.actualSpeed=step>0?travelled/step:0;d.lastCollision=null;
      emitDinoFootFX(d,Math.sin(d.heading),Math.cos(d.heading),travelled);
-    }else{d.state='idle';d.target=null;d.timer=obstacle.blocked?(.25+rand(index*151+Math.floor(t))*.45):2.5;d.actualSpeed=0;d.lastCollision=obstacle.blocked?obstacle.kind:null;}
+    }else{
+     d.actualSpeed=0;d.lastCollision=lastBlocked||'terrain';
+     // Un bloqueo momentáneo no cancela el destino: la IA reintenta con
+     // direcciones alternativas en el siguiente fotograma.
+     d.blockedFrames=(d.blockedFrames||0)+1;
+     if(d.blockedFrames>45){d.state='idle';d.target=null;d.timer=.8;d.blockedFrames=0;}
+    }
+    if(chosenStep)d.blockedFrames=0;
    }
   }else if(d.state!=='walk')root.position.y=terrainHeightAt(root.position.x,root.position.z);
   if(d.state==='look'&&camera){const tx=camera.position.x-root.position.x,tz=camera.position.z-root.position.z;if(Math.hypot(tx,tz)>.1){const face=Math.atan2(tx,tz);let turn=face-d.heading;while(turn>Math.PI)turn-=Math.PI*2;while(turn< -Math.PI)turn+=Math.PI*2;d.heading+=Math.sign(turn)*Math.min(Math.abs(turn),1.8*step);}}
