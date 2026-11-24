@@ -234,3 +234,7 @@ check('Escalones del controlador Havok',()=>{
 check('Mapeo de panoramas por mundo',()=>{
  for(const path of ['atacamatitan_sky.jpg','arackar_sky.jpg','gonkoken_sky.jpg','stegouros_sky.jpg','aysen_sky.jpg'])assert.ok(main.includes(path),'Falta panorama '+path);
 });
+
+check('Instrumentación de diagnóstico',()=>{
+ for(const token of ['new BABYLON.SceneInstrumentation(scene)','new BABYLON.EngineInstrumentation(engine)','drawCallsCounter','gpuFrameTimeCounter','physicsTimeCounter','huellasPerfDiagnostics'])assert.ok(main.includes(token),'Falta '+token);
+});
