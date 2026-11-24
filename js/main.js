@@ -17,12 +17,12 @@ const DINO = {
  stegouros:{name:'Stegouros',file:'models/stegouros.glb',low:'models/lo_stegouros.glb',length:2,flip:true,text:'Vivió hace unos 74 millones de años en la Patagonia chilena. Medía cerca de 2 m y su cola tenía siete pares de placas.'}
 };
 const WORLDS = {
- valle:{title:'Valle de Huellas',sky:'img/valle.jpg',ground:'img/valle_c.jpg',height:'img/valle_h.png',fog:'#a99b7d',hemi:'#d9e7d5',sun:'#fff0cf',dinos:['atacamatitan','arackar','gonkoken','chilesaurus','stegouros'],trees:30,ferns:28,rocks:30,water:'river'},
- atacamatitan:{title:'Atacamatitan · Formación Tolar',sky:'img/atacamatitan_sky.jpg',ground:'img/atacamatitan_c.jpg',height:'img/atacamatitan_h.png',fog:'#c99b70',hemi:'#ffe8cb',sun:'#fff0cf',dinos:['atacamatitan'],trees:7,ferns:20,rocks:46,water:'braided'},
- arackar:{title:'Arackar · Formación Hornitos',sky:'img/arackar_sky.jpg',ground:'img/arackar_c.jpg',height:'img/arackar_h.png',fog:'#c7a27c',hemi:'#ffe2c0',sun:'#ffd59a',dinos:['arackar'],trees:12,ferns:36,rocks:35,water:'lagoon'},
- patagonia:{title:'Gonkoken · Formación Dorotea',sky:'img/gonkoken_sky.jpg',ground:'img/gonkoken_c.jpg',height:'img/gonkoken_h.png',fog:'#aebfc0',hemi:'#e3eee8',sun:'#f5f4e9',dinos:['gonkoken'],trees:48,ferns:65,rocks:18,water:'estuary'},
- stegouros:{title:'Stegouros · Formación Dorotea',sky:'img/stegouros_sky.jpg',ground:'img/stegouros_c.jpg',height:'img/stegouros_h.png',fog:'#a8b59b',hemi:'#e5f0d7',sun:'#fff0d0',dinos:['stegouros'],trees:70,ferns:90,rocks:16,water:'stream'},
- aysen:{title:'Chilesaurus · Formación Toqui',sky:'img/aysen_sky.jpg',ground:'img/aysen_c.jpg',height:'img/aysen_h.png',fog:'#a2aaad',hemi:'#d9e0df',sun:'#f1ead9',dinos:['chilesaurus'],trees:34,ferns:60,rocks:30,water:'braided'}
+ valle:{title:'Valle de Huellas',sky:'img/valle.jpg',ground:'img/valle_c.jpg',height:'img/valle_h.png',fog:'#988e78',hemi:'#ffffff',sun:'#fff1d6',dinos:['atacamatitan','arackar','gonkoken','chilesaurus','stegouros'],terrainMeta:[-.4045716,.4045716,-.4901887,.4901887,0,.4671936],terrainWidth:190,trees:55,ferns:40,rocks:40},
+ atacamatitan:{title:'Atacamatitan · Formación Tolar',sky:'img/atacamatitan_sky.jpg',ground:'img/atacamatitan_c.jpg',height:'img/atacamatitan_h.png',fog:'#d8c2a4',hemi:'#fff0dc',sun:'#fff2d6',dinos:['atacamatitan'],terrainMeta:[-.5,.5,-.5,.5,-.003,.06],terrainWidth:300,rivers:[{pts:[[-160,-34],[-144,-33],[-122,-32],[-99,-30],[-74,-29],[-47,-27],[-18,-27],[10,-29],[35,-33],[60,-35],[88,-34],[121,-32],[160,-30]],w:18},{pts:[[-90,-30],[-76,-34],[-63,-38],[-50,-41],[-30,-43],[-8,-44],[18,-42],[40,-38],[60,-35]],w:7}],lagoons:[],flora:{adult:3,young:5,fern:30,fern2:50,pebble:220,rocks:70,logs:3}},
+ arackar:{title:'Arackar · Formación Hornitos',sky:'img/arackar_sky.jpg',ground:'img/arackar_c.jpg',height:'img/arackar_h.png',fog:'#e2c6a0',hemi:'#ffe6c8',sun:'#ffd9a0',dinos:['arackar'],terrainMeta:[-.5,.5,-.5,.5,-.003,.06],terrainWidth:300,lagoons:[{x:8,z:-31,rx:20,rz:11,rot:0,y:.045},{x:-38,z:-12,rx:7,rz:5,rot:0,y:.045}],flora:{adult:5,young:9,fern:50,fern2:80,pebble:120,rocks:34,logs:3}},
+ patagonia:{title:'Gonkoken · Formación Dorotea',sky:'img/gonkoken_sky.jpg',ground:'img/gonkoken_c.jpg',height:'img/gonkoken_h.png',fog:'#b7c4c6',hemi:'#e4ecec',sun:'#f2f4ff',dinos:['gonkoken'],terrainMeta:[-.5,.5,-.5,.5,-.003,.06],terrainWidth:300,rivers:[{pts:[[-160,46],[-145,41],[-125,34],[-104,27],[-87,21],[-72,16],[-53,9],[-39,1],[-29,-8],[-24,-14],[-18,-26],[-14,-40]],w:9}],lagoons:[{x:0,z:-330,rx:900,rz:300,rot:0,y:.045}],flora:{adult:5,young:7,fern:40,fern2:60,pebble:160,rocks:10,logs:9}},
+ stegouros:{title:'Stegouros · Formación Dorotea',sky:'img/stegouros_sky.jpg',ground:'img/stegouros_c.jpg',height:'img/stegouros_h.png',fog:'#a9b8a0',hemi:'#e6f0d6',sun:'#fff4d8',dinos:['stegouros'],terrainMeta:[-.5,.5,-.5,.5,-.003,.06],terrainWidth:300,rivers:[{pts:[[-160,-6],[-139,-8],[-110,-11],[-81,-13],[-61,-14],[-40,-11],[-24,-9],[-9,-12],[8,-17],[24,-13],[53,-13],[91,-16],[131,-19],[160,-22]],w:5}],lagoons:[],flora:{adult:16,young:26,fern:100,fern2:170,pebble:50,rocks:14,logs:10}},
+ aysen:{title:'Chilesaurus · Formación Toqui',sky:'img/aysen_sky.jpg',ground:'img/aysen_c.jpg',height:'img/aysen_h.png',fog:'#9da2a2',hemi:'#d6d8d4',sun:'#f4ead6',dinos:['chilesaurus'],terrainMeta:[-.5,.5,-.5,.5,-.003,.06],terrainWidth:300,rivers:[{pts:[[-110,160],[-101,140],[-88,111],[-75,82],[-64,60],[-50,37],[-38,18],[-29,4],[-22,-12],[-17,-34],[-16,-40]],w:7},{pts:[[70,160],[65,140],[57,111],[49,82],[42,60],[32,37],[24,18],[20,4],[14,-12],[11,-34],[10,-40]],w:6},{pts:[[-38,18],[-36,12],[-33,7],[-30,0],[-27,-5],[-24,-9],[-22,-12]],w:3.5}],lagoons:[{x:0,z:-125,rx:210,rz:92,rot:0,y:.045}],flora:{adult:9,young:20,fern:90,fern2:150,pebble:75,rocks:22,logs:7}}
 };
 const requested = (params.get('mundo') || 'atacamatitan').toLowerCase();
 const worldKey = WORLDS[requested] ? requested : 'valle';
@@ -36,36 +36,73 @@ function addSky(){
  const m=new BABYLON.StandardMaterial('panorama-sky',scene);m.backFaceCulling=false;m.disableLighting=true;m.emissiveTexture=new BABYLON.Texture(WORLD.sky,scene,false,true);m.emissiveTexture.coordinatesMode=BABYLON.Texture.FIXED_EQUIRECTANGULAR_MODE;m.emissiveColor=new BABYLON.Color3(1,1,1);sky.material=m;sky.rotation.y=Math.PI;return sky;
 }
 function addTerrain(){
- // Los mapas *_h.png originales codifican altura en R+G (16 bits) y máscara válida en B.
- // Babylon CreateGroundFromHeightMap solo lee un canal: por eso aplanaba el relieve original.
- const size=300,N=256;
- return new Promise(resolve=>{
+ const T=WORLD,meta=T.terrainMeta||[-.5,.5,-.5,.5,-.003,.06],width=T.terrainWidth||300;
+ const [mnx,mxx,mnz,mxz,mny,mxy]=meta;
+ return new Promise((resolve,reject)=>{
   const img=new Image();
   img.onload=()=>{
-   const cv=document.createElement('canvas');cv.width=N;cv.height=N;
-   const cx=cv.getContext('2d',{willReadFrequently:true});cx.drawImage(img,0,0,N,N);
-   const px=cx.getImageData(0,0,N,N).data,heights=new Float32Array(N*N),valid=new Uint8Array(N*N);
-   for(let k=0;k<N*N;k++){const packed=px[k*4]*256+px[k*4+1];heights[k]=(packed/65535*.063-.003)*size;valid[k]=px[k*4+2]>127?1:0;}
-   const center=heights[(N>>1)*N+(N>>1)];terrainSamples=heights;terrainResolution=N;terrainSize=size;terrainCenterHeight=center;
-   const positions=[],uvs=[],indices=[],normals=[];
-   for(let j=0;j<N;j++)for(let i=0;i<N;i++){positions.push((i/(N-1)-.5)*size,heights[j*N+i]-center,(j/(N-1)-.5)*size);uvs.push(i/(N-1),1-j/(N-1));}
-   for(let j=0;j<N-1;j++)for(let i=0;i<N-1;i++){const a=j*N+i,b=a+1,c=a+N,d=c+1;if(valid[a]&&valid[b]&&valid[c]&&valid[d])indices.push(a,c,b,b,c,d);}
-   BABYLON.VertexData.ComputeNormals(positions,indices,normals);
-   const mesh=new BABYLON.Mesh('original-photogrammetry-terrain',scene),vd=new BABYLON.VertexData();
+   const N=img.width,H=new Float32Array(N*N),valid=new Uint8Array(N*N);
+   const cv=document.createElement('canvas');cv.width=cv.height=N;
+   const cx=cv.getContext('2d',{willReadFrequently:true});cx.drawImage(img,0,0);
+   const px=cx.getImageData(0,0,N,N).data,S=width/(mxx-mnx),dx=(mxx-mnx)*S/N,dz=(mxz-mnz)*S/N;
+   for(let k=0;k<N*N;k++){H[k]=((px[k*4]*256+px[k*4+1])/65535*(mxy-mny)+mny)*S;valid[k]=px[k*4+2]>127?1:0;}
+   const D=new Uint8Array(N*N),R=14;
+   for(let j=0;j<N;j++)for(let i=0;i<N;i++){
+    if(!valid[j*N+i]){D[j*N+i]=0;continue;}
+    let best=R;
+    for(let r=1;r<=R&&r<best;r++)for(let t=-r;t<=r;t++){
+     const edges=[[i+t,j-r],[i+t,j+r],[i-r,j+t],[i+r,j+t]];
+     for(const [xx,zz] of edges)if(xx<0||zz<0||xx>=N||zz>=N||!valid[zz*N+xx]){best=r;break;}
+    }
+    D[j*N+i]=best;
+   }
+   const slope=(i,j)=>{const l=H[j*N+Math.max(0,i-1)],r=H[j*N+Math.min(N-1,i+1)],u=H[Math.max(0,j-1)*N+i],d=H[Math.min(N-1,j+1)*N+i];return Math.atan(Math.hypot((r-l)/(2*dx),(d-u)/(2*dz)))*57.3;};
+   let bi=N>>1,bj=N>>1,bestScore=-1;const RR=22;
+   for(let j=RR;j<N-RR;j+=4)for(let i=RR;i<N-RR;i+=4){
+    if(D[j*N+i]<12)continue;const h0=H[j*N+i];let score=0,bad=false;
+    for(let oy=-RR;oy<=RR&&!bad;oy+=3)for(let ox=-RR;ox<=RR;ox+=3){
+     if(ox*ox+oy*oy>RR*RR)continue;const k=(j+oy)*N+i+ox;
+     if(!valid[k]){bad=true;break;}if(Math.abs(H[k]-h0)<.9)score++;
+    }
+    if(!bad&&score>bestScore){bestScore=score;bi=i;bj=j;}
+   }
+   const shX=mnx*S+(bi+.5)*dx,shZ=mnz*S+(bj+.5)*dz,shY=H[bj*N+bi];
+   terrainMap={N,S,dx,dz,mnx,mnz,shX,shZ,shY,H,valid,D,width};
+   const cell=(x,z)=>[(x+shX-mnx*S)/dx-.5,(z+shZ-mnz*S)/dz-.5];
+   terrainHeightAt=(x,z)=>{
+    const [fi,fj]=cell(x,z),i=Math.max(0,Math.min(N-2,Math.floor(fi))),j=Math.max(0,Math.min(N-2,Math.floor(fj))),u=Math.max(0,Math.min(1,fi-i)),v=Math.max(0,Math.min(1,fj-j));
+    return H[j*N+i]*(1-u)*(1-v)+H[j*N+i+1]*u*(1-v)+H[(j+1)*N+i]*(1-u)*v+H[(j+1)*N+i+1]*u*v-shY;
+   };
+   terrainValidAt=(x,z)=>{const [fi,fj]=cell(x,z),i=Math.round(fi),j=Math.round(fj);return i>=1&&j>=1&&i<N-1&&j<N-1&&D[j*N+i]>=8&&slope(i,j)<32;};
+   const positions=[],uvs=[],indices=[],id=new Int32Array(N*N).fill(-1);
+   for(let j=0;j<N;j++)for(let i=0;i<N;i++)if(valid[j*N+i]){
+    id[j*N+i]=positions.length/3;
+    positions.push(mnx*S+(i+.5)*dx-shX,H[j*N+i]-shY,mnz*S+(j+.5)*dz-shZ);
+    uvs.push((i+.5)/N,1-(j+.5)/N);
+   }
+   for(let j=0;j<N-1;j++)for(let i=0;i<N-1;i++){
+    const a=id[j*N+i],b=id[j*N+i+1],c=id[(j+1)*N+i],d=id[(j+1)*N+i+1];
+    if(a<0||b<0||c<0||d<0)continue;indices.push(a,c,b,b,c,d);
+   }
+   const normals=[];BABYLON.VertexData.ComputeNormals(positions,indices,normals);
+   const mesh=new BABYLON.Mesh('original-photo-terrain-'+worldKey,scene),vd=new BABYLON.VertexData();
    vd.positions=positions;vd.indices=indices;vd.normals=normals;vd.uvs=uvs;vd.applyToMesh(mesh,true);
    mesh.isPickable=true;mesh.checkCollisions=true;mesh.metadata={ground:true};ground=mesh;pickables.push(mesh);
-   const m=new BABYLON.StandardMaterial('original-terrain-material',scene);
-   m.diffuseTexture=new BABYLON.Texture(WORLD.ground,scene,false,true);
-   m.diffuseTexture.wrapU=m.diffuseTexture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;
-   m.diffuseColor=new BABYLON.Color3(1,1,1);m.specularColor=new BABYLON.Color3(.025,.025,.025);m.roughness=.98;
-   const normalPath=worldKey==='atacamatitan'?'img/tex_sand_n.jpg':worldKey==='arackar'?'img/tex_gsand_n.jpg':worldKey==='stegouros'?'img/tx_leaves_n.jpg':'img/tx_dirt_n.jpg';
-   const normal=new BABYLON.Texture(normalPath,scene,false,true);normal.uScale=normal.vScale=48;normal.wrapU=normal.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;
-   m.bumpTexture=normal;m.bumpTexture.level=.28;mesh.material=m;mesh.refreshBoundingInfo();resolve();
+   const m=new BABYLON.StandardMaterial('photo-terrain-'+worldKey,scene);
+   m.diffuseTexture=new BABYLON.Texture(WORLD.ground,scene,false,true);m.diffuseTexture.wrapU=m.diffuseTexture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;
+   m.diffuseTexture.anisotropicFilteringLevel=8;m.diffuseColor=new BABYLON.Color3(1,1,1);
+   m.specularColor=new BABYLON.Color3(.025,.025,.025);m.roughness=.98;
+   const normalPath=worldKey==='atacamatitan'?'img/tex_redsand_n.jpg':worldKey==='arackar'?'img/tex_crack_n.jpg':worldKey==='patagonia'?'img/tex_dirt_n.jpg':worldKey==='stegouros'?'img/tex_leaves_n.jpg':'img/tex_dirt_n.jpg';
+   const normal=new BABYLON.Texture(normalPath,scene,false,true);normal.wrapU=normal.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;normal.uScale=normal.vScale=55;normal.anisotropicFilteringLevel=8;m.bumpTexture=normal;m.bumpTexture.level=.34;
+   mesh.material=m;mesh.refreshBoundingInfo();resolve();
   };
-  img.onerror=()=>{console.error('No se pudo cargar el mapa de relieve original:',WORLD.height);const fallback=BABYLON.MeshBuilder.CreateGround('terrain-fallback',{width:size,height:size,subdivisions:180},scene);const m=new BABYLON.StandardMaterial('terrain-fallback-material',scene);m.diffuseTexture=new BABYLON.Texture(WORLD.ground,scene);fallback.material=m;fallback.metadata={ground:true};fallback.isPickable=true;ground=fallback;pickables.push(fallback);resolve();};
+  img.onerror=()=>reject(new Error('No se pudo cargar el mapa de relieve '+WORLD.height));
   img.src=WORLD.height;
  });
 }
+let terrainMap=null;
+let terrainHeightAt=(x,z)=>0;
+let terrainValidAt=(x,z)=>true;
 let terrainSamples=null,terrainSize=300,terrainResolution=256,terrainCenterHeight=0;
 function terrainHeightAt(x,z){
  if(!terrainSamples)return 0;
@@ -78,9 +115,25 @@ function terrainHeightAt(x,z){
 
 function addLighting(){const hemi=new BABYLON.HemisphericLight('ambient',new BABYLON.Vector3(0,1,0),scene);hemi.diffuse=BABYLON.Color3.FromHexString(WORLD.hemi);hemi.groundColor=new BABYLON.Color3(.22,.2,.17);hemi.intensity=.82;const sun=new BABYLON.DirectionalLight('sun',new BABYLON.Vector3(-.5,-1,.35),scene);sun.position=new BABYLON.Vector3(-35,55,-20);sun.diffuse=BABYLON.Color3.FromHexString(WORLD.sun);sun.intensity=.9;scene.environmentIntensity=.7;}
 function addWater(){
- const color=worldKey==='arackar'?'#379fa4':worldKey==='atacamatitan'?'#779c9a':worldKey==='aysen'?'#587c88':'#477f78';
- const positions=worldKey==='arackar'?[[8,-27,21,13]]:worldKey==='patagonia'?[[0,-32,55,10]]:[[3,-19,46,5],[20,-30,32,4],[-22,-37,26,3]];
- positions.forEach((p,i)=>{const w=BABYLON.MeshBuilder.CreateGround('water-'+i,{width:p[2],height:p[3],subdivisions:24},scene);w.position.set(p[0],terrainHeightAt(p[0],p[1])+.09+i*.003,p[1]);const wm=new BABYLON.StandardMaterial('water-mat-'+i,scene);wm.diffuseColor=BABYLON.Color3.FromHexString(color);wm.emissiveColor=BABYLON.Color3.FromHexString(color).scale(.12);wm.specularColor=new BABYLON.Color3(.65,.75,.8);wm.alpha=.82;wm.roughness=.16;w.material=wm;w.isPickable=false;});
+ const waterMat=new BABYLON.StandardMaterial('original-water-'+worldKey,scene);
+ waterMat.diffuseColor=BABYLON.Color3.FromHexString(worldKey==='arackar'?'#3fa5a6':worldKey==='atacamatitan'?'#6f9fae':worldKey==='patagonia'?'#4a6f70':worldKey==='stegouros'?'#485c48':'#38535f');
+ waterMat.emissiveColor=waterMat.diffuseColor.scale(.08);waterMat.specularColor=new BABYLON.Color3(.55,.68,.72);waterMat.alpha=.88;waterMat.roughness=.2;
+ const bankMat=new BABYLON.StandardMaterial('original-water-bank-'+worldKey,scene);bankMat.diffuseColor=BABYLON.Color3.FromHexString(worldKey==='atacamatitan'?'#b9784d':worldKey==='arackar'?'#c9ad7b':'#8c927e');bankMat.roughness=1;
+ (WORLD.rivers||[]).forEach((river,index)=>{
+  const pts=river.pts.map(p=>new BABYLON.Vector3(p[0],terrainHeightAt(p[0],p[1])+.11,p[1]));
+  if(pts.length<2)return;
+  const curve=BABYLON.Curve3.CreateCatmullRomSpline(pts,Math.max(24,pts.length*5),false);
+  const path=curve.getPoints(),left=[],right=[];
+  for(let i=0;i<path.length;i++){
+   const prev=path[Math.max(0,i-1)],next=path[Math.min(path.length-1,i+1)],dx=next.x-prev.x,dz=next.z-prev.z,len=Math.hypot(dx,dz)||1,nx=-dz/len,nz=dx/len;
+   const w=river.w*.5;left.push(new BABYLON.Vector3(path[i].x+nx*w,path[i].y,path[i].z+nz*w));right.push(new BABYLON.Vector3(path[i].x-nx*w,path[i].y,path[i].z-nz*w));
+  }
+  const ribbon=BABYLON.MeshBuilder.CreateRibbon('original-river-'+index,{pathArray:[left,right],sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);ribbon.material=waterMat;ribbon.isPickable=false;
+ });
+ (WORLD.lagoons||[]).forEach((l,index)=>{
+  const disk=BABYLON.MeshBuilder.CreateDisc('original-lagoon-'+index,{radius:1,tessellation:96,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);
+  disk.scaling.set(l.rx,1,l.rz);disk.rotation.y=l.rot||0;disk.position.set(l.x,terrainHeightAt(l.x,l.z)+(l.y||.08),l.z);disk.material=waterMat;disk.isPickable=false;
+ });
 }
 async function loadContainer(path){if(assetCache.has(path))return assetCache.get(path);const p=BABYLON.SceneLoader.LoadAssetContainerAsync('',path,scene);assetCache.set(path,p);return p;}
 function fitRoot(root,targetLength){const meshes=root.getChildMeshes(false);let min=new BABYLON.Vector3(Infinity,Infinity,Infinity),max=new BABYLON.Vector3(-Infinity,-Infinity,-Infinity);meshes.forEach(m=>{m.computeWorldMatrix(true);const b=m.getBoundingInfo().boundingBox;min=BABYLON.Vector3.Minimize(min,b.minimumWorld);max=BABYLON.Vector3.Maximize(max,b.maximumWorld);});const sx=max.x-min.x,sz=max.z-min.z,span=Math.max(sx,sz)||1;const scale=targetLength/span;root.scaling.setAll(scale);const baseYaw=sx>sz?Math.PI/2:0;root.rotation.y=baseYaw;root.position.y=-min.y*scale;return baseYaw;}
@@ -164,8 +217,8 @@ async function init(){
  try{engine=new BABYLON.Engine(canvas,true,{disableWebGL2Support:false,doNotHandleContextLost:false,preserveDrawingBuffer:false,stencil:true,antialias:true,adaptToDeviceRatio:true});if(!engine.webGLVersion||engine.webGLVersion<2)throw new Error('Este dispositivo no ofrece WebGL 2.');
  scene=new BABYLON.Scene(engine);scene.clearColor=new BABYLON.Color4(.65,.76,.77,1);scene.collisionsEnabled=true;scene.fogMode=BABYLON.Scene.FOGMODE_EXP2;scene.fogColor=BABYLON.Color3.FromHexString(WORLD.fog);scene.fogDensity=.0038;
  camera=new BABYLON.UniversalCamera('player-camera',new BABYLON.Vector3(0,1.65,12),scene);camera.minZ=.08;camera.maxZ=320;camera.fov=.92;camera.speed=.35;camera.inertia=.82;camera.angularSensibility=3800;camera.attachControl(canvas,true);camera.keysUp.push(87);camera.keysDown.push(83);camera.keysLeft.push(65);camera.keysRight.push(68);camera.applyGravity=false;camera.checkCollisions=true;camera.ellipsoid=new BABYLON.Vector3(.35,.85,.35);
- setProgress(.08,'Creando el paisaje…');addSky();addLighting();await addTerrain();camera.position.y=1.65+terrainHeightAt(0,12);addWater();addMountains();setProgress(.2,'Cargando dinosaurios…');
- const ids=WORLD.dinos,herdSize=worldKey==='valle'?(quality==='baja'?2:4):(quality==='baja'?7:quality==='media'?11:16),totalDinos=ids.length*herdSize;let loadedDinos=0;for(const id of ids){for(let n=0;n<herdSize;n++){await spawnDino(id,n,herdSize,{x:4,z:-4});loadedDinos++;setProgress(.2+.53*loadedDinos/totalDinos,'Cargando '+DINO[id].name+' · '+loadedDinos+'/'+totalDinos+'…');}}
+ setProgress(.08,'Creando el paisaje…');addSky();addLighting();await addTerrain();camera.position.y=1.65+terrainHeightAt(0,12);addWater();setProgress(.2,'Cargando dinosaurios…');
+ const ids=WORLD.dinos,baseHerd={atacamatitan:22,arackar:24,patagonia:22,stegouros:18,aysen:28,valle:5}[worldKey]||5,herdSize=Math.max(3,Math.round(baseHerd*Q)),totalDinos=ids.length*herdSize;let loadedDinos=0;for(const id of ids){for(let n=0;n<herdSize;n++){await spawnDino(id,n,herdSize,{x:4,z:-4});loadedDinos++;setProgress(.2+.53*loadedDinos/totalDinos,'Cargando '+DINO[id].name+' · '+loadedDinos+'/'+totalDinos+'…');}}
  setProgress(.76,'Poblando el paisaje…');await addVegetation();setProgress(.9,'Preparando atmósfera…');addParticles();bindControls();scene.onBeforeRenderObservable.add(()=>{const now=performance.now(),dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;movePlayer(dt);animateDinos(now);});
  engine.runRenderLoop(()=>{if(scene&&scene.activeCamera)scene.render();});window.addEventListener('resize',()=>engine.resize());setProgress(1,'¡Mundo listo!');$('startButtons').classList.remove('hidden');
  }catch(err){console.error(err);$('loadText').textContent='No se pudo iniciar el mundo: '+err.message;$('startButtons').classList.remove('hidden');$('explore').onclick=()=>location.reload();}
