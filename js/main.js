@@ -810,20 +810,30 @@ function installDiagnostics(){
  document.body.appendChild(panel);
  let elapsed=0;scene.onBeforeRenderObservable.add(()=>{
   elapsed+=engine.getDeltaTime();if(elapsed<500)return;elapsed=0;
-  const d=snapshot();panel.textContent='HUELLAS VR · DIAGNÓSTICO\n'+
-   'Mundo: '+d.world+' · Calidad: '+d.quality+'\nFPS: '+d.fps+' · Mallas activas: '+d.activeMeshes+'/'+d.meshes+
-   '\nTexturas: '+d.textures+' · Dinosaurios: '+d.dinosaurs+'\nCPU actualización: '+d.cpuUpdateMs+' ms (media '+d.cpuUpdateAvgMs+' ms) · Partículas: '+d.particles+'\nHeap JS: '+(d.heapMB==null?'N/D':d.heapMB+' MB')+' · XR: '+d.xrState;
+  const d=snapshot();panel.textContent='HUELLAS VR · DIAGNÓSTICO
+'+
+   'Mundo: '+d.world+' · Calidad: '+d.quality+'
+FPS: '+d.fps+' · Mallas activas: '+d.activeMeshes+'/'+d.meshes+
+   '
+Texturas: '+d.textures+' · Dinosaurios: '+d.dinosaurs+'
+CPU actualización: '+d.cpuUpdateMs+' ms (media '+d.cpuUpdateAvgMs+' ms) · Partículas: '+d.particles+'
+Heap JS: '+(d.heapMB==null?'N/D':d.heapMB+' MB')+' · XR: '+d.xrState;
  });
 }
 async function init(){
  if(!params.has('mundo'))return; // La portada no debe crear una escena 3D ni cargar modelos antes de elegir mundo.
- try{engine=new BABYLON.Engine(canvas,true,{disableWebGL2Support:false,doNotHandleContextLost:false,preserveDrawingBuffer:false,stencil:true,antialias:true,adaptToDeviceRatio:true});if(!engine.webGLVersion||engine.webGLVersion<2)throw new Error('Este dispositivo no ofrece WebGL 2.');\n  engine.onContextLostObservable.add(()=>{contextLost=true;lastTime=0;console.warn('WebGL2 perdió el contexto; esperando recuperación del navegador.');});\n  engine.onContextRestoredObservable.add(()=>{contextLost=false;lastTime=0;console.info('Contexto WebGL2 restaurado.');});
+ try{engine=new BABYLON.Engine(canvas,true,{disableWebGL2Support:false,doNotHandleContextLost:false,preserveDrawingBuffer:false,stencil:true,antialias:true,adaptToDeviceRatio:true});if(!engine.webGLVersion||engine.webGLVersion<2)throw new Error('Este dispositivo no ofrece WebGL 2.');
+  engine.onContextLostObservable.add(()=>{contextLost=true;lastTime=0;console.warn('WebGL2 perdió el contexto; esperando recuperación del navegador.');});
+  engine.onContextRestoredObservable.add(()=>{contextLost=false;lastTime=0;console.info('Contexto WebGL2 restaurado.');});
  scene=new BABYLON.Scene(engine);installDiagnostics();scene.clearColor=new BABYLON.Color4(.65,.76,.77,1);scene.collisionsEnabled=true;scene.fogMode=BABYLON.Scene.FOGMODE_EXP2;scene.fogColor=BABYLON.Color3.FromHexString(WORLD.fog);scene.fogDensity=({atacamatitan:.0038,arackar:.0042,patagonia:.0052,stegouros:.0085,aysen:.006,valle:.006}[worldKey]||.0038);
  camera=new BABYLON.UniversalCamera('player-camera',new BABYLON.Vector3(0,1.65,12),scene);camera.minZ=.08;camera.maxZ=320;camera.fov=.92;camera.speed=.35;camera.inertia=.82;camera.angularSensibility=3800;camera.attachControl(canvas,true);camera.keysUp.push(87);camera.keysDown.push(83);camera.keysLeft.push(65);camera.keysRight.push(68);camera.applyGravity=false;camera.checkCollisions=false;camera.ellipsoid=new BABYLON.Vector3(.35,.85,.35);
  setProgress(.08,'Creando el paisaje…');addSky();addSkyLife();addLighting();await addTerrain();initDinoFootFX();camera.position.y=1.65+terrainHeightAt(0,12);addWater();addSandBars();addMountains();setProgress(.2,'Cargando dinosaurios…');
  const ids=WORLD.dinos,baseHerd={atacamatitan:22,arackar:24,patagonia:22,stegouros:18,aysen:28,valle:5}[worldKey]||5,herdSize=Math.max(3,Math.round(baseHerd*Q)),totalDinos=ids.length*herdSize;let loadedDinos=0;for(const id of ids){for(let n=0;n<herdSize;n++){await spawnDino(id,n,herdSize,null);loadedDinos++;setProgress(.2+.53*loadedDinos/totalDinos,'Cargando '+DINO[id].name+' · '+loadedDinos+'/'+totalDinos+'…');}}
  setProgress(.76,'Poblando el paisaje…');await addVegetation();addForest3D();setProgress(.9,'Preparando atmósfera…');addParticles();bindControls();scene.onBeforeRenderObservable.add(()=>{const updateStart=performance.now(),now=updateStart,dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;movePlayer(dt);updateHerdMode(dt);animateDinos(now,dt);updateDinoFootFX(dt);updateEnvironment(dt);updateXRGaze();for(const item of waterTextures)item.tex.uOffset=(item.tex.uOffset+dt*item.speed+1)%1;cpuUpdateMs=performance.now()-updateStart;cpuUpdateAvgMs+=(cpuUpdateMs-cpuUpdateAvgMs)*.08;});
- renderLoop=()=>{if(!contextLost&&scene&&scene.activeCamera)scene.render();};engine.runRenderLoop(renderLoop);\n  document.addEventListener('visibilitychange',()=>{const inXR=xr?.baseExperience?.state===BABYLON.WebXRState.IN_XR;if(document.hidden&&!inXR){if(!renderPausedForVisibility){engine.stopRenderLoop(renderLoop);renderPausedForVisibility=true;}audioContext?.suspend?.().catch(()=>{});}else{lastTime=0;if(renderPausedForVisibility){engine.runRenderLoop(renderLoop);renderPausedForVisibility=false;}if(audioContext?.state==='suspended')audioContext.resume().catch(()=>{});}});\n  window.addEventListener('pagehide',()=>{if(xr?.baseExperience?.state!==BABYLON.WebXRState.IN_XR)audioContext?.suspend?.().catch(()=>{});});window.addEventListener('pageshow',()=>{lastTime=0;if(!document.hidden&&renderPausedForVisibility){engine.runRenderLoop(renderLoop);renderPausedForVisibility=false;}});\n  window.addEventListener('resize',()=>engine.resize());setProgress(1,'¡Mundo listo!');$('startButtons').classList.remove('hidden');
+ renderLoop=()=>{if(!contextLost&&scene&&scene.activeCamera)scene.render();};engine.runRenderLoop(renderLoop);
+  document.addEventListener('visibilitychange',()=>{const inXR=xr?.baseExperience?.state===BABYLON.WebXRState.IN_XR;if(document.hidden&&!inXR){if(!renderPausedForVisibility){engine.stopRenderLoop(renderLoop);renderPausedForVisibility=true;}audioContext?.suspend?.().catch(()=>{});}else{lastTime=0;if(renderPausedForVisibility){engine.runRenderLoop(renderLoop);renderPausedForVisibility=false;}if(audioContext?.state==='suspended')audioContext.resume().catch(()=>{});}});
+  window.addEventListener('pagehide',()=>{if(xr?.baseExperience?.state!==BABYLON.WebXRState.IN_XR)audioContext?.suspend?.().catch(()=>{});});window.addEventListener('pageshow',()=>{lastTime=0;if(!document.hidden&&renderPausedForVisibility){engine.runRenderLoop(renderLoop);renderPausedForVisibility=false;}});
+  window.addEventListener('resize',()=>engine.resize());setProgress(1,'¡Mundo listo!');$('startButtons').classList.remove('hidden');
  }catch(err){console.error(err);$('loadText').textContent='No se pudo iniciar el mundo: '+err.message;$('startButtons').classList.remove('hidden');$('explore').textContent='Volver al inicio';$('visor').disabled=true;$('explore').onclick=()=>{location.href=location.pathname;};}
 }
 window.addEventListener('DOMContentLoaded',init);
