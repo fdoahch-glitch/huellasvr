@@ -90,11 +90,11 @@ function addTerrain(){
    mesh.isPickable=true;mesh.checkCollisions=true;mesh.metadata={ground:true};ground=mesh;pickables.push(mesh);
    const m=new BABYLON.StandardMaterial('photo-terrain-'+worldKey,scene);
    const detailProfiles={
-    atacamatitan:{sand:'img/tex_sand_d.jpg',gravel:'img/tx_stones_d.jpg',crack:'img/tx_stones_d.jpg'},
-    arackar:{sand:'img/tex_crack_d.jpg',gravel:'img/tex_gsand_d.jpg',crack:'img/tx_stones_d.jpg'},
-    patagonia:{sand:'img/tx_dirt_d.jpg',gravel:'img/tex_gsand_d.jpg',crack:'img/tex_gsand_d.jpg'},
-    stegouros:{sand:'img/tx_leaves_d.jpg',gravel:'img/tx_redplants_d.jpg',crack:'img/tx_stones_d.jpg'},
-    aysen:{sand:'img/tx_dirt_d.jpg',gravel:'img/tx_stones_d.jpg',crack:'img/tx_stones_d.jpg'}
+    atacamatitan:{sand:'img/tex_sand_d.jpg',gravel:'img/tx_stones_d.jpg',crack:'img/tx_stones_d.jpg',normal:'img/tex_sand_n.jpg',size:2.4},
+    arackar:{sand:'img/tex_crack_d.jpg',gravel:'img/tex_gsand_d.jpg',crack:'img/tx_stones_d.jpg',normal:'img/tex_gsand_n.jpg',size:2.2},
+    patagonia:{sand:'img/tx_dirt_d.jpg',gravel:'img/tex_gsand_d.jpg',crack:'img/tex_gsand_d.jpg',normal:'img/tx_dirt_n.jpg',size:3},
+    stegouros:{sand:'img/tx_leaves_d.jpg',gravel:'img/tx_redplants_d.jpg',crack:'img/tx_stones_d.jpg',normal:'img/tx_leaves_n.jpg',size:2.4},
+    aysen:{sand:'img/tx_dirt_d.jpg',gravel:'img/tx_stones_d.jpg',crack:'img/tx_stones_d.jpg',normal:'img/tx_dirt_n.jpg',size:3}
    }[worldKey];
    const compositeCanvas=document.createElement('canvas');compositeCanvas.width=compositeCanvas.height=2048;
    const cc=compositeCanvas.getContext('2d',{alpha:false});
@@ -107,8 +107,7 @@ function addTerrain(){
      compositeTexture.wrapU=compositeTexture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;compositeTexture.anisotropicFilteringLevel=8;
      m.diffuseTexture=compositeTexture;m.diffuseColor=new BABYLON.Color3(1,1,1);
      m.specularColor=new BABYLON.Color3(.025,.025,.025);m.roughness=.98;
-     const normalPath=worldKey==='atacamatitan'?'img/tex_sand_n.jpg':worldKey==='arackar'?'img/tex_gsand_n.jpg':worldKey==='stegouros'?'img/tx_leaves_n.jpg':'img/tx_dirt_n.jpg';
-     const normal=new BABYLON.Texture(normalPath,scene,false,true);normal.wrapU=normal.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;normal.uScale=normal.vScale=55;normal.anisotropicFilteringLevel=8;m.bumpTexture=normal;m.bumpTexture.level=.34;
+     const normal=new BABYLON.Texture(detailProfiles?.normal||'img/tx_dirt_n.jpg',scene,false,true);normal.wrapU=normal.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;normal.uScale=normal.vScale=300/(detailProfiles?.size||3);normal.anisotropicFilteringLevel=8;m.bumpTexture=normal;m.bumpTexture.level=.7;
      mesh.material=m;mesh.refreshBoundingInfo();resolve();
     };
     if(!detailProfiles){finish();return;}
