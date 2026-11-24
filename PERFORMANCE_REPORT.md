@@ -39,6 +39,10 @@ La ejecución automatizada `45348814252` abrió los cinco mundos con perfil `baj
 | Stegouros | 10 | 794 | 51 | 5 |
 | Aysén | 8 | 934 | 55 | 8 |
 
+## Observación adicional con panel debug habilitado
+
+Las capturas de `45350786896` registraron aproximadamente 2–5 FPS y 400–735 ms de GPU por frame en Chromium/SwiftShader con el panel de instrumentación activado. Es una carga de renderizado software y el panel añade instrumentación; no es un resultado representativo de Android/PC con GPU física. Sí confirma que el modo de prueba headless no sirve para evaluar el objetivo de 60 FPS.
+
 ## Costes añadidos que requieren medición
 
 - La máscara de pendiente/distancia se calcula sobre una cuadrícula de 256×256 texels durante la composición inicial del terreno. Debe medirse el tiempo CPU de arranque en Android.
