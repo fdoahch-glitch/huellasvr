@@ -329,7 +329,7 @@ check('LOD dinámico por distancia, modelos dobles y animaciones adaptativas',()
  assert.doesNotMatch(main,/index\s*>=\s*5/);
 });
 check('IA de bebida precalculada y cuadrícula espacial reutilizable',()=>{
- for(const token of ['function buildHerdDrinkPoints()','function herdDrinkTarget(d,index)','herdDrinkPoints=points','for(const bucket of dinoCollisionGrid.values())bucket.length=0','function buildEnvironmentCollisionGrid()','function nearbyGridItems('])assert.ok(main.includes(token),'Falta optimización CPU '+token);
+ for(const token of ['function buildHerdDrinkPoints()','function herdDrinkTarget(d,index)','herdDrinkPoints=points','dinoCollisionBucketPool.push(bucket)','function buildEnvironmentCollisionGrid()','function nearbyGridItems('])assert.ok(main.includes(token),'Falta optimización CPU '+token);
 });
 check('Preparación completa del mundo antes de habilitar la experiencia',()=>{
  assert.ok(main.includes('await scene.whenReadyAsync()'),'La carga no espera texturas y materiales');
