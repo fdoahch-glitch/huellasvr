@@ -58,47 +58,26 @@ function tuneVisualMaterials(root,foliage=false){
 function rand(seed){let x=Math.sin(seed*127.1+311.7)*43758.5453;return x-Math.floor(x);}
 function addSky(){
  const sky=BABYLON.MeshBuilder.CreateSphere('sky-dome',{diameter:500,segments:48},scene);
- sky.isPickable=false;sky.infiniteDistance=true;sky.rotation.y=(WORLD.panoRot??23)*Math.PI/180;
+ sky.isPickable=false;sky.infiniteDistance=true;
+ sky.rotation.y=(WORLD.panoRot??180)*Math.PI/180;
  const skyTint=({atacamatitan:[1.02,1,.96],arackar:[1,.97,.92],patagonia:[.9,.95,1],stegouros:[.93,1,.95],aysen:[.96,.98,1]}[worldKey]||[1,1,1]);
- BABYLON.Effect.ShadersStore.huellasPanoramaVertexShader=`
- precision highp float;
- attribute vec3 position;
- uniform mat4 world;
- uniform mat4 worldViewProjection;
- varying vec3 vPanoramaDirection;
- void main(void){
-  vPanoramaDirection=normalize((world*vec4(position,0.0)).xyz);
-  gl_Position=worldViewProjection*vec4(position,1.0);
- }`;
- BABYLON.Effect.ShadersStore.huellasPanoramaFragmentShader=`
- precision highp float;
- varying vec3 vPanoramaDirection;
- uniform sampler2D panoramaSampler;
- uniform vec3 panoramaTint;
- uniform vec2 panoramaShift;
- void main(void){
-  vec3 d=normalize(vPanoramaDirection);
-  float u=atan(d.z,d.x)*0.15915494309189535+0.5+panoramaShift.x;
-  float v=0.5-asin(clamp(d.y,-1.0,1.0))*0.3183098861837907+panoramaShift.y;
-  vec3 color=texture2D(panoramaSampler,vec2(fract(u),clamp(v,0.0,1.0))).rgb;
-  gl_FragColor=vec4(color*panoramaTint,1.0);
- }`;
- const m=new BABYLON.ShaderMaterial('panorama-sky-shader',scene,'huellasPanorama',{attributes:['position'],uniforms:['world','worldViewProjection','panoramaTint','panoramaShift'],samplers:['panoramaSampler']});
- m.backFaceCulling=false;m.disableDepthWrite=true;m.fogEnabled=false;
- m.setVector3('panoramaTint',new BABYLON.Vector3(...skyTint));
- m.setVector2('panoramaShift',new BABYLON.Vector2(WORLD.panoShift?.[0]||0,WORLD.panoShift?.[1]||0));
+ const m=new BABYLON.StandardMaterial('panorama-sky-material',scene);
+ m.backFaceCulling=false;m.disableLighting=true;m.fogEnabled=false;
+ m.emissiveColor=new BABYLON.Color3(...skyTint);
+ m.disableDepthWrite=true;
  sky.material=m;skyMaterial=m;
  return new Promise((resolve,reject)=>{
   const pano=new BABYLON.Texture(WORLD.sky,scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE,()=>{
-   skyReady=true;skyError=null;m.setTexture('panoramaSampler',pano);pano.anisotropicFilteringLevel=8;
+   pano.coordinatesMode=BABYLON.Texture.FIXED_EQUIRECTANGULAR_MODE;
    pano.wrapU=BABYLON.Texture.WRAP_ADDRESSMODE;pano.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;
+   pano.anisotropicFilteringLevel=Math.min(8,VP.anisotropy||8);
+   m.emissiveTexture=pano;skyReady=true;skyError=null;
    console.info('[Huellas VR] Panorama equirectangular listo:',WORLD.sky);resolve(sky);
   },(message,exception)=>{
    skyReady=false;skyError=String(message||exception||'error desconocido');
    console.error('[Huellas VR] Falló panorama:',WORLD.sky,skyError);
    reject(new Error('No se pudo cargar el panorama esencial '+WORLD.sky+': '+skyError));
   });
-  m.setTexture('panoramaSampler',pano);
  });
 }
 function addSkyLife(){
