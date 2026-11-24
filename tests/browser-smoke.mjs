@@ -66,6 +66,7 @@ try{
   const herdCheck=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.dinoBehaviorCheck?.());
   if(!herdCheck||herdCheck.count!==state.diagnostics.dinosaurs||herdCheck.overlaps!==0)throw new Error(world+' presenta superposición entre dinosaurios al iniciar: '+JSON.stringify(herdCheck));
   if(!state.diagnostics.dinoStates.every(d=>d.personality&&typeof d.juvenile==='boolean'))throw new Error(world+' no asignó personalidad/edad a cada dinosaurio');
+  if(!state.diagnostics.dinoStates.some(d=>d.juvenile))throw new Error(world+' no incluyó juveniles en la manada reducida: '+JSON.stringify(state.diagnostics.dinoStates.map(d=>({id:d.id,length:d.length,juvenile:d.juvenile}))));
   const socialCheck=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.exerciseSocial?.());
   const approachCheck=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.exercisePlayerApproach?.());
   if(!socialCheck?.started)throw new Error(world+' no pudo iniciar una interacción entre dinosaurios: '+JSON.stringify(socialCheck));
