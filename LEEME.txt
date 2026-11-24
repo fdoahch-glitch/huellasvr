@@ -15,7 +15,17 @@ CONTROLES
 - Móvil: arrastrar para mirar; tocar el terreno para caminar; tocar un dinosaurio para abrir su ficha.
 - VR: botón VR; requiere HTTPS, navegador compatible con WebXR y visor compatible.
 
+DEPENDENCIAS LOCALES (SIN CDN)
+- Babylon.js 9.37.2: vendor/babylon/babylon.js.
+- Cargadores glTF/GLB 9.37.2: vendor/babylon/babylonjs.loaders.min.js.
+- Havok 1.3.14: vendor/babylon/havok/HavokPhysics_umd.js y HavokPhysics.wasm.
+- La aplicación no solicita el motor, los cargadores ni Havok a servidores CDN.
+- Los archivos se versionan en el repositorio; no se descargan al elegir un mundo.
+- Para regenerar el paquete local: npm install y npm run vendor:babylon.
+- Se conservan las licencias de cada dependencia en vendor/babylon/licenses/.
+
 ESTRUCTURA DE RECURSOS
+vendor/babylon/ motor Babylon.js, cargadores y Havok locales.
 img/       panoramas, texturas y mapas de altura originales.
 models/    modelos GLB originales, dinosaurios y vegetación.
 css/       interfaz.
