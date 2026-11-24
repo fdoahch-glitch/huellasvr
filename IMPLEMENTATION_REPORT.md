@@ -14,9 +14,10 @@
 8. **Locomoción y spawn:** se amplió el radio de terreno válido al colocar cada dinosaurio para que el área de apoyo sea coherente con su tamaño; el radio fijo anterior podía permitir un spawn que luego fallaba al intentar caminar.
 9. **Diagnóstico y pruebas:** el panel expone estado de animación, orientación, posición y estado Havok. Se añadió un API de prueba activado solo con `?test=1` para probar los cuatro clips y desplazamiento de Walk/Run.
 10. **Pruebas reales de navegador:** GitHub Actions instaló Chromium y Playwright en Ubuntu 24.04; la ejecución `45348814252` terminó correctamente y cargó los cinco mundos con WebGL2/SwiftShader, Havok, dinosaurios y sus clips.
-11. **Material del terreno:** se incorporó una máscara de detalle por pendiente estimada desde el heightmap y una atenuación aproximada por distancia desde la cámara inicial. No reemplaza todavía el shader v19 dinámico ni la mezcla por altura.
-12. **Colisiones ambientales:** se agregaron colisionadores cilíndricos simplificados y limitados para araucarias adultas, troncos grandes y rocas grandes. La cantidad se limita por grupo para no convertir cada hoja/helecho en un cuerpo físico.
-13. **WebXR:** el movimiento de la cámara XR se sincroniza con el controlador Havok para aplicar el desplazamiento mediante la consulta física. Esta ruta no se ha validado en un visor físico.
+11. **Domo del panorama:** se detectó por captura que el domo original de diámetro 900 quedaba fuera de `camera.maxZ=320`; se redujo a diámetro 500 para que el panorama quede dentro del plano lejano.
+12. **Material del terreno:** se incorporó una máscara de detalle por pendiente estimada desde el heightmap y una atenuación aproximada por distancia desde la cámara inicial. No reemplaza todavía el shader v19 dinámico ni la mezcla por altura.
+13. **Colisiones ambientales:** se agregaron colisionadores cilíndricos simplificados y limitados para araucarias adultas, troncos grandes y rocas grandes. La cantidad se limita por grupo para no convertir cada hoja/helecho en un cuerpo físico.
+14. **WebXR:** el movimiento de la cámara XR se sincroniza con el controlador Havok para aplicar el desplazamiento mediante la consulta física. Esta ruta no se ha validado en un visor físico.
 
 ## Commits aplicados
 
