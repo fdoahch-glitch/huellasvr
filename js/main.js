@@ -251,7 +251,7 @@ async function spawnDino(id,index,total,center){
  root.position.set(spot.x,terrainHeightAt(spot.x,spot.z),spot.z);
  root.rotation.y=baseYaw+(data.flip?Math.PI:0);
  root.getChildMeshes().forEach(m=>{m.isPickable=true;m.receiveShadows=true;m.metadata={...(m.metadata||{}),dinoId:id};pickables.push(m);shadowGenerator?.addShadowCaster(m,true);});root.metadata.targetLength=targetLength;
- dinoRoots.push({root,id,clips,clipName:idle?.name||'',baseYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},herdCenter:{...preferred},heading:rand(index+71)*Math.PI*2,target:null,goal:null,state:'idle',timer:2+rand(index+82)*5,radius:Math.min(4,1.5+rand(index+8)*2),running:false,restLook:false,drankStamp:-1,lastFootstep:0,stepDistance:0,actualSpeed:0,footDistance:0,dustDistance:0,footSide:1,lastFootPos:root.position.clone()});
+ dinoRoots.push({root,id,length:targetLength,clips,clipName:idle?.name||'',baseYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},herdCenter:{...preferred},heading:rand(index+71)*Math.PI*2,target:null,goal:null,state:'idle',timer:2+rand(index+82)*5,radius:Math.min(4,1.5+rand(index+8)*2),running:false,restLook:false,drankStamp:-1,lastFootstep:0,stepDistance:0,actualSpeed:0,footDistance:0,dustDistance:0,footSide:1,lastFootPos:root.position.clone()});
  return root;
 }
 const VEGETATION_QUALITY={alta:1,media:.6,baja:.3}[quality]||1;
@@ -477,7 +477,7 @@ function updateDinoFootFX(dt){
  for(const p of dinoFootFX.dust){if(!p.active)continue;p.age+=dt;const k=p.age/p.life;if(k>=1){p.active=false;p.mesh.isVisible=false;p.mesh.visibility=0;continue;}p.mesh.position.y+=dt*.35;const scale=p.size*(.6+k*1.8);p.mesh.scaling.set(scale,scale,1);p.mesh.visibility=.55*(1-k)*(k<.1?k*10:1);}
 }
 function emitDinoFootFX(d,dx,dz,travelled){
- const L=DINO[d.id].length,groundY=terrainHeightAt(d.root.position.x,d.root.position.z),len=Math.hypot(dx,dz)||1;
+ const L=d.length||DINO[d.id].length,groundY=terrainHeightAt(d.root.position.x,d.root.position.z),len=Math.hypot(dx,dz)||1;
  d.footDistance=(d.footDistance||0)+travelled;d.dustDistance=(d.dustDistance||0)+travelled;
  if(d.footDistance>Math.max(.45,L*.32)){
   d.footDistance=0;d.footSide*=-1;const side=d.footSide*L*.09;
@@ -488,7 +488,7 @@ function emitDinoFootFX(d,dx,dz,travelled){
   d.dustDistance=0;emitGroundDust(d.root.position.x,groundY,d.root.position.z,Math.max(.5,L*.16));
  }
 }
-let herdMode='graze',herdStamp=0,herdModeTimer=28;
+let herdMode='graze',herdStamp=0,herdModeTimer=10;
 function updateHerdMode(dt){
  const config=HERD_CONFIG[worldKey];if(!config)return;
  herdModeTimer-=dt;if(herdModeTimer>0)return;
@@ -507,7 +507,7 @@ function herdDrinkTarget(d,index){
 function animateDinos(t,dt){
  const step=Math.min(.05,Math.max(0,dt||0)),herd=HERD_CONFIG[worldKey];
  dinoRoots.forEach((d,index)=>{
-  const root=d.root,L=DINO[d.id].length,profile=({
+  const root=d.root,L=d.length||DINO[d.id].length,profile=({
    atacamatitan:{walk:.10,run:.50,reverse:false},arackar:{walk:.16,run:.72,reverse:false},
    gonkoken:{walk:.08,run:1,reverse:false},stegouros:{walk:.22,run:.60,reverse:true},
    chilesaurus:{walk:.45,run:2.2,reverse:false}
