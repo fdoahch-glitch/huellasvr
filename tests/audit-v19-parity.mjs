@@ -184,6 +184,16 @@ check('Base de montañas busca terreno válido antes de interpolar',()=>{
  assert.ok(main.includes('edgeY=mountainBaseAt(edgeX,edgeZ)'));
 });
 
+check('La manada conserva adultos y juveniles en todos los niveles de calidad',()=>{
+ assert.ok(main.includes('sizeIndex=sizes.length>1&&total>1?Math.round(index*(sizes.length-1)/(total-1)):index'));
+ assert.ok(main.includes('const juvenile=targetLength<=data.length*.58'));
+});
+check('Los temporizadores de descanso y bebida se descuentan una sola vez por fotograma',()=>{
+ const start=main.indexOf("if(d.state==='graze'||d.state==='drink'||d.state==='rest')");
+ const end=main.indexOf("if(t<d.lookUntil)",start);
+ const segment=main.slice(start,end);
+ assert.equal((segment.match(/d\.timer-=step/g)||[]).length,1,'Temporizador doble para drink/rest/graze');
+});
 check('IA ecológica: personalidades, separación y respuestas sociales',()=>{
  for(const token of ['function dinoSpacingRadius','function choosePlayerApproach','function chooseDinoSocial','function updateDinoSocial','function tryDinoFlee','dinoBehaviorCheck','exerciseSocial','goal===\'flee\'','d.goal===\'graze\''])assert.ok(main.includes(token),'Falta conducta '+token);
  assert.ok(main.includes('socialPartner'));assert.ok(main.includes('juvenile,personality'));assert.ok(main.includes('playDirection'));assert.ok(main.includes("d.goal='play'"));assert.ok(main.includes('const angle=Math.atan2(d.root.position.x-partner.root.position.x'));
