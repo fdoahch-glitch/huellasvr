@@ -225,7 +225,7 @@ async function spawnDino(id,index,total,center){
  root.position.set(spot.x,terrainHeightAt(spot.x,spot.z),spot.z);
  root.rotation.y=baseYaw+(data.flip?Math.PI:0);
  root.getChildMeshes().forEach(m=>{m.isPickable=true;m.metadata={...(m.metadata||{}),dinoId:id};pickables.push(m);});
- dinoRoots.push({root,id,clips,clipName:idle?.name||'',baseYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},heading:rand(index+71)*Math.PI*2,target:null,state:'idle',timer:2+rand(index+82)*5,radius:Math.min(4,1.5+rand(index+8)*2),running:false,lastFootstep:0,stepDistance:0,footSide:1,footprints:[],lastFootPos:root.position.clone()});
+ dinoRoots.push({root,id,clips,clipName:idle?.name||'',baseYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},heading:rand(index+71)*Math.PI*2,target:null,state:'idle',timer:2+rand(index+82)*5,radius:Math.min(4,1.5+rand(index+8)*2),running:false,lastFootstep:0,stepDistance:0,footDistance:0,dustDistance:0,footSide:1,lastFootPos:root.position.clone()});
  return root;
 }
 async function addVegetation(){
@@ -376,30 +376,68 @@ function movePlayer(dt){
  if(!safe){moving=false;target=null;return;}
  camera.position.x=nx;camera.position.z=nz;camera.position.y=terrainHeightAt(nx,nz)+1.65;
 }
+const dinoFootFX={ready:false,prints:[],dust:[],printIndex:0,dustIndex:0,printMaterial:null,dustMaterial:null};
+function makeFootprintTexture(){
+ const tex=new BABYLON.DynamicTexture('dino-footprint-texture',{width:128,height:128},scene,false,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+ const c=tex.getContext();c.clearRect(0,0,128,128);c.fillStyle='rgba(42,27,18,.92)';
+ c.beginPath();c.ellipse(64,77,27,34,-.08,0,Math.PI*2);c.fill();
+ [[39,38,10,13,-.25],[58,27,10,14,-.08],[78,30,10,14,.12],[94,45,8,11,.38]].forEach(([x,y,rx,ry,a])=>{c.beginPath();c.ellipse(x,y,rx,ry,a,0,Math.PI*2);c.fill();});
+ tex.update(false);tex.hasAlpha=true;return tex;
+}
+function initDinoFootFX(){
+ if(dinoFootFX.ready)return;
+ const printTex=makeFootprintTexture();
+ dinoFootFX.printMaterial=new BABYLON.StandardMaterial('dino-footprint-pool-material',scene);
+ dinoFootFX.printMaterial.diffuseTexture=printTex;dinoFootFX.printMaterial.opacityTexture=printTex;
+ dinoFootFX.printMaterial.diffuseColor=new BABYLON.Color3(.72,.62,.5);dinoFootFX.printMaterial.specularColor=new BABYLON.Color3(0,0,0);
+ dinoFootFX.printMaterial.useAlphaFromDiffuseTexture=true;dinoFootFX.printMaterial.disableLighting=true;dinoFootFX.printMaterial.zOffset=-2;
+ const dustTex=makeParticleTexture();
+ dinoFootFX.dustMaterial=new BABYLON.StandardMaterial('dino-dust-pool-material',scene);
+ dinoFootFX.dustMaterial.diffuseTexture=dustTex;dinoFootFX.dustMaterial.opacityTexture=dustTex;
+ dinoFootFX.dustMaterial.diffuseColor=new BABYLON.Color3(.72,.59,.43);dinoFootFX.dustMaterial.useAlphaFromDiffuseTexture=true;
+ dinoFootFX.dustMaterial.disableLighting=true;dinoFootFX.dustMaterial.backFaceCulling=false;
+ const printCount=quality==='baja'?28:quality==='media'?48:70,dustCount=quality==='baja'?16:quality==='media'?26:36;
+ for(let i=0;i<printCount;i++){
+  const mesh=BABYLON.MeshBuilder.CreatePlane('dino-footprint-pool-'+i,{size:1,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);
+  mesh.rotation.x=Math.PI/2;mesh.material=dinoFootFX.printMaterial;mesh.isPickable=false;mesh.isVisible=false;mesh.visibility=0;
+  dinoFootFX.prints.push({mesh,age:0,life:25,active:false});
+ }
+ for(let i=0;i<dustCount;i++){
+  const mesh=BABYLON.MeshBuilder.CreatePlane('dino-dust-pool-'+i,{size:1,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);
+  mesh.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL;mesh.material=dinoFootFX.dustMaterial;mesh.isPickable=false;mesh.isVisible=false;mesh.visibility=0;
+  dinoFootFX.dust.push({mesh,age:0,life:1.6,size:1,active:false});
+ }
+ dinoFootFX.ready=true;
+}
+function emitFootprint(x,y,z,angle,size){
+ const pool=dinoFootFX.prints;if(!pool.length)return;
+ const fp=pool[dinoFootFX.printIndex++%pool.length],m=fp.mesh;
+ fp.age=0;fp.life=25;fp.active=true;m.isVisible=true;m.visibility=.7;m.position.set(x,y+.035,z);
+ m.rotation.y=angle+Math.PI;m.scaling.set(size,size*1.15,1);
+}
+function emitGroundDust(x,y,z,size){
+ const pool=dinoFootFX.dust;if(!pool.length)return;
+ const p=pool[dinoFootFX.dustIndex++%pool.length],m=p.mesh;
+ p.age=0;p.life=1.6;p.size=size;p.active=true;m.isVisible=true;m.visibility=.55;
+ m.position.set(x+(Math.random()-.5)*size*.65,y+.22,z+(Math.random()-.5)*size*.65);
+ m.scaling.set(size*.6,size*.6,1);
+}
+function updateDinoFootFX(dt){
+ if(!dinoFootFX.ready)return;
+ for(const fp of dinoFootFX.prints){if(!fp.active)continue;fp.age+=dt;const k=fp.age/fp.life;if(k>=1){fp.active=false;fp.mesh.isVisible=false;fp.mesh.visibility=0;}else fp.mesh.visibility=.7*(k<.8?1:(1-k)*5);}
+ for(const p of dinoFootFX.dust){if(!p.active)continue;p.age+=dt;const k=p.age/p.life;if(k>=1){p.active=false;p.mesh.isVisible=false;p.mesh.visibility=0;continue;}p.mesh.position.y+=dt*.35;const scale=p.size*(.6+k*1.8);p.mesh.scaling.set(scale,scale,1);p.mesh.visibility=.55*(1-k)*(k<.1?k*10:1);}
+}
 function emitDinoFootFX(d,dx,dz,travelled){
- const L=DINO[d.id].length,groundY=terrainHeightAt(d.root.position.x,d.root.position.z);
- d.stepDistance=(d.stepDistance||0)+travelled;
- const stride=Math.max(.35,L*.22);
- if(d.stepDistance<stride)return;
- d.stepDistance=0;d.footSide*=-1;
- const len=Math.hypot(dx,dz)||1,side=d.footSide*L*.09;
- const x=d.root.position.x-(dz/len)*side,z=d.root.position.z+(dx/len)*side;
- if(L>=2.5){
-  const matName='footprint-'+d.id;
-  let material=scene.getMaterialByName(matName);
-  if(!material){material=new BABYLON.StandardMaterial(matName,scene);material.diffuseColor=new BABYLON.Color3(.16,.12,.09);material.alpha=.22;material.specularColor=new BABYLON.Color3(0,0,0);material.disableLighting=false;}
-  const mark=BABYLON.MeshBuilder.CreateDisc('dino-footprint',{radius:Math.max(.12,L*.055),tessellation:12},scene);
-  mark.rotation.x=Math.PI/2;mark.rotation.z=Math.atan2(dx,dz);mark.position.set(x,groundY+.018,z);mark.material=material;mark.isPickable=false;
-  d.footprints.push({mesh:mark,age:0});if(d.footprints.length>12){const old=d.footprints.shift();old.mesh.dispose();}
+ const L=DINO[d.id].length,groundY=terrainHeightAt(d.root.position.x,d.root.position.z),len=Math.hypot(dx,dz)||1;
+ d.footDistance=(d.footDistance||0)+travelled;d.dustDistance=(d.dustDistance||0)+travelled;
+ if(L>=2.5&&d.footDistance>Math.max(.9,L*.45)){
+  d.footDistance=0;d.footSide*=-1;const side=d.footSide*L*.09;
+  const x=d.root.position.x-(dz/len)*side,z=d.root.position.z+(dx/len)*side;
+  emitFootprint(x,groundY,z,Math.atan2(dx,dz),Math.max(.35,L*.11));
  }
- if(!d.dustFX){
-  d.dustFX=new BABYLON.ParticleSystem('dino-dust-'+d.id,70,scene);d.dustFX.particleTexture=makeParticleTexture();
-  d.dustFX.minLifeTime=.25;d.dustFX.maxLifeTime=.65;d.dustFX.minSize=.06;d.dustFX.maxSize=Math.max(.12,L*.035);
-  d.dustFX.color1=new BABYLON.Color4(.65,.52,.37,.28);d.dustFX.color2=new BABYLON.Color4(.82,.72,.56,.12);
-  d.dustFX.direction1=new BABYLON.Vector3(-.2,.35,-.2);d.dustFX.direction2=new BABYLON.Vector3(.2,.8,.2);
-  d.dustFX.minEmitPower=.15;d.dustFX.maxEmitPower=.55;d.dustFX.emitRate=0;d.dustFX.manualEmitCount=0;d.dustFX.emitter=new BABYLON.Vector3(x,groundY+.08,z);
+ if(L>=1.5&&d.dustDistance>Math.max(.9,L*.4)&&(d.running||Math.random()<.35)){
+  d.dustDistance=0;emitGroundDust(d.root.position.x,groundY,d.root.position.z,Math.max(.5,L*.16));
  }
- d.dustFX.emitter.set(x,groundY+.08,z);d.dustFX.manualEmitCount=d.running?16:8;d.dustFX.start();
 }
 function animateDinos(t,dt){
  const step=Math.min(.05,Math.max(0,dt||0));
@@ -446,7 +484,7 @@ function animateDinos(t,dt){
     }else{d.state='idle';d.target=null;d.timer=2.5;}
    }
   }else root.position.y=groundY;
-  if(d.footprints?.length){for(let i=d.footprints.length-1;i>=0;i--){const fp=d.footprints[i];fp.age+=step;if(fp.age>18){fp.mesh.dispose();d.footprints.splice(i,1);}else fp.mesh.material.alpha=.22*(1-fp.age/18);}}
+  
   const desired=d.state==='look'?'Neck_Look':d.state==='walk'?(d.running?'Run':'Walk'):'Idle';
   if(d.clipName!==desired){
    const clip=d.clips.find(a=>a.name.toLowerCase()===desired.toLowerCase());
@@ -463,9 +501,9 @@ async function init(){
  try{engine=new BABYLON.Engine(canvas,true,{disableWebGL2Support:false,doNotHandleContextLost:false,preserveDrawingBuffer:false,stencil:true,antialias:true,adaptToDeviceRatio:true});if(!engine.webGLVersion||engine.webGLVersion<2)throw new Error('Este dispositivo no ofrece WebGL 2.');
  scene=new BABYLON.Scene(engine);scene.clearColor=new BABYLON.Color4(.65,.76,.77,1);scene.collisionsEnabled=true;scene.fogMode=BABYLON.Scene.FOGMODE_EXP2;scene.fogColor=BABYLON.Color3.FromHexString(WORLD.fog);scene.fogDensity=({atacamatitan:.0038,arackar:.0042,patagonia:.0052,stegouros:.0085,aysen:.006,valle:.006}[worldKey]||.0038);
  camera=new BABYLON.UniversalCamera('player-camera',new BABYLON.Vector3(0,1.65,12),scene);camera.minZ=.08;camera.maxZ=320;camera.fov=.92;camera.speed=.35;camera.inertia=.82;camera.angularSensibility=3800;camera.attachControl(canvas,true);camera.keysUp.push(87);camera.keysDown.push(83);camera.keysLeft.push(65);camera.keysRight.push(68);camera.applyGravity=false;camera.checkCollisions=false;camera.ellipsoid=new BABYLON.Vector3(.35,.85,.35);
- setProgress(.08,'Creando el paisaje…');addSky();addLighting();await addTerrain();camera.position.y=1.65+terrainHeightAt(0,12);addWater();addSandBars();addMountains();setProgress(.2,'Cargando dinosaurios…');
+ setProgress(.08,'Creando el paisaje…');addSky();addLighting();await addTerrain();initDinoFootFX();camera.position.y=1.65+terrainHeightAt(0,12);addWater();addSandBars();addMountains();setProgress(.2,'Cargando dinosaurios…');
  const ids=WORLD.dinos,baseHerd={atacamatitan:22,arackar:24,patagonia:22,stegouros:18,aysen:28,valle:5}[worldKey]||5,herdSize=Math.max(3,Math.round(baseHerd*Q)),totalDinos=ids.length*herdSize;let loadedDinos=0;for(const id of ids){for(let n=0;n<herdSize;n++){await spawnDino(id,n,herdSize,null);loadedDinos++;setProgress(.2+.53*loadedDinos/totalDinos,'Cargando '+DINO[id].name+' · '+loadedDinos+'/'+totalDinos+'…');}}
- setProgress(.76,'Poblando el paisaje…');await addVegetation();addForest3D();setProgress(.9,'Preparando atmósfera…');addParticles();bindControls();scene.onBeforeRenderObservable.add(()=>{const now=performance.now(),dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;movePlayer(dt);animateDinos(now,dt);});
+ setProgress(.76,'Poblando el paisaje…');await addVegetation();addForest3D();setProgress(.9,'Preparando atmósfera…');addParticles();bindControls();scene.onBeforeRenderObservable.add(()=>{const now=performance.now(),dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;movePlayer(dt);animateDinos(now,dt);updateDinoFootFX(dt);});
  engine.runRenderLoop(()=>{if(scene&&scene.activeCamera)scene.render();});window.addEventListener('resize',()=>engine.resize());setProgress(1,'¡Mundo listo!');$('startButtons').classList.remove('hidden');
  }catch(err){console.error(err);$('loadText').textContent='No se pudo iniciar el mundo: '+err.message;$('startButtons').classList.remove('hidden');$('explore').onclick=()=>location.reload();}
 }
