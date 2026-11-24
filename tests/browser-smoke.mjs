@@ -63,6 +63,11 @@ try{
   await page.waitForFunction(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().physics?.support==='grounded',{timeout:15000});
   if(state.diagnostics.dinosaurs<3)throw new Error(world+' cargó menos de tres dinosaurios');
   if(!state.diagnostics.dinoStates?.length||state.diagnostics.dinoStates.some(d=>!d.active||!d.clip))throw new Error(world+' tiene dinosaurios sin AnimationGroup activo: '+JSON.stringify(state.diagnostics.dinoStates));
+  const herdCheck=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.dinoBehaviorCheck?.());
+  if(!herdCheck||herdCheck.count!==state.diagnostics.dinosaurs||herdCheck.overlaps!==0)throw new Error(world+' presenta superposición entre dinosaurios al iniciar: '+JSON.stringify(herdCheck));
+  if(!state.diagnostics.dinoStates.every(d=>d.personality&&typeof d.juvenile==='boolean'))throw new Error(world+' no asignó personalidad/edad a cada dinosaurio');
+  const socialCheck=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.exerciseSocial?.());
+  console.log('HERD',world,JSON.stringify({herdCheck,socialCheck}));
   if(state.diagnostics.meshes<10||state.diagnostics.textures<1)throw new Error(world+' no generó mallas/texturas suficientes: '+JSON.stringify(state.diagnostics));
   for(const clip of ['Idle','Walk','Run','Neck_Look']){
    const before=await page.evaluate(name=>window.__HUELLAS_VR_TEST__.setAnimation(name),clip);
