@@ -231,7 +231,7 @@ check('Mezcla del terreno por pendiente y variación procedural estable',()=>{
 
 check('Panorama esencial se espera y registra fallos',()=>{
  assert.ok(main.includes('await addSky()'));
- assert.ok(main.includes('Panorama listo:'));
+ assert.ok(main.includes('Panorama equirectangular listo:'));
  assert.ok(main.includes('Falló panorama:'));
  assert.ok(main.includes('sky:{ready:skyReady,error:skyError,url:WORLD.sky}'));
 });
@@ -257,7 +257,11 @@ check('Instrumentación de diagnóstico',()=>{
 
 check('Panorama y atmósfera replican el motor original v19',()=>{
  assert.ok(main.includes("new BABYLON.Texture(WORLD.sky,scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE"));
- assert.ok(main.includes('m.emissiveTexture=pano'));
+ assert.ok(main.includes('BABYLON.Effect.ShadersStore.huellasPanoramaVertexShader'));
+ assert.ok(main.includes('BABYLON.Effect.ShadersStore.huellasPanoramaFragmentShader'));
+ assert.ok(main.includes('panoramaSampler'));
+ assert.ok(main.includes("m.setTexture('panoramaSampler',pano)"));
+ assert.ok(main.includes('atan(d.z,d.x)')&&main.includes('asin(clamp(d.y,-1.0,1.0))'));
  assert.ok(main.includes('WORLD.panoRot??23'));
  assert.ok(main.includes("{diameter:875,segments:32}"),'La cúpula de nubes debe conservar la escala original');
  assert.ok(main.includes('if(false&&quality!==\'baja\')for(let i=0;i<7;i++)'),'Los paneles planos de rayos no deben cubrir la escena');
