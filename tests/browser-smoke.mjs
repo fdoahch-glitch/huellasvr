@@ -69,7 +69,7 @@ try{
   if(!visualMode&&world==='atacamatitan'&&state.diagnostics.visual?.ssao)throw new Error('SSAO no debe activarse en el perfil bajo de la prueba');
   if(visualMode&&!state.diagnostics.visual?.environmentReady)throw new Error(world+' no terminó de cargar IBL local: '+JSON.stringify(state.diagnostics.visual));
   if(visualMode&&state.diagnostics.visual?.environmentError)throw new Error(world+' falló la iluminación IBL: '+state.diagnostics.visual.environmentError);
-  if(visualMode&&state.diagnostics.skyFogEnabled!==false)throw new Error(world+' el panorama sigue afectado por la niebla: '+state.diagnostics.skyFogEnabled);
+  if(visualMode&&state.diagnostics.terrain?.skyFogEnabled!==false)throw new Error(world+' el panorama sigue afectado por la niebla: '+state.diagnostics.skyFogEnabled);
   if(visualMode&&!state.diagnostics.terrain?.albedoTexture)throw new Error(world+' no enlazó la textura albedo PBR del terreno: '+JSON.stringify(state.diagnostics.terrain));
   if(world==='atacamatitan'){const panel=await page.locator('#huellasPerfDiagnostics').textContent();if(!panel||!panel.includes('Draw calls')||!panel.includes('Havok'))throw new Error(world+' no mostró el panel de diagnóstico completo');}
   if(!state.diagnostics.sky?.ready||state.diagnostics.sky.error)throw new Error(world+' no cargó el panorama '+JSON.stringify(state.diagnostics.sky));
