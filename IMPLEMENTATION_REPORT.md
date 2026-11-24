@@ -9,7 +9,11 @@
 3. **Transiciones de animación:** se incorporó un crossfade de 240 ms entre el clip anterior y el nuevo, con ponderación de animatables y detención del clip anterior al terminar la transición.
 4. **Ritmo de locomoción:** se retiró la inversión de velocidad del clip de Stegouros y se mantiene un ratio positivo calculado según la velocidad efectiva del individuo.
 5. **Base de montañas:** el muestreo de altura para la base del anillo ahora busca puntos de terreno válidos hacia el interior antes de recurrir al nivel cero, en vez de depender directamente de una altura aproximada de celdas inválidas.
-6. **Cache busting:** `index.html` referencia ahora `js/main.js?v=61`.
+6. **Cache busting:** `index.html` se actualizó progresivamente; la referencia actual del motor incluye los últimos cambios.
+7. **Havok Physics V2:** se añadió `HavokPhysics_umd.js`, se inicializa `BABYLON.HavokPlugin`, se activa gravedad, se crea un colisionador estático de malla para el terreno y un `PhysicsCharacterController` cápsula para el jugador. Las montañas también registran colisionadores estáticos.
+8. **Locomoción y spawn:** se amplió el radio de terreno válido al colocar cada dinosaurio para que el área de apoyo sea coherente con su tamaño; el radio fijo anterior podía permitir un spawn que luego fallaba al intentar caminar.
+9. **Diagnóstico y pruebas:** el panel expone estado de animación, orientación, posición y estado Havok. Se añadió un API de prueba activado solo con `?test=1` para probar los cuatro clips y desplazamiento de Walk/Run.
+10. **Pruebas reales de navegador:** GitHub Actions instaló Chromium y Playwright en Ubuntu 24.04; la ejecución `45348814252` terminó correctamente y cargó los cinco mundos con WebGL2/SwiftShader, Havok, dinosaurios y sus clips.
 
 ## Commits aplicados
 
@@ -28,4 +32,4 @@
 
 ## Estado de validación
 
-Los commits se han escrito en GitHub. No se ha ejecutado todavía la escena en un navegador real desde este entorno, por lo que no se afirma que los errores visuales reportados estén resueltos. Los cambios deben pasar primero la validación de sintaxis/CI y luego las pruebas de ejecución descritas en `TEST_REPORT.md`.
+Los commits están en GitHub. La auditoría estática y la prueba de navegador Chromium pasaron. La prueba reproduce Idle, Walk, Run y Neck_Look en una instancia de dinosaurio por mundo y verifica desplazamiento durante Walk/Run. También comprueba que Havok y el controlador cápsula se inicializan. Esto no sustituye la inspección visual de las capturas, las pruebas de colisión/pendientes ni los ensayos en Android, PC físico o visor VR. No se declara resuelta la calidad visual de los terrenos ni la paridad completa con v19.
