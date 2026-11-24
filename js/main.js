@@ -810,14 +810,9 @@ function installDiagnostics(){
  document.body.appendChild(panel);
  let elapsed=0;scene.onBeforeRenderObservable.add(()=>{
   elapsed+=engine.getDeltaTime();if(elapsed<500)return;elapsed=0;
-  const d=snapshot();panel.textContent='HUELLAS VR · DIAGNÓSTICO
-'+
-   'Mundo: '+d.world+' · Calidad: '+d.quality+'
-FPS: '+d.fps+' · Mallas activas: '+d.activeMeshes+'/'+d.meshes+
-   '
-Texturas: '+d.textures+' · Dinosaurios: '+d.dinosaurs+'
-CPU actualización: '+d.cpuUpdateMs+' ms (media '+d.cpuUpdateAvgMs+' ms) · Partículas: '+d.particles+'
-Heap JS: '+(d.heapMB==null?'N/D':d.heapMB+' MB')+' · XR: '+d.xrState;
+  const d=snapshot();panel.textContent='HUELLAS VR · DIAGNÓSTICO\n'+
+   'Mundo: '+d.world+' · Calidad: '+d.quality+'\nFPS: '+d.fps+' · Mallas activas: '+d.activeMeshes+'/'+d.meshes+
+   '\nTexturas: '+d.textures+' · Dinosaurios: '+d.dinosaurs+'\nCPU actualización: '+d.cpuUpdateMs+' ms (media '+d.cpuUpdateAvgMs+' ms) · Partículas: '+d.particles+'\nHeap JS: '+(d.heapMB==null?'N/D':d.heapMB+' MB')+' · XR: '+d.xrState
  });
 }
 async function init(){
