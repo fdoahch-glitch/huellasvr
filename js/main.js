@@ -186,7 +186,7 @@ async function addVegetation(){
    const root=new BABYLON.TransformNode('world-vegetation-'+si+'-'+i,scene);
    group.rootNodes.forEach(node=>node.parent=root);
    const scale=minScale+rand(i+si*53+7)*(maxScale-minScale);
-   root.position.set(x,terrainHeightAt(x,z),z);root.scaling.setAll(scale);root.rotation.y=rand(i+si*97+4)*Math.PI*2;
+   root.position.set(x,type==='mountain'?terrainHeightAt(x,z)-2:terrainHeightAt(x,z),z);root.scaling.setAll(scale);root.rotation.y=rand(i+si*97+4)*Math.PI*2;
    root.getChildMeshes().forEach(m=>{m.isPickable=false;m.checkCollisions=false;});
    i++;placed++;
   }
