@@ -1140,7 +1140,7 @@ function installDiagnostics(){
    '\nTerreno: foto '+(d.terrain.photo?'OK':'...')+' / normal '+(d.terrain.normal?'OK':'...')+' · Panorama: '+(d.sky.ready?'OK':'...')+
    '\nHavok: '+(d.physics.enabled?'ON':'OFF')+' · soporte: '+d.physics.support+' · colisionadores: '+d.physics.colliders+' · XR: '+d.xrState+
    '\nJugador xyz: '+pos+' · altura suelo: '+(d.player?d.player.groundY:'N/D')+' · Heap JS: '+(d.heapMB==null?'N/D':d.heapMB+' MB')+
-   '\nDinosaurios: '+dinos+'\nErrores: '+(d.errors.length?d.errors.join(' | '):'ninguno');
+   '\nDinosaurios: '+dinos+'\nCPU subsistemas ms: jugador '+d.cpuStagesMs.player+' / manada '+d.cpuStagesMs.herd+' / dinos '+d.cpuStagesMs.dinosaurs+' / FX '+d.cpuStagesMs.footFx+' / entorno '+d.cpuStagesMs.environment+' / mirada '+d.cpuStagesMs.gaze+' / agua '+d.cpuStagesMs.water+'\nFrame p50/p95/p99: '+fmt(d.frameP50Ms)+' / '+fmt(d.frameP95Ms)+' / '+fmt(d.frameP99Ms)+' ms · 1% low '+fmt(d.fps1PercentLow)+'\nErrores: '+(d.errors.length?d.errors.join(' | '):'ninguno');
  });
 }
 let initStage='preparación';
