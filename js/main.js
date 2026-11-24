@@ -12,7 +12,7 @@ const quality = qualityParam || (mobileDevice || (navigator.hardwareConcurrency 
 const Q = { alta: 1, media: .6, baja: .3 }[quality] || 1;
 const DINO = {
  atacamatitan:{name:'Atacamatitan',file:'models/atacamatitan.glb',low:'models/lo_atacamatitan.glb',length:14,forwardYaw:-Math.PI/2,text:'Titanosaurio del Cretácico superior. Sus huesos aparecieron en el desierto de Atacama, cerca de Conchi Viejo.'},
- arackar:{name:'Arackar',file:'models/arackar.glb',low:'models/lo_arackar.glb',length:7,forwardYaw:Math.PI/2,text:'Titanosaurio de Atacama. Su nombre viene del kunza, la lengua de los atacameños. El ejemplar hallado medía unos 6 m.'},
+ arackar:{name:'Arackar',file:'models/arackar.glb',low:'models/lo_arackar.glb',length:7,forwardYaw:0,text:'Titanosaurio de Atacama. Su nombre viene del kunza, la lengua de los atacameños. El ejemplar hallado medía unos 6 m.'},
  gonkoken:{name:'Gonkoken',file:'models/gonkoken.glb',low:'models/lo_gonkoken.glb',length:4,forwardYaw:-Math.PI/2,text:'Dinosaurio pico de pato de la Patagonia chilena. Vivió hace unos 71 millones de años y medía entre 3,5 y 4 m.'},
  chilesaurus:{name:'Chilesaurus',file:'models/chilesaurus.glb',low:'models/lo_chilesaurus.glb',length:3,forwardYaw:-Math.PI/2,text:'Vivió hace unos 147 millones de años y comía plantas. Lo descubrió Diego Suárez, un niño de 7 años.'},
  stegouros:{name:'Stegouros',file:'models/stegouros.glb',low:'models/lo_stegouros.glb',length:2,forwardYaw:-Math.PI/2,text:'Vivió hace unos 74 millones de años en la Patagonia chilena. Medía cerca de 2 m y su cola tenía siete pares de placas.'}
