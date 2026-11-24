@@ -1074,15 +1074,26 @@ function installDiagnostics(){
    d.socialPartner=null;d.socialUntil=0;d.testSocial=false;d.state='idle';d.speed=0;
    d.testClip=name;d.clipName='';d.target=null;d.goal=null;d.running=name==='Run';d.lookUntil=name==='Neck_Look'?performance.now()+5000:0;
    if(name==='Walk'||name==='Run'){
-    const radius=(d.length||DINO[d.id].length)*.3;let found=false;
-    for(let k=0;k<32&&!found;k++){
-     const angle=k*Math.PI/16,sx=Math.sin(angle),cz=Math.cos(angle);
-     for(const distance of [6,5,4,3,2]){
-      const x=d.root.position.x+sx*distance,z=d.root.position.z+cz*distance,support=[[x,z],[x+sx*radius,z+cz*radius],[x-sx*radius,z-cz*radius]];
-      if(support.every(p=>terrainValidAt(p[0],p[1]))){d.heading=angle;d.target={x,z};d.goal='test';d.state='walk';found=true;break;}
+    const radius=(d.length||DINO[d.id].length)*.3,start={x:d.root.position.x,z:d.root.position.z};let found=false,chosen=null;
+    // La ruta de prueba debe respetar las mismas colisiones que usa animateDinos.
+    // Antes solo se comprobaba el terreno: podía elegir un destino detrás de
+    // otro dinosaurio y la locomoción se detenía en el primer fotograma.
+    rebuildDinoCollisionGrid();
+    for(let k=0;k<64&&!found;k++){
+     const angle=k*Math.PI/32,sx=Math.sin(angle),cz=Math.cos(angle);
+     for(const distance of [8,7,6,5,4,3]){
+      const x=start.x+sx*distance,z=start.z+cz*distance;
+      let valid=true;
+      for(let travelled=.45;travelled<=distance;travelled+=.45){
+       const px=start.x+sx*travelled,pz=start.z+cz*travelled;
+       const support=[[px,pz],[px+sx*radius,pz+cz*radius],[px-sx*radius,pz-cz*radius]];
+       if(isDinoPositionBlocked(d,px,pz).blocked||!support.every(p=>terrainValidAt(p[0],p[1]))){valid=false;break;}
+      }
+      if(valid){chosen={x,z,angle};found=true;break;}
      }
     }
-    return {clip:name,movementPathFound:found,position:{x:d.root.position.x,y:d.root.position.y,z:d.root.position.z}};
+    if(found){d.heading=chosen.angle;d.target={x:chosen.x,z:chosen.z};d.goal='test';d.state='walk';d.timer=0;d.running=name==='Run';}
+    return {clip:name,movementPathFound:found,position:{x:start.x,y:d.root.position.y,z:start.z},target:chosen?{x:chosen.x,z:chosen.z}:null};
    }
    d.state=name==='Neck_Look'?'look':'idle';d.timer=100;
    return {clip:name,movementPathFound:false,position:{x:d.root.position.x,y:d.root.position.y,z:d.root.position.z}};
