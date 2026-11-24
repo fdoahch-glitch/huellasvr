@@ -57,27 +57,30 @@ function tuneVisualMaterials(root,foliage=false){
 }
 function rand(seed){let x=Math.sin(seed*127.1+311.7)*43758.5453;return x-Math.floor(x);}
 function addSky(){
- const sky=BABYLON.MeshBuilder.CreateSphere('sky-dome',{diameter:500,segments:48},scene);
- sky.isPickable=false;sky.infiniteDistance=true;
- sky.rotation.y=(WORLD.panoRot??180)*Math.PI/180;
- const skyTint=({atacamatitan:[1.02,1,.96],arackar:[1,.97,.92],patagonia:[.9,.95,1],stegouros:[.93,1,.95],aysen:[.96,.98,1]}[worldKey]||[1,1,1]);
- const m=new BABYLON.StandardMaterial('panorama-sky-material',scene);
+ // Reproducir el método validado en el Babylon original v20:
+ // esfera grande, material sin iluminación y panorama equirectangular.
+ const sky=BABYLON.MeshBuilder.CreateSphere('sky-dome',{diameter:900,segments:32},scene);
+ sky.isPickable=false;sky.infiniteDistance=true;sky.alwaysSelectAsActiveMesh=true;
+ const m=new BABYLON.StandardMaterial('panorama-sky',scene);
  m.backFaceCulling=false;m.disableLighting=true;m.fogEnabled=false;
- m.emissiveColor=new BABYLON.Color3(...skyTint);
- m.disableDepthWrite=true;
- sky.material=m;skyMaterial=m;
+ m.emissiveColor=new BABYLON.Color3(1,1,1);
+ const pano=new BABYLON.Texture(WORLD.sky,scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE,()=>{
+  pano.coordinatesMode=BABYLON.Texture.FIXED_EQUIRECTANGULAR_MODE;
+  pano.wrapU=BABYLON.Texture.CLAMP_ADDRESSMODE;pano.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;
+  pano.anisotropicFilteringLevel=Math.min(8,VP.anisotropy||8);
+  skyReady=true;skyError=null;
+  console.info('[Huellas VR] Panorama equirectangular listo:',WORLD.sky);
+ },(message,exception)=>{
+  skyReady=false;skyError=String(message||exception||'error desconocido');
+  console.error('[Huellas VR] Falló panorama:',WORLD.sky,skyError);
+ });
+ // Asignar antes de que termine la carga, igual que el original; no esperar
+ // al callback para configurar el modo de coordenadas.
+ pano.coordinatesMode=BABYLON.Texture.FIXED_EQUIRECTANGULAR_MODE;
+ m.emissiveTexture=pano;sky.material=m;skyMaterial=m;sky.rotation.y=Math.PI;
  return new Promise((resolve,reject)=>{
-  const pano=new BABYLON.Texture(WORLD.sky,scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE,()=>{
-   pano.coordinatesMode=BABYLON.Texture.FIXED_EQUIRECTANGULAR_MODE;
-   pano.wrapU=BABYLON.Texture.WRAP_ADDRESSMODE;pano.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;
-   pano.anisotropicFilteringLevel=Math.min(8,VP.anisotropy||8);
-   m.emissiveTexture=pano;skyReady=true;skyError=null;
-   console.info('[Huellas VR] Panorama equirectangular listo:',WORLD.sky);resolve(sky);
-  },(message,exception)=>{
-   skyReady=false;skyError=String(message||exception||'error desconocido');
-   console.error('[Huellas VR] Falló panorama:',WORLD.sky,skyError);
-   reject(new Error('No se pudo cargar el panorama esencial '+WORLD.sky+': '+skyError));
-  });
+  pano.onLoadObservable.add(()=>resolve(sky));
+  pano.onErrorObservable.add((_,error)=>reject(new Error('No se pudo cargar el panorama esencial '+WORLD.sky+': '+String(error||skyError))));
  });
 }
 function addSkyLife(){
@@ -1203,6 +1206,7 @@ function installDiagnostics(){
 }
 let initStage='preparación';
 async function init(){
+ window.__HUELLAS_VR_READY__=false;window.__HUELLAS_VR_INIT_ERROR__=null;
  if(!params.has('mundo'))return; // La portada no debe crear una escena 3D ni cargar modelos antes de elegir mundo.
  try{initStage='creación del motor WebGL2';engine=new BABYLON.Engine(canvas,false,{disableWebGL2Support:false,doNotHandleContextLost:false,preserveDrawingBuffer:false,stencil:true,antialias:false,adaptToDeviceRatio:true});if(!engine.webGLVersion||engine.webGLVersion<2)throw new Error('Este dispositivo no ofrece WebGL 2.');
   engine.onContextLostObservable.add(()=>{contextLost=true;lastTime=0;console.warn('WebGL2 perdió el contexto; esperando recuperación del navegador.');});
@@ -1213,11 +1217,11 @@ async function init(){
  const ids=WORLD.dinos,totalDinos=10,basePerSpecies=Math.floor(totalDinos/ids.length),extraDinos=totalDinos%ids.length;let loadedDinos=0;for(let speciesIndex=0;speciesIndex<ids.length;speciesIndex++){const id=ids[speciesIndex],herdSize=basePerSpecies+(speciesIndex<extraDinos?1:0);for(let n=0;n<herdSize;n++){initStage='dinosaurio '+id+' ('+(n+1)+'/'+herdSize+')';await spawnDino(id,n,herdSize,null);loadedDinos++;setProgress(.2+.53*loadedDinos/totalDinos,'Cargando '+DINO[id].name+' · '+loadedDinos+'/'+totalDinos+'…');}}
  initStage='vegetación y modelos ambientales';setProgress(.76,'Poblando el paisaje…');await addVegetation();buildEnvironmentCollisionGrid();initStage='bosques y atmósfera';/* Se replica la densidad forestal v19 con los GLB originales instanciados en addVegetation(). */setProgress(.9,'Preparando atmósfera e iluminación…');addParticles();addVisualPipeline();bindControls();scene.onBeforeRenderObservable.add(()=>{const now=performance.now(),debugPerf=params.get('debug')==='1',updateStart=now,dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;if(debugPerf){if(lastPerfFrameAt){frameTimeSamples.push(now-lastPerfFrameAt);if(frameTimeSamples.length>300)frameTimeSamples.shift();}lastPerfFrameAt=now;}let stage=updateStart;movePlayer(dt);if(debugPerf){let mark=performance.now();cpuStageMs.player=mark-stage;stage=mark;}updateHerdMode(dt);if(debugPerf){let mark=performance.now();cpuStageMs.herd=mark-stage;stage=mark;}animateDinos(now,dt);if(debugPerf){let mark=performance.now();cpuStageMs.dinosaurs=mark-stage;stage=mark;}updateDinoFootFX(dt);if(debugPerf){let mark=performance.now();cpuStageMs.footFx=mark-stage;stage=mark;}updateEnvironment(dt);if(debugPerf){let mark=performance.now();cpuStageMs.environment=mark-stage;stage=mark;}updateXRGaze();if(debugPerf){let mark=performance.now();cpuStageMs.gaze=mark-stage;stage=mark;}for(const item of waterTextures)item.tex.uOffset=(item.tex.uOffset+dt*item.speed+1)%1;if(debugPerf){let mark=performance.now();cpuStageMs.water=mark-stage;}cpuUpdateMs=performance.now()-updateStart;cpuUpdateAvgMs+=(cpuUpdateMs-cpuUpdateAvgMs)*.08;if(debugPerf)cpuStageMs.total=cpuUpdateMs;});
  renderLoop=()=>{if(!contextLost&&scene&&scene.activeCamera)scene.render();};if(!renderLoopStarted){engine.runRenderLoop(renderLoop);renderLoopStarted=true;}
- initStage='espera de texturas, shaders y materiales del mundo';setProgress(.96,'Finalizando texturas, iluminación y materiales…');await scene.whenReadyAsync();const frozenEnvironmentMeshes=freezeStaticEnvironmentTransforms();console.info('[Huellas VR] Transformaciones estáticas congeladas:',frozenEnvironmentMeshes);
+ initStage='espera de texturas, shaders y materiales del mundo';setProgress(.96,'Finalizando texturas, iluminación y materiales…');await scene.whenReadyAsync();window.__HUELLAS_VR_READY__=true;const frozenEnvironmentMeshes=freezeStaticEnvironmentTransforms();console.info('[Huellas VR] Transformaciones estáticas congeladas:',frozenEnvironmentMeshes);
   document.addEventListener('visibilitychange',()=>{const inXR=xr?.baseExperience?.state===BABYLON.WebXRState.IN_XR;if(document.hidden&&!inXR){if(!renderPausedForVisibility){engine.stopRenderLoop(renderLoop);renderPausedForVisibility=true;}audioContext?.suspend?.().catch(()=>{});}else{lastTime=0;if(renderPausedForVisibility){engine.runRenderLoop(renderLoop);renderPausedForVisibility=false;}if(audioContext?.state==='suspended')audioContext.resume().catch(()=>{});}});
   window.addEventListener('pagehide',()=>{if(xr?.baseExperience?.state!==BABYLON.WebXRState.IN_XR)audioContext?.suspend?.().catch(()=>{});});window.addEventListener('pageshow',()=>{lastTime=0;if(!document.hidden&&renderPausedForVisibility){engine.runRenderLoop(renderLoop);renderPausedForVisibility=false;}});
   window.addEventListener('resize',()=>engine.resize());setProgress(1,'¡Mundo listo!');$('startButtons').classList.remove('hidden');
- }catch(err){console.error('Fallo al iniciar Huellas VR en '+initStage,err);const detail=String(err?.stack||err?.message||err).split('\n').slice(0,6).join('\n');$('loadText').style.whiteSpace='pre-wrap';$('loadText').textContent='No se pudo iniciar el mundo ['+initStage+']: '+(err?.message||String(err))+'\n'+detail;$('startButtons').classList.remove('hidden');$('explore').textContent='Volver al inicio';$('visor').disabled=true;$('explore').onclick=()=>{location.href=location.pathname;};}
+ }catch(err){window.__HUELLAS_VR_READY__=false;window.__HUELLAS_VR_INIT_ERROR__={stage:initStage,message:String(err?.message||err),stack:String(err?.stack||'')};console.error('Fallo al iniciar Huellas VR en '+initStage,err);const detail=String(err?.stack||err?.message||err).split('\n').slice(0,6).join('\n');$('loadText').style.whiteSpace='pre-wrap';$('loadText').textContent='No se pudo iniciar el mundo ['+initStage+']: '+(err?.message||String(err))+'\n'+detail;$('startButtons').classList.remove('hidden');$('explore').textContent='Volver al inicio';$('visor').disabled=true;$('explore').onclick=()=>{location.href=location.pathname;};}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
