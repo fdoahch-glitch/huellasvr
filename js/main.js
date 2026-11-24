@@ -35,13 +35,53 @@ const HERD_CONFIG = {
 const requested = (params.get('mundo') || 'atacamatitan').toLowerCase();
 const worldKey = WORLDS[requested] ? requested : 'valle';
 const WORLD = WORLDS[worldKey];
-let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, lightingBase=null, timeMode='dia';
+let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, lightingBase=null, timeMode='dia', skyLife=null;
 const setProgress=(v,t)=>{$('progressFill').style.width=Math.round(v*100)+'%';$('loadText').textContent=t;};
 function mat(name,color,rough=.9){const m=new BABYLON.StandardMaterial(name,scene);m.diffuseColor=BABYLON.Color3.FromHexString(color);m.specularColor=new BABYLON.Color3(.08,.08,.08);m.roughness=rough;return m;}
 function rand(seed){let x=Math.sin(seed*127.1+311.7)*43758.5453;return x-Math.floor(x);}
 function addSky(){
  const sky=BABYLON.MeshBuilder.CreateSphere('sky-dome',{diameter:900,segments:32},scene);sky.isPickable=false;sky.infiniteDistance=true;
  const m=new BABYLON.StandardMaterial('panorama-sky',scene);m.backFaceCulling=false;m.disableLighting=true;m.emissiveTexture=new BABYLON.Texture(WORLD.sky,scene,false,true);const skyTint=({atacamatitan:[1.02,1,.96],arackar:[1,.97,.92],patagonia:[.9,.95,1],stegouros:[.93,1,.95],aysen:[.96,.98,1]}[worldKey]||[1,1,1]);m.emissiveColor=new BABYLON.Color3(...skyTint);sky.material=m;skyMaterial=m;sky.rotation.y=(WORLD.panoRot??23)*Math.PI/180;return sky;
+}
+
+function addSkyLife(){
+ const anchor=new BABYLON.TransformNode('environment-sky-anchor',scene);
+ const cloudTex=new BABYLON.DynamicTexture('moving-cloud-texture',{width:2048,height:512},scene,false,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+ const ctx=cloudTex.getContext();ctx.clearRect(0,0,2048,512);
+ let seed=77;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+ for(let i=0;i<46;i++){const x=rnd()*2048,y=65+rnd()*360,w=75+rnd()*190,h=16+rnd()*42;
+  for(let k=0;k<7;k++){const px=x+(rnd()-.5)*w,py=y+(rnd()-.5)*h,r=w*(.16+rnd()*.18),g=ctx.createRadialGradient(px,py,1,px,py,r);
+   g.addColorStop(0,'rgba(255,255,255,.48)');g.addColorStop(.55,'rgba(255,255,255,.19)');g.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(px,py,r,r*.28,rnd()*.2,0,Math.PI*2);ctx.fill();
+  }
+ }
+ cloudTex.update();cloudTex.wrapU=BABYLON.Texture.WRAP_ADDRESSMODE;
+ const cloudMat=new BABYLON.StandardMaterial('moving-cloud-material',scene);cloudMat.diffuseTexture=cloudTex;cloudMat.opacityTexture=cloudTex;cloudMat.disableLighting=true;cloudMat.backFaceCulling=false;cloudMat.alpha=.52;cloudMat.useAlphaFromDiffuseTexture=true;cloudMat.transparencyMode=BABYLON.Material.MATERIAL_ALPHABLEND;
+ const clouds=BABYLON.MeshBuilder.CreateSphere('moving-cloud-dome',{diameter:875,segments:32},scene);clouds.parent=anchor;clouds.material=cloudMat;clouds.isPickable=false;clouds.infiniteDistance=true;clouds.rotation.x=Math.PI;
+ const starCount=900,positions=new Float32Array(starCount*3);
+ for(let i=0;i<starCount;i++){const a=rnd()*Math.PI*2,e=.08+rnd()*1.3,r=420;positions[i*3]=Math.cos(a)*Math.cos(e)*r;positions[i*3+1]=Math.sin(e)*r;positions[i*3+2]=Math.sin(a)*Math.cos(e)*r;}
+ const starMesh=new BABYLON.Mesh('night-sky-stars',scene),starData=new BABYLON.VertexData();starData.positions=Array.from(positions);starData.applyToMesh(starMesh,true);starMesh.parent=anchor;starMesh.isPickable=false;starMesh.alwaysSelectAsActiveMesh=true;
+ const starMat=new BABYLON.StandardMaterial('night-stars-material',scene);starMat.pointsCloud=true;starMat.pointSize=2.1;starMat.emissiveColor=new BABYLON.Color3(.88,.92,1);starMat.disableLighting=true;starMat.alpha=0;starMesh.material=starMat;
+ const moon=BABYLON.MeshBuilder.CreateSphere('night-moon',{diameter:13,segments:20},scene);moon.parent=anchor;moon.position.set(-110,150,-170);moon.isPickable=false;
+ const moonMat=new BABYLON.StandardMaterial('night-moon-material',scene);moonMat.emissiveColor=new BABYLON.Color3(.82,.87,1);moonMat.diffuseColor=new BABYLON.Color3(.3,.34,.42);moonMat.specularColor=new BABYLON.Color3(0,0,0);moonMat.alpha=0;moonMat.disableLighting=true;moon.material=moonMat;
+ const pterosaurs=[];
+ for(let i=0;i<4;i++){
+  const root=new BABYLON.TransformNode('sky-pterosaur-'+i,scene);
+  const body=BABYLON.MeshBuilder.CreateSphere('pterosaur-body-'+i,{diameter:1,segments:8},scene);body.parent=root;body.scaling.set(.16,.14,.85);body.position.z=.1;
+  const head=BABYLON.MeshBuilder.CreateSphere('pterosaur-head-'+i,{diameter:.22,segments:6},scene);head.parent=root;head.position.z=.82;
+  const wingGeo=(side)=>{const mesh=new BABYLON.Mesh('pterosaur-wing-'+i+'-'+side,scene),vd=new BABYLON.VertexData(),sgn=side==='L'?1:-1;vd.positions=[0,0,0,sgn*1.65,0,-.08,sgn*1.9,0,-.58,sgn*.22,0,-.36];vd.indices=[0,1,2,0,2,3];const n=[];BABYLON.VertexData.ComputeNormals(vd.positions,vd.indices,n);vd.normals=n;vd.applyToMesh(mesh,true);mesh.parent=root;mesh.position.x=side==='L'?.08:-.08;const m=new BABYLON.StandardMaterial('pterosaur-wing-mat-'+i+'-'+side,scene);m.diffuseColor=new BABYLON.Color3(.25,.22,.19);m.specularColor=new BABYLON.Color3(0,0,0);m.backFaceCulling=false;mesh.material=m;return mesh;};
+  const left=wingGeo('L'),right=wingGeo('R');pterosaurs.push({root,left,right,phase:rnd()*Math.PI*2,radius:34+rnd()*28,height:18+rnd()*14,speed:(.035+rnd()*.025)*(i%2?1:-1),offset:rnd()*Math.PI*2});
+ }
+ skyLife={anchor,clouds,cloudTex,starMat,moonMat,pterosaurs,cloudRotation:0};
+}
+function updateSkyLife(dt){
+ if(!skyLife||!camera)return;
+ skyLife.anchor.position.copyFrom(camera.position);skyLife.clouds.rotation.y+=dt*.0009;skyLife.cloudTex.uOffset=(skyLife.cloudTex.uOffset+dt*.000004)%1;
+ const nightAlpha=timeMode==='noche'?1:0;
+ skyLife.starMat.alpha+=(nightAlpha-skyLife.starMat.alpha)*(1-Math.exp(-dt*1.8));
+ skyLife.moonMat.alpha+=(nightAlpha-skyLife.moonMat.alpha)*(1-Math.exp(-dt*1.8));
+ skyLife.clouds.material.alpha+=(.52+(raining?.24:0)-skyLife.clouds.material.alpha)*(1-Math.exp(-dt*1.5));
+ const t=performance.now()*.00008;
+ skyLife.pterosaurs.forEach((p,i)=>{p.phase+=dt*.00035;p.root.position.set(camera.position.x+Math.cos(p.phase+p.offset)*p.radius,camera.position.y+p.height+Math.sin(p.phase*1.7)*2,camera.position.z-20+Math.sin(p.phase+p.offset)*p.radius);p.root.rotation.y=Math.atan2(Math.cos(p.phase+p.offset)*p.speed,Math.sin(p.phase+p.offset)*p.speed)+Math.PI/2;const flap=Math.sin(performance.now()*.008+i*1.7)*.62;p.left.rotation.z=flap;p.right.rotation.z=-flap;p.root.setEnabled(timeMode!=='noche'&&!raining);});
 }
 function addTerrain(){
  const T=WORLD,meta=T.terrainMeta||[-.5,.5,-.5,.5,-.003,.06],width=T.terrainWidth||300;
@@ -161,19 +201,22 @@ let terrainValidAt=(x,z)=>true;
 
 function addLighting(){const L={atacamatitan:{hemi:1.05,sun:1.15,pos:[25,34,-10],ground:'#8a4e34'},arackar:{hemi:1,sun:1.1,pos:[-30,18,-20],ground:'#9a7a5a'},patagonia:{hemi:.95,sun:.8,pos:[20,30,-30],ground:'#5f6a52'},stegouros:{hemi:.95,sun:.85,pos:[15,36,-10],ground:'#4a5a34'},aysen:{hemi:.9,sun:.75,pos:[30,30,-20],ground:'#55584e'},valle:{hemi:.55,sun:.9,pos:[-12,22,10],ground:'#6b8a5a'}}[worldKey];hemiLight=new BABYLON.HemisphericLight('ambient',new BABYLON.Vector3(0,1,0),scene);hemiLight.diffuse=BABYLON.Color3.FromHexString(WORLD.hemi);hemiLight.groundColor=BABYLON.Color3.FromHexString(L.ground);hemiLight.intensity=L.hemi;sunLight=new BABYLON.DirectionalLight('sun',new BABYLON.Vector3(-L.pos[0],-L.pos[1],-L.pos[2]).normalize(),scene);sunLight.position=new BABYLON.Vector3(...L.pos);sunLight.diffuse=BABYLON.Color3.FromHexString(WORLD.sun);sunLight.intensity=L.sun;sunLight.shadowMinZ=1;sunLight.shadowMaxZ=420;sunLight.shadowFrustumSize=210;scene.environmentIntensity=.7;scene.clearColor=BABYLON.Color3.FromHexString(WORLD.fog).toColor4(1);scene.imageProcessingConfiguration.exposure=1.05;scene.imageProcessingConfiguration.contrast=1.08;scene.imageProcessingConfiguration.toneMappingEnabled=true;scene.imageProcessingConfiguration.toneMappingType=BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;lightingBase={hemi:L.hemi,sun:L.sun,fog:BABYLON.Color3.FromHexString(WORLD.fog),sky:skyMaterial?.emissiveColor?.clone()||new BABYLON.Color3(1,1,1),fogDensity:scene.fogDensity};shadowGenerator=new BABYLON.ShadowGenerator(quality==='alta'?1024:quality==='media'?768:512,sunLight);shadowGenerator.useBlurExponentialShadowMap=true;shadowGenerator.blurKernel=16;shadowGenerator.bias=.0005;shadowGenerator.normalBias=.02;shadowGenerator.setDarkness(.24);}
 const TIME_OF_DAY={
- dia:{hemi:1,sun:1,sky:[1,1,1],fog:null,icon:'☀️'},
- atardecer:{hemi:.8,sun:.8,sky:[1,.7,.54],fog:'#c88c64',icon:'🌅'},
- noche:{hemi:.3,sun:.12,sky:[.1,.14,.28],fog:'#0e1526',icon:'🌙'}
+ dia:{hemi:1,sun:1,sky:[1,1,1],hemiColor:null,sunColor:null,fog:null,icon:'☀️'},
+ atardecer:{hemi:.8,sun:.8,sky:[1,.7,.54],hemiColor:'#ffc79a',sunColor:'#ff9a55',fog:'#c88c64',icon:'🌅'},
+ noche:{hemi:.3,sun:.12,sky:[.1,.14,.28],hemiColor:'#7a90d4',sunColor:'#8fa4ff',fog:'#0e1526',icon:'🌙'}
 };
 function cycleTimeOfDay(){
  const modes=Object.keys(TIME_OF_DAY);timeMode=modes[(modes.indexOf(timeMode)+1)%modes.length];
  const button=$('timeButton');if(button)button.textContent=TIME_OF_DAY[timeMode].icon;
 }
 function updateEnvironment(dt){
+ updateSkyLife(dt);
  if(!lightingBase||!hemiLight||!sunLight)return;
  const t=TIME_OF_DAY[timeMode]||TIME_OF_DAY.dia,k=1-Math.exp(-Math.max(0,dt)*2.2);
  hemiLight.intensity+=(lightingBase.hemi*t.hemi-hemiLight.intensity)*k;
  sunLight.intensity+=(lightingBase.sun*t.sun-sunLight.intensity)*k;
+ const hc=t.hemiColor?BABYLON.Color3.FromHexString(t.hemiColor):BABYLON.Color3.FromHexString(WORLD.hemi),sc=t.sunColor?BABYLON.Color3.FromHexString(t.sunColor):BABYLON.Color3.FromHexString(WORLD.sun);
+ hemiLight.diffuse=BABYLON.Color3.Lerp(hemiLight.diffuse,hc,k);sunLight.diffuse=BABYLON.Color3.Lerp(sunLight.diffuse,sc,k);
  const skyTarget=new BABYLON.Color3(...t.sky);
  if(skyMaterial)skyMaterial.emissiveColor=BABYLON.Color3.Lerp(skyMaterial.emissiveColor,skyTarget,k);
  const fogTarget=t.fog?BABYLON.Color3.FromHexString(t.fog):lightingBase.fog;
@@ -304,6 +347,9 @@ async function addVegetation(){
   {file:'models/veg/fern_small.glb',n:F.fern2||0,free:true,clump:.6,size:[.7,1.5],sink:0,bright:1.15,water:1.2,keep:0,rMin:2.5,rMax:32},
   {file:'models/veg/pebble.glb',n:F.pebble||0,free:true,size:[.12,.45],sink:.2,squash:1.5,tint:rockTint,bright:1.6,band:[0,6],rMax:34},
   {file:'models/env/rock_07.glb',n:F.rocks||0,size:[.6,1.8],sink:.15,squash:1.4,tint:rockTint,bright:1.6,rMin:6,rMax:44},
+  {file:'models/env/rock_09.glb',n:220,size:[.12,.4],sink:.2,squash:1.5,tint:'#d8b894',bright:1.9,rMax:16},
+  {file:'models/env/fern_02.glb',n:110,size:[.7,1.3],bright:1.2,keep:1.2,rMax:18},
+  {file:'models/env/rock_07.glb',n:40,size:[.35,.8],sink:.15,squash:1.4,tint:'#e0b898',bright:1.8,rMax:22},
   {file:'models/env/dead_tree_trunk_02.glb',n:F.logs||0,size:[3.5,6],sink:.1,water:3,keep:4,rMin:8,rMax:40}
  ];
  const home=({atacamatitan:{x:4,z:-4},arackar:{x:4,z:-4},patagonia:{x:4,z:-8},stegouros:{x:3,z:4},aysen:{x:3,z:-8}}[worldKey]||{x:0,z:-10});
@@ -697,7 +743,7 @@ async function init(){
  try{engine=new BABYLON.Engine(canvas,true,{disableWebGL2Support:false,doNotHandleContextLost:false,preserveDrawingBuffer:false,stencil:true,antialias:true,adaptToDeviceRatio:true});if(!engine.webGLVersion||engine.webGLVersion<2)throw new Error('Este dispositivo no ofrece WebGL 2.');
  scene=new BABYLON.Scene(engine);installDiagnostics();scene.clearColor=new BABYLON.Color4(.65,.76,.77,1);scene.collisionsEnabled=true;scene.fogMode=BABYLON.Scene.FOGMODE_EXP2;scene.fogColor=BABYLON.Color3.FromHexString(WORLD.fog);scene.fogDensity=({atacamatitan:.0038,arackar:.0042,patagonia:.0052,stegouros:.0085,aysen:.006,valle:.006}[worldKey]||.0038);
  camera=new BABYLON.UniversalCamera('player-camera',new BABYLON.Vector3(0,1.65,12),scene);camera.minZ=.08;camera.maxZ=320;camera.fov=.92;camera.speed=.35;camera.inertia=.82;camera.angularSensibility=3800;camera.attachControl(canvas,true);camera.keysUp.push(87);camera.keysDown.push(83);camera.keysLeft.push(65);camera.keysRight.push(68);camera.applyGravity=false;camera.checkCollisions=false;camera.ellipsoid=new BABYLON.Vector3(.35,.85,.35);
- setProgress(.08,'Creando el paisaje…');addSky();addLighting();await addTerrain();initDinoFootFX();camera.position.y=1.65+terrainHeightAt(0,12);addWater();addSandBars();addMountains();setProgress(.2,'Cargando dinosaurios…');
+ setProgress(.08,'Creando el paisaje…');addSky();addSkyLife();addLighting();await addTerrain();initDinoFootFX();camera.position.y=1.65+terrainHeightAt(0,12);addWater();addSandBars();addMountains();setProgress(.2,'Cargando dinosaurios…');
  const ids=WORLD.dinos,baseHerd={atacamatitan:22,arackar:24,patagonia:22,stegouros:18,aysen:28,valle:5}[worldKey]||5,herdSize=Math.max(3,Math.round(baseHerd*Q)),totalDinos=ids.length*herdSize;let loadedDinos=0;for(const id of ids){for(let n=0;n<herdSize;n++){await spawnDino(id,n,herdSize,null);loadedDinos++;setProgress(.2+.53*loadedDinos/totalDinos,'Cargando '+DINO[id].name+' · '+loadedDinos+'/'+totalDinos+'…');}}
  setProgress(.76,'Poblando el paisaje…');await addVegetation();addForest3D();setProgress(.9,'Preparando atmósfera…');addParticles();bindControls();scene.onBeforeRenderObservable.add(()=>{const now=performance.now(),dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;movePlayer(dt);updateHerdMode(dt);animateDinos(now,dt);updateDinoFootFX(dt);updateEnvironment(dt);for(const item of waterTextures)item.tex.uOffset=(item.tex.uOffset+dt*item.speed+1)%1;});
  engine.runRenderLoop(()=>{if(scene&&scene.activeCamera)scene.render();});window.addEventListener('resize',()=>engine.resize());setProgress(1,'¡Mundo listo!');$('startButtons').classList.remove('hidden');
