@@ -425,13 +425,13 @@ function animateDinos(t,dt){
      const samples=[ [x,z],[x+Math.cos(a)*DINO[d.id].length*.3,z+Math.sin(a)*DINO[d.id].length*.3],[x-Math.cos(a)*DINO[d.id].length*.3,z-Math.sin(a)*DINO[d.id].length*.3] ];
      if(samples.every(p=>terrainValidAt(p[0],p[1])))candidate={x,z};
     }
-    if(candidate){d.target=candidate;d.state='walk';}
+    if(candidate){d.target=candidate;d.running=rand(Math.floor(t*10)+d.phase*37)<({atacamatitan:.035,arackar:.09,patagonia:.08,stegouros:.16,aysen:.22}[d.id]||.06);d.state='walk';}
     else d.timer=2;
    }
   }
   if(d.state==='walk'&&d.target){
    const dx=d.target.x-root.position.x,dz=d.target.z-root.position.z,dist=Math.hypot(dx,dz);
-   if(dist<.35){d.state='idle';d.target=null;d.timer=2+rand(Math.floor(t)+d.phase*19)*4;}
+   if(dist<.35){d.state='idle';d.target=null;d.running=false;d.timer=2+rand(Math.floor(t)+d.phase*19)*4;}
    else{
     const desired=Math.atan2(dx,dz);let delta=desired-d.heading;
     while(delta>Math.PI)delta-=Math.PI*2;while(delta< -Math.PI)delta+=Math.PI*2;
