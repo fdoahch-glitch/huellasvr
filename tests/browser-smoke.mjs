@@ -43,6 +43,7 @@ try{
   await page.locator('#explore').click();
   await page.waitForFunction(()=>!document.querySelector('#hud')?.classList.contains('hidden'),{timeout:5000});
   await page.waitForTimeout(1200);
+  if(visualMode)await page.waitForFunction(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().visual?.environmentReady===true,{timeout:20000});
   await page.screenshot({path:path.join(resultsDir,world+'-'+testQuality+'.png'),fullPage:false});
   const state=await page.evaluate(()=>{
    const d=window.__HUELLAS_VR_DIAGNOSTICS__?.();
