@@ -372,7 +372,7 @@ async function spawnDino(id,index,total,center){
  clips.forEach(a=>{if(a!==idle)a.stop();});
  if(idle){idle.start(true);idle.setWeightForAllAnimatables?.(1);}
  root.metadata={dinoId:id};
- const herd=HERD_CONFIG[worldKey],sizes=herd?.sizes||[],baseSize=sizes[index]??(sizes.length?sizes[index%sizes.length]*(.82+((index*37)%17)/70):data.length*(index===0?1:.82+rand(index+2)*.12));
+ const herd=HERD_CONFIG[worldKey],sizes=herd?.sizes||[],sizeIndex=sizes.length>1&&total>1?Math.round(index*(sizes.length-1)/(total-1)):index,baseSize=sizes[sizeIndex]??(sizes.length?sizes[index%sizes.length]*(.82+((index*37)%17)/70):data.length*(index===0?1:.82+rand(index+2)*.12));
  const targetLength=+baseSize.toFixed(2);fitRoot(root,targetLength);const forwardYaw=data.forwardYaw??0;
  const preferred=center||herd?.center||{x:0,z:-15};
  const angle=index*2.4+.7,radius=6+(index%6)*2;
@@ -813,9 +813,6 @@ function animateDinos(t,dt){
   if(d.state==='graze'||d.state==='drink'||d.state==='rest'){d.timer-=step;if(d.timer<=0){d.state='idle';d.timer=1+rand(index*19+Math.floor(t))*2;d.goal=null;d.actualSpeed=0;}}
   if(t<d.lookUntil)d.state='look';
   else if(d.state==='look'){d.state='idle';d.timer=1.5;d.target=null;d.goal=null;d.actualSpeed=0;}
-  if(d.state==='drink'||d.state==='rest'){
-   d.timer-=step;if(d.timer<=0){d.state='idle';d.timer=1+rand(index*19+Math.floor(t))*2;d.goal=null;d.actualSpeed=0;}
-  }
   if(d.state==='idle'){
    d.timer-=step;
    if(d.timer<=0){
