@@ -621,10 +621,8 @@ function addAdvancedVisualEffects(){
   try{ssrPipeline=new BABYLON.SSRRenderingPipeline('huellas-ssr-'+worldKey,scene,[camera],true,BABYLON.Constants.TEXTURETYPE_UNSIGNED_BYTE);ssrPipeline.environmentTexture=environmentTexture||null;ssrPipeline.reflectivityThreshold=.055;ssrPipeline.maxDistance=72;ssrPipeline.maxSteps=48;ssrPipeline.step=2;ssrPipeline.blurDownsample=1;ssrPipeline.blurDispersionStrength=.025;ssrPipeline.strength=.62;console.info('[Huellas VR] SSR selectivo activo:',worldKey);}
   catch(error){ssrPipeline=null;console.warn('[Huellas VR] SSR no disponible; agua mantiene reflejos PBR/IBL:',error);}
  }
- if(['patagonia','stegouros','aysen','arackar'].includes(worldKey)&&BABYLON.VolumetricLightScatteringPostProcess){
-  try{volumetricLight=new BABYLON.VolumetricLightScatteringPostProcess('huellas-sunrays-'+worldKey,{postProcessRatio:1,passRatio:.5},camera,null,40,BABYLON.Texture.BILINEAR_SAMPLINGMODE,engine,false);volumetricLight.useDiffuseColor=true;volumetricLight.invert=true;volumetricLight.mesh.position.copyFrom(sunLight.position);volumetricLight.mesh.scaling.setAll(8);if(volumetricLight.mesh.material?.diffuseColor)volumetricLight.mesh.material.diffuseColor=sunLight.diffuse.clone();if(volumetricLight.mesh.material?.emissiveColor)volumetricLight.mesh.material.emissiveColor=sunLight.diffuse.scale(.5);console.info('[Huellas VR] Rayos volumétricos de baja resolución activos:',worldKey);}
-  catch(error){volumetricLight=null;console.warn('[Huellas VR] Rayos volumétricos no disponibles; se conserva luz solar:',error);}
- }
+ // Rayos volumétricos desactivados: se priorizan estabilidad y rendimiento de la IA/render.
+
 }
 function addVisualPipeline(){
  if(!BABYLON.DefaultRenderingPipeline||!camera)return;
