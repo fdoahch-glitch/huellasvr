@@ -323,7 +323,7 @@ check('Mejoras visuales Babylon.js/WebGL2: perfiles, PBR, sombras y postprocesad
 
 check('LOD dinámico por distancia, modelos dobles y animaciones adaptativas',()=>{
  for(const token of ['function updateDinoLod(d,t)','d.highVisual.setEnabled(next===\'high\')','d.lowVisual.setEnabled(next===\'low\')','distanceSq>72*72','distanceSq>55*55','d.activeClip?.pause?.()','d.activeClip?.play?.()','DINO_TURN_ANGLES'])assert.ok(main.includes(token),'Falta LOD/animación '+token);
- assert.doesNotMatch(main,/index\\s*>=\\s*5/);
+ assert.doesNotMatch(main,/index\s*>=\s*5/);
 });
 check('IA de bebida precalculada y cuadrícula espacial reutilizable',()=>{
  for(const token of ['function buildHerdDrinkPoints()','function herdDrinkTarget(d,index)','herdDrinkPoints=points','for(const bucket of dinoCollisionGrid.values())bucket.length=0','function buildEnvironmentCollisionGrid()','function nearbyGridItems('])assert.ok(main.includes(token),'Falta optimización CPU '+token);
@@ -349,13 +349,13 @@ check('Motor Babylon.js, cargadores y Havok servidos localmente sin CDN',()=>{
 });
 
 
-check('Optimización CPU ULTRA: mezcla de audio sin automatizaciones por fotograma y colores reutilizados',()=>{
+check('Optimización CPU: mezcla de audio sin automatizaciones por fotograma y colores reutilizados',()=>{
  const start=main.indexOf('function updateEnvironment(dt){'),end=main.indexOf('function initAmbientAudio()',start),environment=main.slice(start,end);
  assert.ok(start>=0&&end>start,'No se encuentra el actualizador ambiental');
  assert.equal((environment.match(/setTargetAtTime/g)||[]).length,0,'Audio programa eventos WebAudio repetidos en cada fotograma');
  for(const token of ['function syncAmbientAudioMix()','ambientAudioMixKey','ENVIRONMENT_COLOR_CACHE','ENVIRONMENT_COLOR_SCRATCH','BABYLON.Color3.LerpToRef'])assert.ok(main.includes(token),'Falta optimización CPU '+token);
 });
-check('Diagnóstico de rendimiento ULTRA: tiempos por sistema y percentiles de fotograma',()=>{
+check('Diagnóstico de rendimiento: tiempos por sistema y percentiles de fotograma',()=>{
  for(const token of ['cpuStagesMs','frameP50Ms','frameP95Ms','frameP99Ms','fps1PercentLow','frameTimeSamples','gpuFrameTimeMs','captureGPUFrameTime'])assert.ok(main.includes(token),'Falta métrica '+token);
  for(const token of ['cpuStageMs.player','cpuStageMs.herd','cpuStageMs.dinosaurs','cpuStageMs.footFx','cpuStageMs.environment','cpuStageMs.gaze','cpuStageMs.water'])assert.ok(main.includes(token),'Falta desglose CPU '+token);
 });
