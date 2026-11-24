@@ -365,7 +365,17 @@ function addParticles(){const p=new BABYLON.ParticleSystem('ambient-dust',700,sc
 function showInfo(id){const d=DINO[id];if(!d)return;const actor=dinoRoots.find(x=>x.id===id);if(actor){actor.lookUntil=performance.now()+6500;actor.state='look';actor.target=null;actor.clipName='';}$('infoTitle').textContent=d.name;$('infoBody').textContent=d.text;$('info').classList.remove('hidden');}
 function closeInfo(){$('info').classList.add('hidden');}
 function onPick(evt){if(!evt.hit||!evt.pickedMesh)return;let m=evt.pickedMesh;while(m&&!m.metadata?.dinoId&&!m.metadata?.ground)m=m.parent;if(m?.metadata?.dinoId){showInfo(m.metadata.dinoId);return;}if(m?.metadata?.ground&&evt.pickedPoint){target=evt.pickedPoint.clone();moving=true;}}
-function movePlayer(dt){if(!moving||!target||xr?.baseExperience?.state===BABYLON.WebXRState.IN_XR)return;const dest=new BABYLON.Vector3(target.x,1.65,target.z);dest.y=1.65;const delta=dest.subtract(camera.position);delta.y=0;const len=delta.length();if(len<.45){moving=false;return;}delta.normalize();camera.position.addInPlace(delta.scale(Math.min(len,dt*4.5)));camera.position.y=terrainHeightAt(camera.position.x,camera.position.z)+1.65;}
+function movePlayer(dt){
+ if(!moving||!target||xr?.baseExperience?.state===BABYLON.WebXRState.IN_XR)return;
+ if(!terrainValidAt(target.x,target.z)){moving=false;target=null;return;}
+ const dx=target.x-camera.position.x,dz=target.z-camera.position.z,len=Math.hypot(dx,dz);
+ if(len<.45){moving=false;target=null;return;}
+ const advance=Math.min(len,dt*4.5),nx=camera.position.x+dx/len*advance,nz=camera.position.z+dz/len*advance;
+ const samples=5;let safe=true;
+ for(let i=1;i<=samples;i++){const t=i/samples,x=camera.position.x+(nx-camera.position.x)*t,z=camera.position.z+(nz-camera.position.z)*t;if(!terrainValidAt(x,z)){safe=false;break;}}
+ if(!safe){moving=false;target=null;return;}
+ camera.position.x=nx;camera.position.z=nz;camera.position.y=terrainHeightAt(nx,nz)+1.65;
+}
 function animateDinos(t,dt){
  const step=Math.min(.05,Math.max(0,dt||0));
  const gait={atacamatitan:.72,arackar:.9,patagonia:.55,stegouros:.5,aysen:.85};
@@ -419,7 +429,7 @@ async function startExperience(withVR){$('loader').style.opacity='0';setTimeout(
 async function init(){
  try{engine=new BABYLON.Engine(canvas,true,{disableWebGL2Support:false,doNotHandleContextLost:false,preserveDrawingBuffer:false,stencil:true,antialias:true,adaptToDeviceRatio:true});if(!engine.webGLVersion||engine.webGLVersion<2)throw new Error('Este dispositivo no ofrece WebGL 2.');
  scene=new BABYLON.Scene(engine);scene.clearColor=new BABYLON.Color4(.65,.76,.77,1);scene.collisionsEnabled=true;scene.fogMode=BABYLON.Scene.FOGMODE_EXP2;scene.fogColor=BABYLON.Color3.FromHexString(WORLD.fog);scene.fogDensity=({atacamatitan:.0038,arackar:.0042,patagonia:.0052,stegouros:.0085,aysen:.006,valle:.006}[worldKey]||.0038);
- camera=new BABYLON.UniversalCamera('player-camera',new BABYLON.Vector3(0,1.65,12),scene);camera.minZ=.08;camera.maxZ=320;camera.fov=.92;camera.speed=.35;camera.inertia=.82;camera.angularSensibility=3800;camera.attachControl(canvas,true);camera.keysUp.push(87);camera.keysDown.push(83);camera.keysLeft.push(65);camera.keysRight.push(68);camera.applyGravity=false;camera.checkCollisions=true;camera.ellipsoid=new BABYLON.Vector3(.35,.85,.35);
+ camera=new BABYLON.UniversalCamera('player-camera',new BABYLON.Vector3(0,1.65,12),scene);camera.minZ=.08;camera.maxZ=320;camera.fov=.92;camera.speed=.35;camera.inertia=.82;camera.angularSensibility=3800;camera.attachControl(canvas,true);camera.keysUp.push(87);camera.keysDown.push(83);camera.keysLeft.push(65);camera.keysRight.push(68);camera.applyGravity=false;camera.checkCollisions=false;camera.ellipsoid=new BABYLON.Vector3(.35,.85,.35);
  setProgress(.08,'Creando el paisaje…');addSky();addLighting();await addTerrain();camera.position.y=1.65+terrainHeightAt(0,12);addWater();addSandBars();addMountains();setProgress(.2,'Cargando dinosaurios…');
  const ids=WORLD.dinos,baseHerd={atacamatitan:22,arackar:24,patagonia:22,stegouros:18,aysen:28,valle:5}[worldKey]||5,herdSize=Math.max(3,Math.round(baseHerd*Q)),totalDinos=ids.length*herdSize;let loadedDinos=0;for(const id of ids){for(let n=0;n<herdSize;n++){await spawnDino(id,n,herdSize,null);loadedDinos++;setProgress(.2+.53*loadedDinos/totalDinos,'Cargando '+DINO[id].name+' · '+loadedDinos+'/'+totalDinos+'…');}}
  setProgress(.76,'Poblando el paisaje…');await addVegetation();addForest3D();setProgress(.9,'Preparando atmósfera…');addParticles();bindControls();scene.onBeforeRenderObservable.add(()=>{const now=performance.now(),dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;movePlayer(dt);animateDinos(now,dt);});
