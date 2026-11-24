@@ -55,6 +55,8 @@ jobs:
         run: node tests/browser-smoke.mjs
       - name: Validar efectos visuales de alta calidad en los cinco mundos
         run: HUELLAS_VISUAL_TEST=1 node tests/browser-smoke.mjs
+      - name: Medir rendimiento ULTRA solo con GPU física verificable
+        run: node tests/performance-smoke.mjs
       - name: Guardar capturas de los mundos
         if: always()
         uses: actions/upload-artifact@v4
