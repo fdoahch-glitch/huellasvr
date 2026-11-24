@@ -197,7 +197,18 @@ function addTerrain(){
      const hash=(x,z,seed)=>{const q=Math.sin(x*127.1+z*311.7+seed*74.7)*43758.5453;return q-Math.floor(q);};
      const noise=(x,z,seed)=>{const ix=Math.floor(x),iz=Math.floor(z),u=x-ix,v=z-iz,su=u*u*(3-2*u),sv=v*v*(3-2*v);return (hash(ix,iz,seed)*(1-su)+hash(ix+1,iz,seed)*su)*(1-sv)+(hash(ix,iz+1,seed)*(1-su)+hash(ix+1,iz+1,seed)*su)*sv;};
      const maskSize=256,maskCanvases=[0,1,2].map(()=>{const c=document.createElement('canvas');c.width=c.height=maskSize;return c;}),maskData=maskCanvases.map(c=>c.getContext('2d').createImageData(maskSize,maskSize));
-     for(let y=0;y<maskSize;y++)for(let x=0;x<maskSize;x++){const wx=(x/maskSize-.5)*300,wz=(y/maskSize-.5)*300,wg=Math.max(0,Math.min(1,(noise(wx*.045,wz*.045,5)-.58)/.20)),wc=Math.max(0,Math.min(1,(noise(wx*.03+11.7,wz*.03+11.7,13)-.60)/.20))*(1-wg),weights=[1-wg-wc,wg,wc],p=(y*maskSize+x)*4;for(let k=0;k<3;k++){const d=maskData[k].data;d[p]=d[p+1]=d[p+2]=255;d[p+3]=Math.round(255*weights[k]);}}
+     const smoothMask=(a,b,v)=>{const t=Math.max(0,Math.min(1,(v-a)/(b-a)));return t*t*(3-2*t);};
+      for(let y=0;y<maskSize;y++)for(let x=0;x<maskSize;x++){
+       const wx=(x/maskSize-.5)*300,wz=(y/maskSize-.5)*300;
+       let flat=0;const e=1.25;
+       if(terrainValidAt(wx,wz)&&terrainValidAt(wx-e,wz)&&terrainValidAt(wx+e,wz)&&terrainValidAt(wx,wz-e)&&terrainValidAt(wx,wz+e)){
+        const sx=(terrainHeightAt(wx+e,wz)-terrainHeightAt(wx-e,wz))/(2*e),sz=(terrainHeightAt(wx,wz+e)-terrainHeightAt(wx,wz-e))/(2*e),normalY=1/Math.sqrt(1+sx*sx+sz*sz);
+        flat=smoothMask(.55,.92,normalY);
+       }
+       const cameraDistance=Math.hypot(wx-(camera?.position.x||0),wz-(camera?.position.z||0)),distanceFade=1-smoothMask(35,120,cameraDistance),coverage=flat*distanceFade;
+       const wg=Math.max(0,Math.min(1,(noise(wx*.045,wz*.045,5)-.58)/.20)),wc=Math.max(0,Math.min(1,(noise(wx*.03+11.7,wz*.03+11.7,13)-.60)/.20))*(1-wg),weights=[1-wg-wc,wg,wc],p=(y*maskSize+x)*4;
+       for(let k=0;k<3;k++){const d=maskData[k].data;d[p]=d[p+1]=d[p+2]=255;d[p+3]=Math.round(255*weights[k]*coverage);}
+      }
      maskCanvases.forEach((c,k)=>c.getContext('2d').putImageData(maskData[k],0,0));
      images.forEach((im,k)=>{
       const layer=layers[k],normalized=document.createElement('canvas');normalized.width=im.width;normalized.height=im.height;const nc=normalized.getContext('2d');nc.drawImage(im,0,0);const nd=nc.getImageData(0,0,im.width,im.height),px=nd.data,mean=layer.mean;
