@@ -160,3 +160,26 @@ check('Recursos locales literales del motor presentes en el repositorio',()=>{
 check('Diagnóstico de rendimiento expone CPU, GPU y estado XR',()=>{
  for(const token of ['__HUELLAS_VR_DIAGNOSTICS__','cpuUpdateAvgMs','activeMeshes','getLoadedTexturesCache','xrState','heapMB'])assert.ok(main.includes(token),'Falta diagnóstico '+token);
 });
+
+
+check('Orientación frontal explícita e independiente por especie',()=>{
+ const expected={atacamatitan:'-Math.PI/2',arackar:'Math.PI/2',gonkoken:'-Math.PI/2',stegouros:'-Math.PI/2',chilesaurus:'-Math.PI/2'};
+ for(const [id,yaw] of Object.entries(expected))assert.ok(main.includes(id+":{name:")&&main.includes(id+":{name:") , 'Falta especie '+id);
+ for(const [id,yaw] of Object.entries(expected)){
+  const line=main.split('\\n').find(x=>x.includes(id+":{name:"));
+  assert.ok(line&&line.includes('forwardYaw:'+yaw),'Orientación no explícita para '+id);
+ }
+ assert.doesNotMatch(main,/DINO\\[d\\.id\\]\\.flip/);
+});
+check('Clips clonados: sufijos numéricos y crossfade',()=>{
+ assert.match(main,/function resolveDinoClip\\(clips,semantic\\)/);
+ assert.match(main,/replace\\(/);
+ assert.ok(main.includes('setWeightForAllAnimatables'));
+ assert.ok(main.includes('transitionElapsed/.24'));
+ assert.ok(main.includes("resolveDinoClip(clips,'Idle')"));
+});
+check('Base de montañas busca terreno válido antes de interpolar',()=>{
+ assert.ok(main.includes('const mountainBaseAt=(x,z)=>'));
+ assert.ok(main.includes('for(let inward=2;inward<=36;inward+=2)'));
+ assert.ok(main.includes('edgeY=mountainBaseAt(edgeX,edgeZ)'));
+});
