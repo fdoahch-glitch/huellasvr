@@ -183,3 +183,9 @@ check('Base de montañas busca terreno válido antes de interpolar',()=>{
  assert.ok(main.includes('for(let inward=2;inward<=36;inward+=2)'));
  assert.ok(main.includes('edgeY=mountainBaseAt(edgeX,edgeZ)'));
 });
+
+check('API de prueba temporal para reproducir los cuatro clips',()=>{
+ assert.ok(main.includes("params.get('test')==='1'"));
+ assert.ok(main.includes('window.__HUELLAS_VR_TEST__'));
+ assert.ok(main.includes('d.testClip||'));
+});
