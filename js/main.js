@@ -129,9 +129,20 @@ let terrainValidAt=(x,z)=>true;
 
 function addLighting(){const L={atacamatitan:{hemi:1.05,sun:1.15,pos:[25,34,-10],ground:'#8a4e34'},arackar:{hemi:1,sun:1.1,pos:[-30,18,-20],ground:'#9a7a5a'},patagonia:{hemi:.95,sun:.8,pos:[20,30,-30],ground:'#5f6a52'},stegouros:{hemi:.95,sun:.85,pos:[15,36,-10],ground:'#4a5a34'},aysen:{hemi:.9,sun:.75,pos:[30,30,-20],ground:'#55584e'},valle:{hemi:.55,sun:.9,pos:[-12,22,10],ground:'#6b8a5a'}}[worldKey];const hemi=new BABYLON.HemisphericLight('ambient',new BABYLON.Vector3(0,1,0),scene);hemi.diffuse=BABYLON.Color3.FromHexString(WORLD.hemi);hemi.groundColor=BABYLON.Color3.FromHexString(L.ground);hemi.intensity=L.hemi;const sun=new BABYLON.DirectionalLight('sun',new BABYLON.Vector3(-L.pos[0],-L.pos[1],-L.pos[2]).normalize(),scene);sun.position=new BABYLON.Vector3(...L.pos);sun.diffuse=BABYLON.Color3.FromHexString(WORLD.sun);sun.intensity=L.sun;scene.environmentIntensity=.7;}
 function addWater(){
+ const waterPal={
+  atacamatitan:{edge:'#d9c59b',mid:'#93b3b4',center:'#6f9fae'},
+  arackar:{edge:'#a9cdc9',mid:'#68a5b8',center:'#4f93b3'},
+  patagonia:{edge:'#86a39c',mid:'#5e837f',center:'#4a6f70'},
+  stegouros:{edge:'#7c7a58',mid:'#5a6a50',center:'#485c48'},
+  aysen:{edge:'#6f828a',mid:'#4a6672',center:'#38535f'}
+ }[worldKey]||{edge:'#8aa5a0',mid:'#668a8c',center:'#456d78'};
+ const waterTex=new BABYLON.DynamicTexture('water-ripple-texture-'+worldKey,256,scene,false,BABYLON.Texture.TRILINEAR_SAMPLINGMODE),wc=waterTex.getContext();
+ const wg=wc.createLinearGradient(0,0,0,256);wg.addColorStop(0,waterPal.edge);wg.addColorStop(.48,waterPal.mid);wg.addColorStop(1,waterPal.center);wc.fillStyle=wg;wc.fillRect(0,0,256,256);
+ for(let n=0;n<46;n++){const y=(n*37)%256,x=(n*71)%256;wc.beginPath();wc.ellipse(x,y,8+(n%7)*3,1+(n%3),-.15,0,Math.PI*2);wc.strokeStyle='rgba(235,245,238,'+(.045+(n%4)*.018)+')';wc.lineWidth=.8+(n%2)*.45;wc.stroke();}
+ waterTex.update(false);waterTex.wrapU=waterTex.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;waterTex.uScale=4;waterTex.vScale=2;waterTex.anisotropicFilteringLevel=4;
  const waterMat=new BABYLON.StandardMaterial('original-water-'+worldKey,scene);
- waterMat.diffuseColor=BABYLON.Color3.FromHexString(worldKey==='arackar'?'#24869a':worldKey==='atacamatitan'?'#706c62':worldKey==='patagonia'?'#4a6f70':worldKey==='stegouros'?'#485c48':'#38535f');
- waterMat.emissiveColor=waterMat.diffuseColor.scale(.08);waterMat.specularColor=new BABYLON.Color3(.55,.68,.72);waterMat.alpha=.88;waterMat.roughness=.2;
+ waterMat.diffuseTexture=waterTex;waterMat.diffuseColor=new BABYLON.Color3(1,1,1);
+ waterMat.emissiveColor=BABYLON.Color3.FromHexString(waterPal.center).scale(.06);waterMat.specularColor=new BABYLON.Color3(.42,.55,.58);waterMat.alpha=.94;waterMat.roughness=.24;
  const bankMat=new BABYLON.StandardMaterial('original-water-bank-'+worldKey,scene);bankMat.diffuseColor=BABYLON.Color3.FromHexString(worldKey==='atacamatitan'?'#b9784d':worldKey==='arackar'?'#c9ad7b':'#8c927e');bankMat.roughness=1;
  (WORLD.rivers||[]).forEach((river,index)=>{
   const pts=river.pts.map(p=>new BABYLON.Vector3(p[0],terrainHeightAt(p[0],p[1])+.11,p[1]));
