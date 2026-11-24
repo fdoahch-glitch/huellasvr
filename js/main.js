@@ -595,7 +595,7 @@ async function initPhysics(){
  const terrainCollider=new BABYLON.PhysicsAggregate(ground,BABYLON.PhysicsShapeType.MESH,{mass:0,friction:.9,restitution:0},scene);
  physicsAggregates.push(terrainCollider);
  physicsController=new BABYLON.PhysicsCharacterController(new BABYLON.Vector3(camera.position.x,camera.position.y-.75,camera.position.z),{capsuleHeight:1.8,capsuleRadius:.35},scene);
- physicsController.maxSlopeCosine=Math.cos(50*Math.PI/180);
+ physicsController.maxSlopeCosine=Math.cos(50*Math.PI/180);physicsController.maxStepHeight=.35;physicsController.maxCharacterSpeedForSolver=8;
  physicsController.staticFriction=.8;physicsController.dynamicFriction=.65;physicsController.keepDistance=.06;
  physicsReady=true;physicsLastSupport='initializing';
  console.info('[Huellas VR] Havok Physics V2 activo: terreno estático y controlador cápsula del jugador.');
