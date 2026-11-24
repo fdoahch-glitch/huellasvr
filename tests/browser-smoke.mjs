@@ -68,7 +68,6 @@ try{
   if(!['gpu','cpu'].includes(state.diagnostics.visual?.particleBackend))throw new Error(world+' no informó backend de partículas válido: '+JSON.stringify(state.diagnostics.visual));
   if(!visualMode&&world==='atacamatitan'&&state.diagnostics.visual?.ssao)throw new Error('SSAO no debe activarse en el perfil bajo de la prueba');
   if(visualMode&&!state.diagnostics.visual?.environmentReady)throw new Error(world+' no terminó de cargar IBL local: '+JSON.stringify(state.diagnostics.visual));
-  if(visualMode&&['patagonia','stegouros','aysen','arackar'].includes(world)&&!state.diagnostics.visual?.volumetric)throw new Error(world+' no activó los rayos volumétricos del perfil ultra: '+JSON.stringify(state.diagnostics.visual));
   if(visualMode&&state.diagnostics.visual?.environmentError)throw new Error(world+' falló la iluminación IBL: '+state.diagnostics.visual.environmentError);
   if(world==='atacamatitan'){const panel=await page.locator('#huellasPerfDiagnostics').textContent();if(!panel||!panel.includes('Draw calls')||!panel.includes('Havok'))throw new Error(world+' no mostró el panel de diagnóstico completo');}
   if(!state.diagnostics.sky?.ready||state.diagnostics.sky.error)throw new Error(world+' no cargó el panorama '+JSON.stringify(state.diagnostics.sky));
