@@ -297,3 +297,11 @@ check('Recursos compartidos y un solo bucle de renderizado',()=>{
  assert.ok(main.includes('if(!renderLoopStarted){engine.runRenderLoop(renderLoop);renderLoopStarted=true;}'));
  assert.ok(main.includes('antialias:false'),'El antialias del contexto no debe duplicar el MSAA del pipeline');
 });
+
+
+check('Motor Babylon.js, cargadores y Havok servidos localmente sin CDN',()=>{
+ const html=read('index.html');
+ for(const file of ['vendor/babylon/babylon.js','vendor/babylon/babylonjs.loaders.min.js','vendor/babylon/havok/HavokPhysics_umd.js'])assert.ok(html.includes(file),'Falta referencia local '+file);
+ assert.ok(!/https?:\\/\\/[^\\s"'<>]*(babylon|havok)/i.test(html),'Se detectó dependencia Babylon/Havok externa en index.html');
+ for(const file of ['vendor/babylon/babylon.js','vendor/babylon/babylonjs.loaders.min.js','vendor/babylon/havok/HavokPhysics_umd.js','vendor/babylon/havok/HavokPhysics.wasm'])assert.ok(fs.existsSync(new URL('../'+file,import.meta.url)),'No está versionado '+file);
+});
