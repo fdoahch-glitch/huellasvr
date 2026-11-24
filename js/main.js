@@ -1117,6 +1117,7 @@ async function toggleMobileStereo(){
   camera.setCameraRigMode(BABYLON.Camera.RIG_MODE_STEREOSCOPIC_SIDEBYSIDE_PARALLEL,{interaxialDistance:.064});
   if(!camera.rigCameras||camera.rigCameras.length!==2)throw new Error('Babylon no creó las dos cámaras estereoscópicas.');
   stereoEnabled=true;$('stereoButton').textContent='🥽✓';$('hud').classList.add('hidden');$('exitHint').classList.remove('hidden');
+  if(!orientationEnabled)await toggleMobileOrientation();
   try{const el=document.documentElement;if(el.requestFullscreen)await el.requestFullscreen({navigationUI:'hide'});else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();}catch(e){}
   try{await screen.orientation?.lock?.('landscape');}catch(e){}
   try{if(navigator.wakeLock)stereoWakeLock=await navigator.wakeLock.request('screen');}catch(e){}
