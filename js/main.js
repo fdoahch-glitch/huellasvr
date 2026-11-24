@@ -114,7 +114,7 @@ function addTerrain(){
     if(!detailProfiles){finish();return;}
     Promise.all([loadImage(detailProfiles.sand),loadImage(detailProfiles.gravel),loadImage(detailProfiles.crack)]).then(images=>{
      const alphas=[.38,.26,.18],sizes=[2.4,2.2,2.8];
-     images.forEach((im,k)=>{const pat=cc.createPattern(im,'repeat');if(!pat)return;const tilePx=300/sizes[k]/(2048/300);if(pat.setTransform&&typeof DOMMatrix!=='undefined')pat.setTransform(new DOMMatrix().scale(tilePx/im.width,tilePx/im.height));cc.save();cc.globalAlpha=alphas[k];cc.globalCompositeOperation=k===0?'soft-light':'multiply';cc.fillStyle=pat;cc.fillRect(0,0,2048,2048);cc.restore();});
+     images.forEach((im,k)=>{const pat=cc.createPattern(im,'repeat');if(!pat)return;const tilePx=2048*sizes[k]/300;if(pat.setTransform&&typeof DOMMatrix!=='undefined')pat.setTransform(new DOMMatrix().scale(tilePx/im.width,tilePx/im.height));cc.save();cc.globalAlpha=alphas[k];cc.globalCompositeOperation=k===0?'soft-light':'multiply';cc.fillStyle=pat;cc.fillRect(0,0,2048,2048);cc.restore();});
      finish();
     }).catch(reject);
    };
