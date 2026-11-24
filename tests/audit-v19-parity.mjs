@@ -77,6 +77,16 @@ check('Inicialización de iluminación sin referencias obsoletas',()=>{
  assert.ok(main.includes('sunLight.shadowFrustumSize=210'));
  assert.doesNotMatch(main,/(?<![\\w$])sun\\.(?:shadowMinZ|shadowMaxZ|shadowFrustumSize)/);
 });
+check('Atmósfera v19: nubes móviles, pterosaurios, estrellas, luna y mariposas',()=>{
+ for(const token of ['function addSkyLife()','function updateSkyLife(dt)','moving-cloud-dome','night-sky-stars','night-moon','sky-pterosaur-','ambient-butterfly-','sunbeam-','floating-atmosphere-motes'])assert.ok(main.includes(token),'Falta '+token);
+});
+check('Sonido nocturno original y mezcla de lluvia',()=>{
+ assert.ok(main.includes('nightInsectGain'));assert.ok(main.includes('insectLfo.frequency.value=13'));
+ assert.ok(main.includes("timeMode==='noche'&&!raining&&soundOn"));
+});
+check('Catálogo ambiental v19: rocas y helechos GLB complementarios',()=>{
+ for(const file of ['models/env/rock_09.glb','models/env/fern_02.glb','models/env/rock_07.glb','models/env/dead_tree_trunk_02.glb']){assert.ok(main.includes(file),'No se instancia '+file);assert.ok(exists(file),'Falta recurso '+file);}
+});
 check('Clima, ciclo horario y sonido',()=>{
  for(const token of ['function cycleTimeOfDay()','function initAmbientAudio()','function updateEnvironment(dt)','rainSystem'])assert.ok(main.includes(token),'Falta '+token);
 });
