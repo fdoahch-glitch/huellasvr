@@ -742,7 +742,7 @@ function animateDinos(t,dt){
   const desired=d.testClip||(d.state==='look'||d.state==='drink'||(d.state==='rest'&&d.restLook)?'Neck_Look':d.state==='walk'?(d.running?'Run':'Walk'):'Idle');
   if(d.clipName!==desired){
    const clip=resolveDinoClip(d.clips,desired);
-   if(clip&&clip!==d.activeClip){d.transitionFrom=d.activeClip||null;d.transitionElapsed=0;clip.start(true);clip.setWeightForAllAnimatables?.(0);d.activeClip=clip;d.clipName=desired;}
+   if(clip&&clip!==d.activeClip){if(d.transitionFrom&&d.transitionFrom!==d.activeClip)d.transitionFrom.stop();d.transitionFrom=d.activeClip||null;d.transitionElapsed=0;clip.start(true);clip.setWeightForAllAnimatables?.(0);d.activeClip=clip;d.clipName=desired;}
   }
   if(d.activeClip){
    const gaitBase=profile[d.running?'run':'walk']||profile.walk||.1;
