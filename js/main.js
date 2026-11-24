@@ -274,7 +274,7 @@ async function addVegetation(){
    if(!dimensions){
     let min=new BABYLON.Vector3(Infinity,Infinity,Infinity),max=new BABYLON.Vector3(-Infinity,-Infinity,-Infinity);
     meshes.forEach(mesh=>{mesh.computeWorldMatrix(true);const bb=mesh.getBoundingInfo().boundingBox;min=BABYLON.Vector3.Minimize(min,bb.minimumWorld);max=BABYLON.Vector3.Maximize(max,bb.maximumWorld);});
-    dimensions={base:Math.max(max.x-min.x,max.z-min.z)||1,height:max.y-min.y||1,cx:(min.x+max.x)*.5,cz:(min.z+max.z)*.5};
+    dimensions={base:Math.max(max.x-min.x,max.z-min.z)||1,height:max.y-min.y||1,minY:min.y,cx:(min.x+max.x)*.5,cz:(min.z+max.z)*.5};
    }
    if(!materialsAdjusted){
     meshes.forEach(mesh=>{
@@ -284,7 +284,7 @@ async function addVegetation(){
     });materialsAdjusted=true;
    }
    const width=a.size[0]+rng(p.index*7+31)*(a.size[1]-a.size[0]),scale=width/dimensions.base,squash=a.squash||1;
-   root.position.set(p.x-dimensions.cx*scale,terrainHeightAt(p.x,p.z)-(a.sink||0)*dimensions.height*scale*squash,p.z-dimensions.cz*scale);
+   root.position.set(p.x-dimensions.cx*scale,terrainHeightAt(p.x,p.z)-dimensions.minY*scale-(a.sink||0)*dimensions.height*scale*squash,p.z-dimensions.cz*scale);
    root.scaling.set(scale,scale*squash,scale);
    root.rotation.set((rng(p.index*7+41)-.5)*(a.tilt||0),rng(p.index*7+43)*Math.PI*2,(rng(p.index*7+47)-.5)*(a.tilt||0));
    meshes.forEach(mesh=>{mesh.isPickable=false;mesh.checkCollisions=false;});
@@ -368,16 +368,17 @@ function addForest3D(){
   return out;
  };
  const makeMatrices=(list,scaleFn,offsetY=0)=>list.map((p,i)=>{const sc=scaleFn(i),rot=BABYLON.Quaternion.RotationYawPitchRoll(rnd(i*19+FT.length)*Math.PI*2,0,0);return BABYLON.Matrix.Compose(new BABYLON.Vector3(sc.x,sc.y,sc.z),rot,new BABYLON.Vector3(p.x,p.y+offsetY,p.z));});
- const adult=place(Math.round(FN.adult*Q),{rMin:46,rMax:130,water:7,keepHerd:16},11),adultH=adult.map((p,i)=>16+rnd(i*5+13)*16);
+ const forestRing=worldKey==='stegouros'?30:46;
+ const adult=place(Math.round(FN.adult*VEGETATION_QUALITY),{rMin:forestRing,rMax:130,water:7,keepHerd:16},11),adultH=adult.map((p,i)=>16+rnd(i*5+13)*16);
  setThin(adultTrunk,makeMatrices(adult,i=>({x:adultH[i],y:adultH[i],z:adultH[i]}),0),bark,'forest-adult-trunks-'+FT);
  setThin(adultCrown,makeMatrices(adult,i=>({x:adultH[i],y:adultH[i],z:adultH[i]}),0),leaf,'forest-adult-crowns-'+FT);
- const young=place(Math.round(FN.young*Q),{rMin:40,rMax:130,water:5,keepHerd:12},29),youngH=young.map((p,i)=>5+rnd(i*7+31)*8);
+ const young=place(Math.round(FN.young*VEGETATION_QUALITY),{rMin:forestRing-2,rMax:130,water:5,keepHerd:12},29),youngH=young.map((p,i)=>5+rnd(i*7+31)*8);
  setThin(youngTrunk,makeMatrices(young,i=>({x:youngH[i],y:youngH[i],z:youngH[i]})),bark,'forest-young-trunks-'+FT);
  setThin(youngCrown,makeMatrices(young,i=>({x:youngH[i],y:youngH[i],z:youngH[i]})),leaf,'forest-young-crowns-'+FT);
- const ferns=place(Math.round(FN.fern*Q),{rMin:7,rMax:120,water:3.5,wMax:45,keepHerd:6},53),fernH=ferns.map((p,i)=>1.1+rnd(i*11+59)*2.4);
+ const ferns=place(Math.round(FN.fern*VEGETATION_QUALITY),{rMin:7,rMax:120,water:3.5,wMax:45,keepHerd:6},53),fernH=ferns.map((p,i)=>1.1+rnd(i*11+59)*2.4);
  setThin(fernStem,makeMatrices(ferns,i=>({x:fernH[i],y:fernH[i],z:fernH[i]})),bark,'forest-fern-stems-'+FT);
  setThin(fernLeaves,makeMatrices(ferns,i=>({x:fernH[i],y:fernH[i],z:fernH[i]})),frondMat,'forest-fern-leaves-'+FT);
- const grass=place(Math.round((WORLD.walk?0:FN.grass)*Q),{rMin:2,rMax:60,water:1.2},79),grassH=grass.map((p,i)=>.35+rnd(i*13+83)*.6);
+ const grass=place(Math.round((FN.grass||0)*VEGETATION_QUALITY),{rMin:2,rMax:60,water:1.2},79),grassH=grass.map((p,i)=>.35+rnd(i*13+83)*.6);
  setThin(grassGeo,makeMatrices(grass,i=>({x:grassH[i],y:grassH[i],z:grassH[i]})),grassMat,'forest-grass-'+FT);
 }
 function makeParticleTexture(){const tex=new BABYLON.DynamicTexture('procedural-particle',64,scene,false);const c=tex.getContext(),g=c.createRadialGradient(32,32,1,32,32,31);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.25,'rgba(255,255,255,.75)');g.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=g;c.fillRect(0,0,64,64);tex.update(false);return tex;}
