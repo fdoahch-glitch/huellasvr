@@ -164,16 +164,16 @@ check('Diagnóstico de rendimiento expone CPU, GPU y estado XR',()=>{
 
 check('Orientación frontal explícita e independiente por especie',()=>{
  const expected={atacamatitan:'-Math.PI/2',arackar:'Math.PI/2',gonkoken:'-Math.PI/2',stegouros:'-Math.PI/2',chilesaurus:'-Math.PI/2'};
- for(const [id,yaw] of Object.entries(expected))assert.ok(main.includes(id+":{name:")&&main.includes(id+":{name:") , 'Falta especie '+id);
  for(const [id,yaw] of Object.entries(expected)){
-  const line=main.split('\\n').find(x=>x.includes(id+":{name:"));
-  assert.ok(line&&line.includes('forwardYaw:'+yaw),'Orientación no explícita para '+id);
+  const at=main.indexOf(id+':{name:');assert.ok(at>=0,'Falta especie '+id);
+  const end=main.indexOf('},',at),spec=main.slice(at,end<0?at+500:end);
+  assert.ok(spec.includes('forwardYaw:'+yaw),'Orientación no explícita para '+id);
  }
- assert.doesNotMatch(main,/DINO\\[d\\.id\\]\\.flip/);
+ assert.ok(!main.includes('DINO[d.id].flip'),'Se mantiene la inversión genérica antigua');
 });
 check('Clips clonados: sufijos numéricos y crossfade',()=>{
- assert.match(main,/function resolveDinoClip\\(clips,semantic\\)/);
- assert.match(main,/replace\\(/);
+ assert.ok(main.includes('function resolveDinoClip(clips,semantic)'));
+ assert.ok(main.includes("replace(/(?:[-_ ]\\\\d+)+$/"));
  assert.ok(main.includes('setWeightForAllAnimatables'));
  assert.ok(main.includes('transitionElapsed/.24'));
  assert.ok(main.includes("resolveDinoClip(clips,'Idle')"));
