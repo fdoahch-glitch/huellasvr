@@ -77,7 +77,7 @@ function addSky(){
  // Asignar antes de que termine la carga, igual que el original; no esperar
  // al callback para configurar el modo de coordenadas.
  pano.coordinatesMode=BABYLON.Texture.FIXED_EQUIRECTANGULAR_MODE;
- m.emissiveTexture=pano;sky.material=m;skyMaterial=m;sky.rotation.y=Math.PI;
+ m.emissiveTexture=pano;sky.material=m;skyMaterial=m;sky.rotation.y=(WORLD.panoRot??180)*Math.PI/180;
  return new Promise((resolve,reject)=>{
   pano.onLoadObservable.add(()=>resolve(sky));
   pano.onErrorObservable.add((_,error)=>reject(new Error('No se pudo cargar el panorama esencial '+WORLD.sky+': '+String(error||skyError))));
