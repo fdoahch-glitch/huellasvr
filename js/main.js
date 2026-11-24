@@ -831,7 +831,7 @@ function installDiagnostics(){
    setAnimation(name){
     const d=dinoRoots[0];if(!d)throw new Error('No hay dinosaurios cargados para probar.');
     if(!['Idle','Walk','Run','Neck_Look'].includes(name))throw new Error('Clip de prueba no permitido: '+name);
-    d.testClip=name;d.clipName='';d.target=null;d.goal=null;d.running=name==='Run';
+    d.testClip=name;d.clipName='';d.target=null;d.goal=null;d.running=name==='Run';d.lookUntil=name==='Neck_Look'?performance.now()+5000:0;
     if(name==='Walk'||name==='Run'){
      const radius=(d.length||DINO[d.id].length)*.3;let found=false;
      for(let k=0;k<32&&!found;k++){
@@ -844,7 +844,7 @@ function installDiagnostics(){
      }
      return {clip:name,movementPathFound:found,position:{x:d.root.position.x,y:d.root.position.y,z:d.root.position.z}};
     }
-    d.state=name==='Neck_Look'?'look':'idle';d.timer=100;d.lookUntil=performance.now()+5000;
+    d.state=name==='Neck_Look'?'look':'idle';d.timer=100;
     return {clip:name,movementPathFound:false,position:{x:d.root.position.x,y:d.root.position.y,z:d.root.position.z}};
    }
   };
