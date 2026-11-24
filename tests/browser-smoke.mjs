@@ -30,10 +30,15 @@ try{
   const url='http://127.0.0.1:4173/?mundo='+world+'&q=baja&test=1&debug=1';
   console.log('LOAD',world,url);
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
-  await page.waitForFunction(()=>{
-   const t=document.querySelector('#loadText')?.textContent||'';
-   return t.includes('¡Mundo listo!')||t.includes('No se pudo iniciar el mundo');
-  },{timeout:180000});
+  try{
+   await page.waitForFunction(()=>{
+    const t=document.querySelector('#loadText')?.textContent||'';
+    return t.includes('¡Mundo listo!')||t.includes('No se pudo iniciar el mundo');
+   },{timeout:60000});
+  }catch(error){
+   const progress=await page.locator('#loadText').textContent().catch(()=>'(sin texto de carga)');
+   throw new Error(world+' excedió 60 s durante la carga: '+progress+'; '+error.message);
+  }
   await page.locator('#explore').click();
   await page.waitForFunction(()=>!document.querySelector('#hud')?.classList.contains('hidden'),{timeout:5000});
   await page.waitForTimeout(1200);
