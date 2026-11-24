@@ -62,6 +62,8 @@ jobs:
           fi
       - name: Probar los cinco mundos en Chromium con WebGL2
         run: node tests/browser-smoke.mjs
+      - name: Probar perfil MEDIA en los cinco mundos
+        run: HUELLAS_QUALITY_TEST=media node tests/browser-smoke.mjs
       - name: Validar efectos visuales del perfil ALTA en los cinco mundos
         run: HUELLAS_VISUAL_TEST=1 node tests/browser-smoke.mjs
       - name: Medir rendimiento del perfil ALTA solo con GPU física verificable
