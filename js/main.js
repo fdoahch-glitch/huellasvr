@@ -800,7 +800,7 @@ function animateDinos(t,dt){
      const x=d.home.x+Math.cos(a)*r,z=d.home.z+Math.sin(a)*r;
      if(terrainValidAt(x,z))d.target={x,z};
     }
-    if(d.target&&!d.target.rest){d.running=(L<8&&rand(index*109+Math.floor(t*4))<.2)||(herdMode==='graze'&&rand(index*113+Math.floor(t))<.035);d.state='walk';}
+    if(d.target&&!d.target.rest){d.running=d.goal==='approach'?!!d.juvenile:(L<8&&rand(index*109+Math.floor(t*4))<.2)||(herdMode==='graze'&&rand(index*113+Math.floor(t))<.035);d.state='walk';}
     else if(!d.target)d.timer=2;
    }
   }
