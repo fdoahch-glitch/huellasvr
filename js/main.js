@@ -78,18 +78,18 @@ function addTerrain(){
    for(let j=0;j<N;j++)for(let i=0;i<N;i++)if(valid[j*N+i]){
     id[j*N+i]=positions.length/3;
     positions.push(mnx*S+(i+.5)*dx-shX,H[j*N+i]-shY,mnz*S+(j+.5)*dz-shZ);
-    uvs.push((i+.5)/N,1-(j+.5)/N);
+    uvs.push((mnx*S+(i+.5)*dx-shX)/12,1-(mnz*S+(j+.5)*dz-shZ)/12);
    }
    for(let j=0;j<N-1;j++)for(let i=0;i<N-1;i++){
     const a=id[j*N+i],b=id[j*N+i+1],c=id[(j+1)*N+i],d=id[(j+1)*N+i+1];
-    if(a<0||b<0||c<0||d<0)continue;indices.push(a,c,b,b,c,d);
+    if(a>=0&&b>=0&&c>=0&&d>=0){indices.push(a,c,b,b,c,d);continue;}if(a>=0&&b>=0&&c>=0)indices.push(a,c,b);if(b>=0&&c>=0&&d>=0)indices.push(b,c,d);if(a>=0&&b>=0&&d>=0)indices.push(a,d,b);if(a>=0&&c>=0&&d>=0)indices.push(a,c,d);
    }
    const normals=[];BABYLON.VertexData.ComputeNormals(positions,indices,normals);
    const mesh=new BABYLON.Mesh('original-photo-terrain-'+worldKey,scene),vd=new BABYLON.VertexData();
    vd.positions=positions;vd.indices=indices;vd.normals=normals;vd.uvs=uvs;vd.applyToMesh(mesh,true);
    mesh.isPickable=true;mesh.checkCollisions=true;mesh.metadata={ground:true};ground=mesh;pickables.push(mesh);
    const m=new BABYLON.StandardMaterial('photo-terrain-'+worldKey,scene);
-   m.diffuseTexture=new BABYLON.Texture(WORLD.ground,scene,false,true);m.diffuseTexture.wrapU=m.diffuseTexture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;
+   m.diffuseTexture=new BABYLON.Texture(WORLD.ground,scene,false,true);m.diffuseTexture.wrapU=m.diffuseTexture.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;m.diffuseTexture.uScale=1;m.diffuseTexture.vScale=1;
    m.diffuseTexture.anisotropicFilteringLevel=8;m.diffuseColor=new BABYLON.Color3(1,1,1);
    m.specularColor=new BABYLON.Color3(.025,.025,.025);m.roughness=.98;
    const normalPath=worldKey==='atacamatitan'?'img/tex_sand_n.jpg':worldKey==='arackar'?'img/tex_gsand_n.jpg':worldKey==='stegouros'?'img/tx_leaves_n.jpg':'img/tx_dirt_n.jpg';
