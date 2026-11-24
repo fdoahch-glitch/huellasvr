@@ -31,3 +31,11 @@ RESTAURACIÓN DE LA EXPERIENCIA ORIGINAL v19
 - Decoración 3D diferenciada por mundo; se conservan los modelos y texturas originales.
 - Los GLB tienen clips Idle, Walk, Run y Neck_Look. El motor reproduce un clip de estado a la vez, no todos simultáneamente.
 - La escala y orientación se calculan con el eje horizontal de mayor longitud para evitar dinosaurios desproporcionados.
+
+PRUEBAS AUTOMATIZADAS (desarrollo)
+- Requiere Node.js 22 o superior.
+- Instalar dependencias de prueba: npm install
+- Instalar Chromium de Playwright: npx playwright install chromium
+- Ejecutar auditoría estática y los cinco mundos: npm test
+- La prueba de navegador usa Chromium/SwiftShader; sus FPS no son un benchmark de GPU física.
+- Las pruebas no sustituyen ensayos en Android, PC físico ni visor WebXR.
