@@ -225,3 +225,8 @@ check('Mapas del terreno con carga verificada',()=>{
  assert.ok(main.includes('No se pudo cargar el mapa normal'));
  assert.ok(main.includes('terrain:{photo:terrainPhotoReady,normal:terrainNormalReady,error:terrainTextureError'));
 });
+
+check('Escalones del controlador Havok',()=>{
+ assert.ok(main.includes('physicsController.maxStepHeight=.35'));
+ assert.ok(main.includes('physicsController.maxSlopeCosine=Math.cos(50*Math.PI/180)'));
+});
