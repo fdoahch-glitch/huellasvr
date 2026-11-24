@@ -1068,6 +1068,10 @@ function installDiagnostics(){
   setAnimation(name){
    const d=dinoRoots[0];if(!d)throw new Error('No hay dinosaurios cargados para probar.');
    if(!['Idle','Walk','Run','Neck_Look'].includes(name))throw new Error('Clip de prueba no permitido: '+name);
+   // Aislar la prueba de locomoción: las pruebas sociales previas pueden dejar
+   // un vínculo de pareja activo que bloquea el movimiento aunque exista destino.
+   if(d.socialPartner){const partner=d.socialPartner;partner.socialPartner=null;partner.socialUntil=0;if(partner.state==='social'||partner.state==='play')partner.state='idle';}
+   d.socialPartner=null;d.socialUntil=0;d.testSocial=false;d.state='idle';d.speed=0;
    d.testClip=name;d.clipName='';d.target=null;d.goal=null;d.running=name==='Run';d.lookUntil=name==='Neck_Look'?performance.now()+5000:0;
    if(name==='Walk'||name==='Run'){
     const radius=(d.length||DINO[d.id].length)*.3;let found=false;
