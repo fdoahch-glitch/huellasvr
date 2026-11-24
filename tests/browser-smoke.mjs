@@ -73,6 +73,7 @@ try{
   if(visualMode&&(!state.diagnostics.terrain?.cloudTextureHasAlpha||!state.diagnostics.terrain?.skyTextureReady))throw new Error(world+' no preparó correctamente las texturas del cielo: '+JSON.stringify(state.diagnostics.terrain));
   if(world==='atacamatitan'){const panel=await page.locator('#huellasPerfDiagnostics').textContent();if(!panel||!panel.includes('Draw calls')||!panel.includes('Havok'))throw new Error(world+' no mostró el panel de diagnóstico completo');}
   if(!state.diagnostics.sky?.ready||state.diagnostics.sky.error)throw new Error(world+' no cargó el panorama '+JSON.stringify(state.diagnostics.sky));
+  if(!Number.isFinite(state.diagnostics.cameraFar)||state.diagnostics.cameraFar<=450)throw new Error(world+' el plano lejano recorta la esfera del cielo: '+state.diagnostics.cameraFar);
   const expectedSky={atacamatitan:'img/atacamatitan_sky.jpg',arackar:'img/arackar_sky.jpg',patagonia:'img/gonkoken_sky.jpg',stegouros:'img/stegouros_sky.jpg',aysen:'img/aysen_sky.jpg'};
   if(state.diagnostics.sky.url!==expectedSky[world])throw new Error(world+' asignó un panorama incorrecto: '+state.diagnostics.sky.url);
   if(!state.diagnostics.terrain?.photo||!state.diagnostics.terrain?.normal||state.diagnostics.terrain.error)throw new Error(world+' no cargó las texturas esenciales del terreno '+JSON.stringify(state.diagnostics.terrain));
