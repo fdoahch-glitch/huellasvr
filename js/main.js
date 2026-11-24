@@ -501,12 +501,16 @@ async function addVegetation(){
    if(!a.free&&homes.some(h=>Math.hypot(x-h.p.x,z-h.p.z)<=h.r+(a.keep||1)))continue;
    if(a.clump)points.push({x,z});placed.push({x,z,index:i++});
   }
-  let dimensions=null,materialsAdjusted=false;const batchMeshes=[],batchRoots=[];
+  let dimensions=null,materialsAdjusted=false,materialsTuned=false;const batchMeshes=[],batchRoots=[];
   for(let i=0;i<placed.length;i++){
    const p=placed[i],instances=container.instantiateModelsToScene(n=>n+'-veg-'+si+'-'+i,false,{doNotInstantiate:false});
    const root=new BABYLON.TransformNode('world-vegetation-'+si+'-'+i,scene);
    const visualPivot=new BABYLON.TransformNode('vegetation-pivot-'+si+'-'+i,scene);visualPivot.parent=root;
-   instances.rootNodes.forEach(node=>{node.parent=visualPivot;tuneVisualMaterials(node,true);});root.computeWorldMatrix(true);
+   instances.rootNodes.forEach(node=>{node.parent=visualPivot;});
+   // instantiateModelsToScene usa cloneMaterials=false: los materiales se comparten entre copias.
+   // Ajustarlos una sola vez por GLB evita recorrer texturas y materiales por cada árbol/helecho.
+   if(!materialsTuned){instances.rootNodes.forEach(node=>tuneVisualMaterials(node,true));materialsTuned=true;}
+   root.computeWorldMatrix(true);
    const meshes=root.getChildMeshes(false);
    if(!dimensions){
     let min=new BABYLON.Vector3(Infinity,Infinity,Infinity),max=new BABYLON.Vector3(-Infinity,-Infinity,-Infinity);
