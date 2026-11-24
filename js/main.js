@@ -310,14 +310,14 @@ function addWater(){
 
 function addSandBars(){const c=worldKey==='atacamatitan'?'#c9915a':worldKey==='aysen'?'#a4a197':'#b7a58a';const material=new BABYLON.StandardMaterial('original-sandbar-material',scene);material.diffuseColor=BABYLON.Color3.FromHexString(c);material.roughness=1;(WORLD.bars||[]).forEach((b,i)=>{const mesh=BABYLON.MeshBuilder.CreateDisc('original-sandbar-'+i,{radius:1,tessellation:48,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);mesh.scaling.set(b.rx,1,b.rz);mesh.rotation.x=Math.PI/2;mesh.rotation.y=b.rot||0;mesh.position.set(b.x,terrainHeightAt(b.x,b.z)+.035,b.z);mesh.material=material;mesh.isPickable=false;});}
 async function loadContainer(path){if(assetCache.has(path))return assetCache.get(path);const p=BABYLON.SceneLoader.LoadAssetContainerAsync('',path,scene).catch(error=>{assetCache.delete(path);error.message='Recurso '+path+': '+(error?.message||String(error));throw error;});assetCache.set(path,p);return p;}
-function findFlatDinoPosition(cx,cz,index,maxRadius=42){
+function findFlatDinoPosition(cx,cz,index,maxRadius=42,supportRadius=2.8){
  let best=null,bestScore=Infinity;
  for(let ring=0;ring<=maxRadius;ring+=3)for(let a=0;a<24;a++){
   const ang=a*Math.PI*2/24,x=cx+Math.cos(ang)*ring,z=cz+Math.sin(ang)*ring;
   if(!terrainValidAt(x,z))continue;
-  if(dinoRoots.some(d=>Math.hypot(d.root.position.x-x,d.root.position.z-z)<7))continue;
+  if(dinoRoots.some(d=>Math.hypot(d.root.position.x-x,d.root.position.z-z)<Math.max(7,supportRadius*2.2)))continue;
   let lo=1e9,hi=-1e9,ok=true;
-  for(let q=0;q<8;q++){const px=x+Math.cos(q*Math.PI/4)*2.8,pz=z+Math.sin(q*Math.PI/4)*2.8;if(!terrainValidAt(px,pz)){ok=false;break;}const h=terrainHeightAt(px,pz);lo=Math.min(lo,h);hi=Math.max(hi,h);}
+  for(let q=0;q<8;q++){const px=x+Math.cos(q*Math.PI/4)*supportRadius,pz=z+Math.sin(q*Math.PI/4)*supportRadius;if(!terrainValidAt(px,pz)){ok=false;break;}const h=terrainHeightAt(px,pz);lo=Math.min(lo,h);hi=Math.max(hi,h);}
   if(!ok)continue;const score=(hi-lo)*5+ring*.015+Math.abs(rand(index*31+a)-.5)*.08;
   if(score<bestScore){bestScore=score;best={x,z};}
  }
@@ -358,7 +358,7 @@ async function spawnDino(id,index,total,center){
  const preferred=center||herd?.center||{x:0,z:-15};
  const angle=index*2.4+.7,radius=6+(index%6)*2;
  const seedX=preferred.x+Math.cos(angle)*radius,seedZ=preferred.z+Math.sin(angle)*radius;
- const spot=findFlatDinoPosition(seedX,seedZ,index,6)||findFlatDinoPosition(preferred.x,preferred.z,index);
+ const supportRadius=Math.max(2.8,targetLength*.3+.35),spot=findFlatDinoPosition(seedX,seedZ,index,6,supportRadius)||findFlatDinoPosition(preferred.x,preferred.z,index,42,supportRadius);
  if(!spot||!terrainValidAt(spot.x,spot.z))throw new Error('No se encontró suelo firme para '+data.name);
  root.position.set(spot.x,terrainHeightAt(spot.x,spot.z),spot.z);
  root.rotation.y=forwardYaw;
