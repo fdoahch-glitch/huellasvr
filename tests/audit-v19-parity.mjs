@@ -231,7 +231,7 @@ check('Mezcla del terreno por pendiente y variación procedural estable',()=>{
 
 check('Panorama esencial se espera y registra fallos',()=>{
  assert.ok(main.includes('await addSky()'));
- assert.ok(main.includes('Skybox equirectangular original listo:'));
+ assert.ok(main.includes('Panorama listo:'));
  assert.ok(main.includes('Falló panorama:'));
  assert.ok(main.includes('sky:{ready:skyReady,error:skyError,url:WORLD.sky}'));
 });
@@ -255,12 +255,13 @@ check('Instrumentación de diagnóstico',()=>{
  for(const token of ['new BABYLON.SceneInstrumentation(scene)','new BABYLON.EngineInstrumentation(engine)','drawCallsCounter','gpuFrameTimeCounter','physicsTimeCounter','huellasPerfDiagnostics'])assert.ok(main.includes(token),'Falta '+token);
 });
 
-check('Domo panorámico dentro del plano lejano y nubes visibles',()=>{
- assert.ok(main.includes("skyDome=scene.createDefaultSkybox(skyCubeTexture,true,500,0)"));
- assert.ok(main.includes("skyDome.name='sky-dome'"));
- assert.ok(main.includes('camera.maxZ=320'));
- assert.ok(main.includes("{diameter:498,segments:32}"),'La capa de nubes debe quedar dentro del domo panorámico');
- assert.ok(main.includes('new BABYLON.EquiRectangularCubeTexture(WORLD.sky,scene,size,false,true'),'El panorama debe convertirse desde la imagen equirectangular original');
+check('Panorama y atmósfera replican el motor original v19',()=>{
+ assert.ok(main.includes("new BABYLON.Texture(WORLD.sky,scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE"));
+ assert.ok(main.includes('m.emissiveTexture=pano'));
+ assert.ok(main.includes('WORLD.panoRot??23'));
+ assert.ok(main.includes("{diameter:875,segments:32}"),'La cúpula de nubes debe conservar la escala original');
+ assert.ok(main.includes('const a=rnd()*Math.PI*2,e=.08+rnd()*1.3,r=420'),'El radio estelar debe conservar el valor original');
+ assert.ok(!main.includes('createDefaultSkybox'),'No reemplazar el panorama original por un cubemap distinto');
 });
 
 check('Materiales PBR para suelo, montañas y agua',()=>{
