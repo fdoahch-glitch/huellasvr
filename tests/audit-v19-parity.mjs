@@ -330,3 +330,11 @@ check('Matrices estáticas congeladas sin inmovilizar dinosaurios ni atmósfera 
  assert.ok(main.includes('freezeStaticEnvironmentTransforms()'));
  assert.ok(main.includes('frozenWorldMatrices:'));
 });
+
+
+check('Smoke browser tolera frames lentos sin depender de requestAnimationFrame para sondear estado',()=>{
+ const smoke=read('tests/browser-smoke.mjs');
+ const waits=[...smoke.matchAll(/waitForFunction\([\s\S]*?\{polling:100,timeout:\d+\}\)/g)];
+ assert.ok(waits.length>=5,'Las esperas del navegador deben usar polling por intervalo en vez de polling RAF');
+ assert.ok(!smoke.includes('},{timeout:60000});'),'La espera de inicio no debe depender del ciclo RAF');
+});
