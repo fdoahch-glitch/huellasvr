@@ -68,6 +68,11 @@ check('Selección de dinosaurios, información y locomoción',()=>{
 check('Terreno, mezcla de texturas, montañas, ríos y lagunas',()=>{
  for(const token of ['detailProfiles','function addMountains()','function addWater()','function addSandBars()','terrainHeightAt'])assert.ok(main.includes(token),'Falta '+token);
 });
+check('Selección por mirada para visores WebXR sin mando',()=>{
+ assert.ok(main.includes('function updateXRGaze()'));
+ assert.ok(main.includes('performance.now()-xrGazeSince>=1400'));
+ assert.ok(main.includes('updateXRGaze();'));
+});
 check('Controles WebXR, suelo local y seguimiento',()=>{
  for(const token of ['immersive-vr','local-floor','onInitialXRPoseSetObservable','onStateChangedObservable','onControllerAddedObservable','WebXRFeatureName.MOVEMENT'])assert.ok(main.includes(token),'Falta '+token);
 });
