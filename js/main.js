@@ -739,6 +739,12 @@ function herdDrinkTarget(d,index){
  candidates.sort((a,b)=>a.score-b.score);
  return candidates.length?{x:candidates[0].x,z:candidates[0].z}:null;
 }
+function isDinoPositionBlocked(d,x,z){
+ const bodyRadius=Math.max(.35,Math.min(1.35,(d.length||DINO[d.id].length)*.11));
+ for(const zone of environmentCollisionZones){const min=bodyRadius+zone.radius;if((x-zone.x)*(x-zone.x)+(z-zone.z)*(z-zone.z)<min*min)return {blocked:true,kind:zone.kind};}
+ for(const other of dinoRoots){if(other===d||!other.root||other.state==='rest')continue;const min=bodyRadius+Math.max(.35,Math.min(1.35,(other.length||DINO[other.id].length)*.11));const dx=x-other.root.position.x,dz=z-other.root.position.z;if(dx*dx+dz*dz<min*min)return {blocked:true,kind:'dinosaur'};}
+ return {blocked:false,kind:null};
+}
 function animateDinos(t,dt){
  const step=Math.min(.05,Math.max(0,dt||0)),herd=HERD_CONFIG[worldKey];
  dinoRoots.forEach((d,index)=>{
@@ -796,11 +802,11 @@ function animateDinos(t,dt){
     const nominal=L*(d.running?profile.run:profile.walk),turnFactor=Math.abs(delta)<.6?1:.45,speed=nominal*turnFactor;
     const nx=root.position.x+Math.sin(d.heading)*speed*step,nz=root.position.z+Math.cos(d.heading)*speed*step,r=L*.3;
     const support=[[nx,nz],[nx+Math.sin(d.heading)*r,nz+Math.cos(d.heading)*r],[nx-Math.sin(d.heading)*r,nz-Math.cos(d.heading)*r]];
-    if(support.every(p=>terrainValidAt(p[0],p[1]))){
+    const obstacle=isDinoPositionBlocked(d,nx,nz);if(!obstacle.blocked&&support.every(p=>terrainValidAt(p[0],p[1]))){
      const heights=support.map(p=>terrainHeightAt(p[0],p[1])),travelled=Math.hypot(nx-root.position.x,nz-root.position.z);
      root.position.x=nx;root.position.z=nz;root.position.y=Math.min(...heights);d.actualSpeed=step>0?travelled/step:0;
      emitDinoFootFX(d,Math.sin(d.heading),Math.cos(d.heading),travelled);
-    }else{d.state='idle';d.target=null;d.timer=2.5;d.actualSpeed=0;}
+    }else{d.state='idle';d.target=null;d.timer=obstacle.blocked?(.25+rand(index*151+Math.floor(t))*.45):2.5;d.actualSpeed=0;d.lastCollision=obstacle.blocked?obstacle.kind:null;}
    }
   }else if(d.state!=='walk')root.position.y=terrainHeightAt(root.position.x,root.position.z);
   const desired=d.testClip||(d.state==='look'||d.state==='drink'||(d.state==='rest'&&d.restLook)?'Neck_Look':d.state==='walk'?(d.running?'Run':'Walk'):'Idle');
@@ -904,13 +910,14 @@ function installDiagnostics(){
    gpuFrameTimeMs:gpuCounter&&Number.isFinite(gpuCounter.current)?Math.round(gpuCounter.current/1e6*100)/100:null,
    heapMB:performance.memory?Math.round(performance.memory.usedJSHeapSize/1048576):null,
    player:p?{x:+p.x.toFixed(2),y:+p.y.toFixed(2),z:+p.z.toFixed(2),groundY:typeof terrainHeightAt==='function'?+terrainHeightAt(p.x,p.z).toFixed(2):null}:null,
-   sky:{ready:skyReady,error:skyError,url:WORLD.sky},terrain:{photo:terrainPhotoReady,normal:terrainNormalReady,error:terrainTextureError,ground:WORLD.ground,mesh:ground?.name||null,material:ground?.material?.name||null,diffuseTexture:ground?.material?.diffuseTexture?.name||null,diffuseReady:!!ground?.material?.diffuseTexture?.isReady?.(),uvCount:ground?.getVerticesData?.(BABYLON.VertexBuffer.UVKind)?.length||0,vertices:ground?.getTotalVertices?.()||0,photoSample:(()=>{try{const c=ground?.material?.diffuseTexture?.getContext?.();return c?[...c.getImageData(1024,1024,1,1).data]:null;}catch{return null;}})()},
-   physics:{enabled:physicsReady,controller:!!physicsController,colliders:physicsAggregates.length,support:physicsLastSupport},xrState:xr?.baseExperience?.state??'desktop',
+   sky:{ready:skyReady,error:skyError,url:WORLD.sky},terrain:{photo:terrainPhotoReady,normal:terrainNormalReady,error:terrainTextureError,ground:WORLD.ground,mesh:ground?.name||null,material:ground?.material?.name||null,diffuseTexture:ground?.material?.diffuseTexture?.name||null,materialType:ground?.material?.getClassName?.()||ground?.material?.constructor?.name||null,diffuseReady:!!(ground?.material?.albedoTexture?.isReady?.()||ground?.material?.diffuseTexture?.isReady?.()),uvCount:ground?.getVerticesData?.(BABYLON.VertexBuffer.UVKind)?.length||0,vertices:ground?.getTotalVertices?.()||0,photoSample:(()=>{try{const c=ground?.material?.diffuseTexture?.getContext?.();return c?[...c.getImageData(1024,1024,1,1).data]:null;}catch{return null;}})()},
+   physics:{enabled:physicsReady,controller:!!physicsController,colliders:physicsAggregates.length,environmentZones:environmentCollisionZones.length,support:physicsLastSupport,dinoCollisionAvoidance:typeof isDinoPositionBlocked==='function'},xrState:xr?.baseExperience?.state??'desktop',
    webglVersion:engine?.webGLVersion??null,renderSize:{width:engine?.getRenderWidth?.()||0,height:engine?.getRenderHeight?.()||0},errors:[skyError,terrainTextureError].filter(Boolean)
   };
  };
  window.__HUELLAS_VR_DIAGNOSTICS__=snapshot;
  if(params.get('test')==='1')window.__HUELLAS_VR_TEST__={
+  collisionCheck(){const zone=environmentCollisionZones[0];const probe=zone?isDinoPositionBlocked({id:dinoRoots[0]?.id||'atacamatitan',length:0},zone.x,zone.z):{blocked:false,kind:null};return {havok:physicsReady,aggregates:physicsAggregates.length,environmentZones:environmentCollisionZones.length,probeBlocked:probe.blocked,probeKind:probe.kind};},
   setAnimation(name){
    const d=dinoRoots[0];if(!d)throw new Error('No hay dinosaurios cargados para probar.');
    if(!['Idle','Walk','Run','Neck_Look'].includes(name))throw new Error('Clip de prueba no permitido: '+name);
