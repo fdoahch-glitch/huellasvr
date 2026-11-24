@@ -73,3 +73,50 @@ Los GLB originales incluyen los clips `Idle`, `Walk`, `Run` y `Neck_Look` en las
 - Entrar y salir de una sesión WebXR real.
 
 **Conclusión:** el repositorio conserva una parte importante del inventario original, pero la presencia de recursos o funciones no acredita paridad funcional. Los subsistemas anteriores siguen abiertos hasta superar sus pruebas de ejecución.
+
+
+## Inventario completo del ZIP v19 (105 archivos)
+
+El ZIP contiene 20 GLB, 57 JPG, 22 PNG, 2 JS y 1 HTML. No contiene archivos de audio MP3, OGG ni WAV.
+
+### Modelos GLB (20)
+
+**Dinosaurios principales (5):**
+- `models/atacamatitan.glb`
+- `models/arackar.glb`
+- `models/gonkoken.glb`
+- `models/stegouros.glb`
+- `models/chilesaurus.glb`
+
+**Variantes LOD (5):**
+- `models/lo_atacamatitan.glb`
+- `models/lo_arackar.glb`
+- `models/lo_gonkoken.glb`
+- `models/lo_stegouros.glb`
+- `models/lo_chilesaurus.glb`
+
+**Entorno (5):**
+- `models/env/fern_02.glb`
+- `models/env/dead_tree_trunk_02.glb`
+- `models/env/rock_07.glb`
+- `models/env/rock_09.glb`
+- `models/env/cerro_desierto.glb`
+
+**Vegetación (5):**
+- `models/veg/araucaria_adulta.glb`
+- `models/veg/araucaria_joven.glb`
+- `models/veg/fern_small.glb`
+- `models/veg/fern_tripo.glb`
+- `models/veg/pebble.glb`
+
+### Texturas JPG (57)
+
+`img/gonkoken_sky.jpg`, `img/tex_sand_n.jpg`, `img/valle_c.jpg`, `img/atacamatitan_sky.jpg`, `img/mundo1_sW.jpg`, `img/arackar_leaf.jpg`, `img/arackar_c.jpg`, `img/tex_crack_d.jpg`, `img/atacamatitan.jpg`, `img/atacama360_c.jpg`, `img/stegouros_bark.jpg`, `img/atacamatitan360.jpg`, `img/arackar_bark.jpg`, `img/mundo1_sS.jpg`, `img/aysen_bark.jpg`, `img/tx_redplants_n.jpg`, `img/patagonia_sky.jpg`, `img/pat_bark.jpg`, `img/tx_leaves_n.jpg`, `img/patagonia.jpg`, `img/tex_tiger_d.jpg`, `img/tex_rterr_d.jpg`, `img/aysen_sky.jpg`, `img/aysen_leaf.jpg`, `img/stegouros_sky.jpg`, `img/arackar.jpg`, `img/tex_sand_d.jpg`, `img/tx_dirt_n.jpg`, `img/tex_gsand_n.jpg`, `img/stegouros_leaf.jpg`, `img/atacama360.jpg`, `img/tex_gravel_d.jpg`, `img/mundo1_c.jpg`, `img/atacamatitan_c.jpg`, `img/tx_stones_d.jpg`, `img/valle.jpg`, `img/tex_grass_d.jpg`, `img/stegouros_c.jpg`, `img/pat_leaf.jpg`, `img/tx_dirt_d.jpg`, `img/tx_stones_n.jpg`, `img/atacamatitan_leaf.jpg`, `img/arackar_sky.jpg`, `img/portada.jpg`, `img/tex_gravel_d.jpg`, `img/tex_gsand_d.jpg`, `img/aysen_c.jpg`, `img/tx_leaves_d.jpg`, `img/atacamatitan_bark.jpg`, `img/tx_redplants_d.jpg`, `img/gonkoken_bark.jpg`, `img/mundo1_sE.jpg`, `img/gonkoken_leaf.jpg`, `img/mundo1_sN.jpg`, `img/gonkoken_c.jpg`, `img/patagonia_c.jpg`, `img/aysen.jpg`.
+
+### Texturas PNG (22)
+
+`img/pat_h.png`, `img/aysen_grass.png`, `img/arackar_frond.png`, `img/gonkoken_grass.png`, `img/gonkoken_h.png`, `img/stegouros_frond.png`, `img/gonkoken_frond.png`, `img/stegouros_h.png`, `img/flat_h.png`, `img/aysen_frond.png`, `img/pat_grass.png`, `img/arackar_grass.png`, `img/mundo1_h.png`, `img/atacamatitan_h.png`, `img/atacamatitan_frond.png`, `img/atacamatitan_grass.png`, `img/aysen_h.png`, `img/atacama360_h.png`, `img/arackar_h.png`, `img/pat_frond.png`, `img/valle_h.png`, `img/stegouros_grass.png`.
+
+**Otros:** `js/main.js`, `lib/aframe.min.js` y `index.html`. La presencia de A-Frame en el ZIP original no significa que deba volver a usarse: la migración actual mantiene Babylon.js como único motor.
+
+**Audio:** el ZIP v19 no contiene archivos de sonido. Los sonidos ambientales actuales deben documentarse como generados/procedurales o añadidos en la migración; no se puede afirmar que se recuperaron archivos de audio originales.
