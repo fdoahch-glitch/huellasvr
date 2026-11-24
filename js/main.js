@@ -459,7 +459,7 @@ async function spawnDino(id,index,total,center){
  const supportRadius=Math.max(2.8,targetLength*.3+.35),spot=findFlatDinoPosition(seedX,seedZ,index,10,supportRadius,targetLength)||findFlatDinoPosition(preferred.x,preferred.z,index,48,supportRadius,targetLength);
  if(!spot||!terrainValidAt(spot.x,spot.z))throw new Error('No se encontró suelo firme para '+data.name);
  root.position.set(spot.x,terrainHeightAt(spot.x,spot.z),spot.z);root.rotation.y=forwardYaw;
- for(const mesh of [...highVisual.getChildMeshes(),...(hasLow?lowVisual.getChildMeshes():[])]){mesh.isPickable=true;mesh.receiveShadows=true;mesh.metadata={...(mesh.metadata||{}),dinoId:id};pickables.push(mesh);if(mesh.parent===highVisual||mesh.isEnabled())shadowGenerator?.addShadowCaster(mesh,true);}
+ for(const mesh of [...highVisual.getChildMeshes(),...(hasLow?lowVisual.getChildMeshes():[])]){mesh.isPickable=true;mesh.receiveShadows=true;mesh.metadata={...(mesh.metadata||{}),dinoId:id};pickables.push(mesh);shadowGenerator?.addShadowCaster(mesh,true);}
  const juvenile=targetLength<=data.length*.58,personalityRoll=rand(index*197+id.length*29),personality=juvenile?(personalityRoll<.68?'playful':personalityRoll<.88?'curious':'shy'):(index%7===1?'social':personalityRoll<.34?'curious':personalityRoll<.62?'social':personalityRoll<.82?'calm':'shy');
  dinoRoots.push({root,id,length:targetLength,clips,highClips,lowClips,highVisual,lowVisual,hasLow,lodLevel:'high',nextLodCheck:0,animationPaused:false,clipName:idle?'Idle':'',activeClip:idle||null,transitionFrom:null,transitionElapsed:0,baseYaw:forwardYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},herdCenter:{...preferred},heading:rand(index+71)*Math.PI*2,target:null,goal:null,state:'idle',timer:1.5+rand(index+82)*4,radius:Math.min(4,1.5+rand(index+8)*2),running:false,restLook:false,drankStamp:-1,juvenile,personality,curiosity:juvenile ? .82 : personality==='curious' ? .68 : personality==='social' ? .34 : .12,nextCuriosityAt:performance.now()+3500+rand(index*211+5)*10000,nextSocialAt:performance.now()+7000+rand(index*277+9)*14000,socialUntil:0,socialPartner:null,lastFootstep:0,stepDistance:0,actualSpeed:0,footDistance:0,dustDistance:0,footSide:1,lastFootPos:root.position.clone()});
  return root;
@@ -958,7 +958,8 @@ function animateDinos(t,dt){
    chilesaurus:{walk:.45,run:2.2,}
   })[d.id]||{walk:.1,run:.5,reverse:false};
   const playerDistance=camera?Math.hypot(camera.position.x-root.position.x,camera.position.z-root.position.z):0;
-  if(playerDistance>65&&d.state==='idle'&&!d.testClip&&!d.transitionFrom&&t<(d.nextLodUpdate||0))return;
+  if(playerDistance>65&&d.state==='idle'&&!d.testClip&&!d.transitionFrom&&t<(d.nextLodUpdate||0)){if(!d.animationPaused){d.activeClip?.pause?.();d.animationPaused=true;}return;}
+  if(d.animationPaused&&playerDistance<=65){d.activeClip?.play?.(true);d.animationPaused=false;}
   const step=playerDistance>65&&d.state==='idle'&&!d.testClip?Math.min(.25,Math.max(frameStep,(t-(d.lastLodUpdate||t-200))/1000)):frameStep;
   if(playerDistance>65&&d.state==='idle'&&!d.testClip){d.lastLodUpdate=t;d.nextLodUpdate=t+200;}
   tryDinoFlee(d,index,t);
