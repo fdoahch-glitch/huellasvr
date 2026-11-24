@@ -739,7 +739,7 @@ function animateDinos(t,dt){
     }else{d.state='idle';d.target=null;d.timer=2.5;d.actualSpeed=0;}
    }
   }else if(d.state!=='walk')root.position.y=terrainHeightAt(root.position.x,root.position.z);
-  const desired=d.state==='look'||d.state==='drink'||(d.state==='rest'&&d.restLook)?'Neck_Look':d.state==='walk'?(d.running?'Run':'Walk'):'Idle';
+  const desired=d.testClip||(d.state==='look'||d.state==='drink'||(d.state==='rest'&&d.restLook)?'Neck_Look':d.state==='walk'?(d.running?'Run':'Walk'):'Idle');
   if(d.clipName!==desired){
    const clip=resolveDinoClip(d.clips,desired);
    if(clip&&clip!==d.activeClip){d.transitionFrom=d.activeClip||null;d.transitionElapsed=0;clip.start(true);clip.setWeightForAllAnimatables?.(0);d.activeClip=clip;d.clipName=desired;}
@@ -826,6 +826,27 @@ function installDiagnostics(){
   xrState:xr?.baseExperience?.state??'desktop'
  });
  window.__HUELLAS_VR_DIAGNOSTICS__=snapshot;
+  if(params.get('test')==='1')window.__HUELLAS_VR_TEST__={
+   setAnimation(name){
+    const d=dinoRoots[0];if(!d)throw new Error('No hay dinosaurios cargados para probar.');
+    if(!['Idle','Walk','Run','Neck_Look'].includes(name))throw new Error('Clip de prueba no permitido: '+name);
+    d.testClip=name;d.clipName='';d.target=null;d.goal=null;d.running=name==='Run';
+    if(name==='Walk'||name==='Run'){
+     const radius=(d.length||DINO[d.id].length)*.3;let found=false;
+     for(let k=0;k<32&&!found;k++){
+      const angle=k*Math.PI/16,sx=Math.sin(angle),cz=Math.cos(angle);
+      for(const distance of [2,3,4,5,6]){
+       const x=d.root.position.x+sx*distance,z=d.root.position.z+cz*distance;
+       const support=[[x,z],[x+sx*radius,z+cz*radius],[x-sx*radius,z-cz*radius]];
+       if(support.every(p=>terrainValidAt(p[0],p[1]))){d.heading=angle;d.target={x,z};d.goal='test';d.state='walk';found=true;break;}
+      }
+     }
+     return {clip:name,movementPathFound:found,position:{x:d.root.position.x,y:d.root.position.y,z:d.root.position.z}};
+    }
+    d.state=name==='Neck_Look'?'look':'idle';d.timer=100;d.lookUntil=performance.now()+5000;
+    return {clip:name,movementPathFound:false,position:{x:d.root.position.x,y:d.root.position.y,z:d.root.position.z}};
+   }
+  };
  if(params.get('debug')!=='1')return;
  const panel=document.createElement('pre');
  panel.id='huellasPerfDiagnostics';
