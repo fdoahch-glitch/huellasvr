@@ -6,7 +6,7 @@ on:
     branches: [main]
 jobs:
   parity-audit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
@@ -20,6 +20,6 @@ jobs:
         run: |
           npm init -y
           npm install --no-audit --no-fund playwright@1.55.0
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Probar los cinco mundos en Chromium con WebGL2
         run: node tests/browser-smoke.mjs
