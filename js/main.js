@@ -238,8 +238,9 @@ function updateEnvironment(dt){
  const skyTarget=new BABYLON.Color3(t.sky[0]*(1-.38*rainBlend),t.sky[1]*(1-.38*rainBlend),t.sky[2]*(1-.3*rainBlend));
  if(skyMaterial)skyMaterial.emissiveColor=BABYLON.Color3.Lerp(skyMaterial.emissiveColor,skyTarget,k);
  const fogTarget=t.fog?BABYLON.Color3.FromHexString(t.fog):lightingBase.fog;
- scene.fogColor=BABYLON.Color3.Lerp(scene.fogColor,fogTarget,k);
- scene.fogDensity+=(lightingBase.fogDensity*(1+.4*rainBlend)-scene.fogDensity)*(1-Math.exp(-dt*1.4));
+ const rainFog=BABYLON.Color3.FromHexString('#8d949c'),fogWeather=BABYLON.Color3.Lerp(fogTarget,rainFog,rainBlend*.5*(timeMode==='noche'?.2:1));
+ scene.fogColor=BABYLON.Color3.Lerp(scene.fogColor,fogWeather,k);
+ scene.fogDensity+=(lightingBase.fogDensity*(1+1.4*rainBlend)-scene.fogDensity)*(1-Math.exp(-dt*1.4));
  if(rainGain&&audioContext)rainGain.gain.setTargetAtTime(raining&&soundOn?.12:0,audioContext.currentTime,.25);
  if(nightInsectGain&&audioContext)nightInsectGain.gain.setTargetAtTime(timeMode==='noche'&&!raining&&soundOn?.008:0,audioContext.currentTime,.35);
  if(waterGain&&audioContext)waterGain.gain.setTargetAtTime(((WORLD.rivers||[]).length||(WORLD.lagoons||[]).length)&&soundOn?.12:0,audioContext.currentTime,.6);
