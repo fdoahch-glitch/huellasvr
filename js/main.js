@@ -853,7 +853,7 @@ function animateDinos(t,dt){
    if(dist<(d.goal==='drink'?.9:d.goal==='approach'?Math.max(1.8,d.length*.16+1.1):.45)){
     if(d.goal==='drink'){d.state='drink';d.timer=7+rand(index*127+herdStamp)*7;d.drankStamp=herdStamp;}
     else if(d.goal==='approach'){d.state='look';d.lookUntil=t+4500+rand(index*251+Math.floor(t/1000))*4500;d.socialUntil=d.lookUntil;d.timer=0;}
-    else if(d.goal==='social'||d.goal==='play'){d.state=d.goal==='play'?'play':'social';d.timer=d.goal==='play'?2.2:5+rand(index*313+Math.floor(t/1000))*5;d.socialUntil=Math.max(d.socialUntil,t+(d.goal==='play'?11000:d.timer*1000));}
+    else if(d.goal==='social'||d.goal==='play'){d.state=d.goal==='play'?'play':'social';d.timer=d.goal==='play'?2.2:5+rand(index*313+Math.floor(t/1000))*5;}
     else if(d.goal==='graze'){d.state='graze';d.timer=5+rand(index*317+Math.floor(t/1000))*8;}
     else if(d.goal==='flee'){d.state='idle';d.timer=4+rand(index*331+Math.floor(t/1000))*4;d.goal=null;}
     else{d.state='idle';d.timer=2+rand(index*131+Math.floor(t))*4;}
