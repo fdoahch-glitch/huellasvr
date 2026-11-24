@@ -63,7 +63,7 @@ check('Tamaños, cantidades y velocidades de manada del original v19',()=>{
  for(const state of ['graze','drink','rest'])assert.ok(main.includes("'"+state+"'"));
 });
 check('Selección de dinosaurios, información y locomoción',()=>{
- for(const token of ['function onPick(evt)','function showInfo(id)','function closeInfo()','scene.onPointerObservable','function movePlayer(dt)','xr-standard-trigger'])assert.ok(main.includes(token),'Falta '+token);
+ for(const token of ['function onPick(evt)','function showInfo(id,actor=null)','function closeInfo()','scene.onPointerObservable','function movePlayer(dt)','xr-standard-trigger'])assert.ok(main.includes(token),'Falta '+token);
 });
 check('Terreno, mezcla de texturas, montañas, ríos y lagunas',()=>{
  for(const token of ['detailProfiles','function addMountains()','function addWater()','function addSandBars()','terrainHeightAt'])assert.ok(main.includes(token),'Falta '+token);
