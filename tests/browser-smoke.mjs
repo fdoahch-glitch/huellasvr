@@ -35,23 +35,21 @@ try{
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
   try{
    await page.waitForFunction(()=>{
-    const t=document.querySelector('#loadText')?.textContent||'';
-    return t.includes('¡Mundo listo!')||t.includes('No se pudo iniciar el mundo');
-   },{polling:100,timeout:60000});
+    return window.__HUELLAS_VR_READY__===true||!!window.__HUELLAS_VR_INIT_ERROR__;
+   },{polling:100,timeout:90000});
   }catch(error){
-   const progress=await page.locator('#loadText').textContent().catch(()=>' (sin texto de carga)');
-   const startup=await page.evaluate(()=>({url:location.href,readyState:document.readyState,homeHidden:document.querySelector('#homeScreen')?.classList.contains('hidden'),mainScript:[...document.scripts].map(s=>s.src).filter(Boolean),babylon:typeof window.BABYLON,havok:typeof window.HavokPhysics,loadText:document.querySelector('#loadText')?.textContent})).catch(e=>({evaluateError:String(e)}));
+   const startup=await page.evaluate(()=>({url:location.href,readyState:document.readyState,ready:window.__HUELLAS_VR_READY__,initError:window.__HUELLAS_VR_INIT_ERROR__,diagnostics:window.__HUELLAS_VR_DIAGNOSTICS__?.(),loadText:document.querySelector('#loadText')?.textContent,startButtons:document.querySelector('#startButtons')?.className})).catch(e=>({evaluateError:String(e)}));
    const shot=path.join(resultsDir,world+'-startup-failure.png');
    await page.screenshot({path:shot,fullPage:false}).catch(()=>{});
-   throw new Error(world+' excedió 60 s durante la carga: '+progress+'; '+error.message+'; startup='+JSON.stringify(startup)+'; pageErrors='+pageErrors.slice(0,12).join(' | ')+'; failedRequests='+failedRequests.slice(0,20).join(' | ')+'; screenshot='+shot);
+   throw new Error(world+' no completó el arranque real en 90 s: '+error.message+'; startup='+JSON.stringify(startup)+'; pageErrors='+pageErrors.slice(0,12).join(' | ')+'; failedRequests='+failedRequests.slice(0,20).join(' | ')+'; screenshot='+shot);
   }
-  const startupMessage=await page.locator('#loadText').textContent().catch(()=>'');
-  if(startupMessage.includes('No se pudo iniciar el mundo')){
+  const startup=await page.evaluate(()=>({ready:window.__HUELLAS_VR_READY__,initError:window.__HUELLAS_VR_INIT_ERROR__,message:document.querySelector('#loadText')?.textContent||''}));
+  if(startup.initError){
    const shot=path.join(resultsDir,world+'-initialization-error.png');
    await page.screenshot({path:shot,fullPage:false}).catch(()=>{});
-   throw new Error(world+' falló durante la inicialización: '+startupMessage+'; pageErrors='+pageErrors.slice(0,12).join(' | ')+'; failedRequests='+failedRequests.slice(0,20).join(' | ')+'; screenshot='+shot);
+   throw new Error(world+' falló en '+startup.initError.stage+': '+startup.initError.message+'; '+startup.initError.stack+'; pageErrors='+pageErrors.slice(0,12).join(' | ')+'; failedRequests='+failedRequests.slice(0,20).join(' | ')+'; screenshot='+shot);
   }
-  if(!startupMessage.includes('¡Mundo listo!'))throw new Error(world+' no llegó al estado listo; mensaje='+startupMessage);
+  if(startup.ready!==true)throw new Error(world+' no confirmó el estado de arranque completo: '+JSON.stringify(startup));
   await page.locator('#explore').click();
   await page.waitForFunction(()=>!document.querySelector('#hud')?.classList.contains('hidden'),{polling:100,timeout:5000});
   await page.waitForTimeout(1200);
