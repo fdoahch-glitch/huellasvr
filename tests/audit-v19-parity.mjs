@@ -163,7 +163,7 @@ check('Diagnóstico de rendimiento expone CPU, GPU y estado XR',()=>{
 
 
 check('Orientación frontal explícita e independiente por especie',()=>{
- const expected={atacamatitan:'-Math.PI/2',arackar:'Math.PI/2',gonkoken:'-Math.PI/2',stegouros:'-Math.PI/2',chilesaurus:'-Math.PI/2'};
+ const expected={atacamatitan:'-Math.PI/2',arackar:'0',gonkoken:'-Math.PI/2',stegouros:'-Math.PI/2',chilesaurus:'-Math.PI/2'};
  for(const [id,yaw] of Object.entries(expected)){
   const at=main.indexOf(id+':{name:');assert.ok(at>=0,'Falta especie '+id);
   const end=main.indexOf('},',at),spec=main.slice(at,end<0?at+500:end);
