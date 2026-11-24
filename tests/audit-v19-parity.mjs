@@ -78,6 +78,7 @@ check('Controles de orientación móvil y visor estereoscópico',()=>{
  for(const token of ['function toggleMobileOrientation()','Orientation.requestPermission','deviceorientation','function toggleMobileStereo()','RIG_MODE_STEREOSCOPIC_SIDEBYSIDE_PARALLEL'])assert.ok(main.includes(token),'Falta '+token);
  for(const id of ['sensorButton','stereoButton'])assert.ok(html.includes('id="'+id+'"'),'Falta control '+id);
 });
+check('La cámara WebXR conserva altura de cabeza sobre el suelo local',()=>{assert.ok(main.includes('headHeight=Math.max(1.1,Math.min(2.2,xrCamera.position.y||1.65))'));assert.ok(main.includes('terrainHeightAt(px,pz)+headHeight'));});
 check('Controles WebXR, suelo local y seguimiento',()=>{
  for(const token of ['immersive-vr','local-floor','onInitialXRPoseSetObservable','onStateChangedObservable','onControllerAddedObservable','WebXRFeatureName.MOVEMENT'])assert.ok(main.includes(token),'Falta '+token);
 });
