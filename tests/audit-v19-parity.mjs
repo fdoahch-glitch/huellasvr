@@ -238,3 +238,8 @@ check('Mapeo de panoramas por mundo',()=>{
 check('Instrumentación de diagnóstico',()=>{
  for(const token of ['new BABYLON.SceneInstrumentation(scene)','new BABYLON.EngineInstrumentation(engine)','drawCallsCounter','gpuFrameTimeCounter','physicsTimeCounter','huellasPerfDiagnostics'])assert.ok(main.includes(token),'Falta '+token);
 });
+
+check('Domo panorámico dentro del plano lejano',()=>{
+ assert.ok(main.includes("CreateSphere('sky-dome',{diameter:500,segments:32}"));
+ assert.ok(main.includes('camera.maxZ=320'));
+});
