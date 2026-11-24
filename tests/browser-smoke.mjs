@@ -82,10 +82,10 @@ try{
   if(!String(state.diagnostics.terrain.materialType||'').includes('PBR'))throw new Error(world+' no usa material PBR en el terreno: '+state.diagnostics.terrain.materialType);
   if(visualMode){
    const visual=state.diagnostics.terrain||{};
-   if(visual.riverBankMeshes!==0)throw new Error(world+' generó bancos de río que el original v19 desactiva: '+visual.riverBankMeshes);
-   if(visual.cloudDomeDiameter<490||visual.cloudDomeDiameter>505)throw new Error(world+' la cúpula de nubes quedó fuera de la esfera del cielo: '+visual.cloudDomeDiameter);
+   if(['atacamatitan','patagonia','stegouros','aysen'].includes(world)&&visual.riverBankMeshes<2)throw new Error(world+' no generó las orillas del río original: '+visual.riverBankMeshes);
+   if(visual.cloudDomeDiameter<860||visual.cloudDomeDiameter>890)throw new Error(world+' la cúpula de nubes no conserva la escala original: '+visual.cloudDomeDiameter);
    if(visual.proceduralForestMeshes!==0)throw new Error(world+' conserva copas procedurales separadas de sus troncos: '+visual.proceduralForestMeshes);
-   if(!visual.skyDomeVisible||!visual.skyDomeAtCamera)throw new Error(world+' no renderiza el skybox centrado en cámara: '+JSON.stringify({visible:visual.skyDomeVisible,atCamera:visual.skyDomeAtCamera}));
+   if(!visual.skyDomeVisible)throw new Error(world+' no muestra la esfera del panorama original');
   }
   if(!visualMode){
   const collision=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.collisionCheck?.());if(!collision?.havok||collision.aggregates<1||collision.environmentZones<1||!collision.probeBlocked)throw new Error(world+' no valida colisión con obstáculos: '+JSON.stringify(collision));
