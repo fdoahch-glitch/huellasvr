@@ -80,6 +80,7 @@ try{
   if(!state.diagnostics.terrain.diffuseReady||state.diagnostics.terrain.uvCount<6||!state.diagnostics.terrain.photoSample)throw new Error(world+' textura del terreno no enlazada al mesh: '+JSON.stringify(state.diagnostics.terrain));
   if(!String(state.diagnostics.terrain.materialType||'').includes('PBR'))throw new Error(world+' no usa material PBR en el terreno: '+state.diagnostics.terrain.materialType);
   if(state.diagnostics.dinosaurs!==15)throw new Error(world+' debe cargar exactamente 15 dinosaurios en '+testQuality+'; cargó '+state.diagnostics.dinosaurs);
+  if(!Number.isFinite(state.diagnostics.vegetationInstances)||state.diagnostics.vegetationInstances<50)throw new Error(world+' no conserva una densidad vegetal suficiente en '+testQuality+': '+state.diagnostics.vegetationInstances);
   if(state.diagnostics.drinkPoints<1)throw new Error(world+' no precalculó puntos válidos para beber: '+state.diagnostics.drinkPoints);
   if(state.diagnostics.dinoStates?.length!==15||state.diagnostics.dinoStates.some(d=>!d.active||!d.clip))throw new Error(world+' tiene uno o más dinosaurios sin animación activa en '+testQuality);
   const herdCheckAll=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.dinoBehaviorCheck?.());
