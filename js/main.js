@@ -198,18 +198,28 @@ function addTerrain(){
     const k=j*N+i;if(!valid[k]||!valid[k+1]||!valid[k+N]||!valid[k+N+1])return false;
     return D[Math.round(fj)*N+Math.round(fi)]>=32&&slope(Math.round(fi),Math.round(fj))<32;
    };
-   const positions=[],uvs=[],indices=[],id=new Int32Array(N*N).fill(-1);
-   for(let j=0;j<N;j++)for(let i=0;i<N;i++)if(valid[j*N+i]){
-    id[j*N+i]=positions.length/3;
-    positions.push(mnx*S+(i+.5)*dx-shX,H[j*N+i]-shY,mnz*S+(j+.5)*dz-shZ);
-    uvs.push((i+.5)/N,1-(j+.5)/N);
+   // Geometría con buffers tipados: evita arrays JS dinámicos y copias durante el montaje del terreno.
+   let vertexCount=0;
+   for(let k=0;k<N*N;k++)if(valid[k])vertexCount++;
+   const positions=new Float32Array(vertexCount*3),uvs=new Float32Array(vertexCount*2),id=new Int32Array(N*N).fill(-1);
+   let vp=0,up=0;
+   for(let j=0;j<N;j++)for(let i=0;i<N;i++){
+    const k=j*N+i;if(!valid[k])continue;
+    id[k]=vp/3;
+    positions[vp++]=mnx*S+(i+.5)*dx-shX;positions[vp++]=H[k]-shY;positions[vp++]=mnz*S+(j+.5)*dz-shZ;
+    uvs[up++]=(i+.5)/N;uvs[up++]=1-(j+.5)/N;
    }
+   let quadCount=0;
    for(let j=0;j<N-1;j++)for(let i=0;i<N-1;i++){
-    const a=id[j*N+i],b=id[j*N+i+1],c=id[(j+1)*N+i],d=id[(j+1)*N+i+1];
-    if(a<0||b<0||c<0||d<0)continue;
-    indices.push(a,b,c,b,d,c);
+    const k=j*N+i;if(id[k]>=0&&id[k+1]>=0&&id[k+N]>=0&&id[k+N+1]>=0)quadCount++;
    }
-   const normals=[];BABYLON.VertexData.ComputeNormals(positions,indices,normals);
+   const indices=new Uint32Array(quadCount*6);let ip=0;
+   for(let j=0;j<N-1;j++)for(let i=0;i<N-1;i++){
+    const k=j*N+i,a=id[k],b=id[k+1],c=id[k+N],d=id[k+N+1];
+    if(a<0||b<0||c<0||d<0)continue;
+    indices[ip++]=a;indices[ip++]=b;indices[ip++]=c;indices[ip++]=b;indices[ip++]=d;indices[ip++]=c;
+   }
+   const normals=new Float32Array(positions.length);BABYLON.VertexData.ComputeNormals(positions,indices,normals);
    const mesh=new BABYLON.Mesh('original-photo-terrain-'+worldKey,scene),vd=new BABYLON.VertexData();
    vd.positions=positions;vd.indices=indices;vd.normals=normals;vd.uvs=uvs;vd.applyToMesh(mesh,true);
    mesh.isPickable=true;mesh.checkCollisions=true;mesh.receiveShadows=true;mesh.metadata={ground:true};ground=mesh;pickables.push(mesh);
