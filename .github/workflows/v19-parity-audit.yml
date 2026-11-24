@@ -35,6 +35,7 @@ jobs:
           echo "Prueba de panorama y alfa de nubes restaurados desde el original."
           echo "Auditoría de orillas de ríos y escala atmosférica original."
           echo "Verificación de paneles planos y brillo de agua corregidos."
+          echo "Verificación del cauce sin cinta especular duplicada."
           echo "Se validan panorama, ríos, vegetación, cinco mundos y rendimiento por separado."
           git status --short
       - name: Preparar Node.js
