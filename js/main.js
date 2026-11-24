@@ -35,7 +35,7 @@ const HERD_CONFIG = {
 const requested = (params.get('mundo') || 'atacamatitan').toLowerCase();
 const worldKey = WORLDS[requested] ? requested : 'valle';
 const WORLD = WORLDS[worldKey];
-let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, waterGain=null, lightingBase=null, timeMode='dia', skyLife=null, nightInsectGain=null, xrGazeActor=null, xrGazeSince=0, xrGazeFired=false;
+let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, waterGain=null, lightingBase=null, timeMode='dia', skyLife=null, nightInsectGain=null, rainBlend=0, xrGazeActor=null, xrGazeSince=0, xrGazeFired=false;
 const setProgress=(v,t)=>{$('progressFill').style.width=Math.round(v*100)+'%';$('loadText').textContent=t;};
 function mat(name,color,rough=.9){const m=new BABYLON.StandardMaterial(name,scene);m.diffuseColor=BABYLON.Color3.FromHexString(color);m.specularColor=new BABYLON.Color3(.08,.08,.08);m.roughness=rough;return m;}
 function rand(seed){let x=Math.sin(seed*127.1+311.7)*43758.5453;return x-Math.floor(x);}
@@ -88,7 +88,7 @@ function addSkyLife(){
 function updateSkyLife(dt){
  if(!skyLife||!camera)return;
  skyLife.anchor.position.copyFrom(camera.position);skyLife.clouds.rotation.y+=dt*.0009;skyLife.cloudTex.uOffset=(skyLife.cloudTex.uOffset+dt*.000004)%1;
- const daylight=timeMode==='noche'?0:1,weather=raining?.15:1,seconds=performance.now()*.001;
+ const daylight=timeMode==='noche'?0:1,weather=1-rainBlend*.85,seconds=performance.now()*.001;
  const moteArr=skyLife.motes.getVerticesData(BABYLON.VertexBuffer.PositionKind);if(moteArr){for(let i=0;i<skyLife.motePositions.length/3;i++){moteArr[i*3]=skyLife.motePositions[i*3]+Math.sin(seconds*.4+i)*1.2;moteArr[i*3+1]=(skyLife.motePositions[i*3+1]+seconds*.08)%7;moteArr[i*3+2]=skyLife.motePositions[i*3+2]+Math.cos(seconds*.35+i*2)*1.2;}skyLife.motes.updateVerticesData(BABYLON.VertexBuffer.PositionKind,moteArr);}
  skyLife.motes.setEnabled(daylight>.1&&!raining&&quality!=='baja');
  skyLife.rays.forEach(r=>{r.mesh.material.alpha=r.base*(.6+.4*Math.sin(seconds*.3+r.phase))*daylight*weather*(timeMode==='atardecer'?1.6:1);r.mesh.setEnabled(r.mesh.material.alpha>.004);});
@@ -96,7 +96,7 @@ function updateSkyLife(dt){
  const nightAlpha=timeMode==='noche'?1:0;
  skyLife.starMat.alpha+=(nightAlpha-skyLife.starMat.alpha)*(1-Math.exp(-dt*1.8));
  skyLife.moonMat.alpha+=(nightAlpha-skyLife.moonMat.alpha)*(1-Math.exp(-dt*1.8));
- skyLife.clouds.material.alpha+=(.52+(raining?.24:0)-skyLife.clouds.material.alpha)*(1-Math.exp(-dt*1.5));
+ skyLife.clouds.material.alpha+=(.5+.4*rainBlend-skyLife.clouds.material.alpha)*(1-Math.exp(-dt*1.5));
  const t=performance.now()*.00008;
  skyLife.pterosaurs.forEach((p,i)=>{p.phase+=dt*.00035;p.root.position.set(camera.position.x+Math.cos(p.phase+p.offset)*p.radius,camera.position.y+p.height+Math.sin(p.phase*1.7)*2,camera.position.z-20+Math.sin(p.phase+p.offset)*p.radius);p.root.rotation.y=Math.atan2(Math.cos(p.phase+p.offset)*p.speed,Math.sin(p.phase+p.offset)*p.speed)+Math.PI/2;const flap=Math.sin(performance.now()*.008+i*1.7)*.62;p.left.rotation.z=flap;p.right.rotation.z=-flap;p.root.setEnabled(timeMode!=='noche'&&!raining);});
 }
@@ -229,16 +229,16 @@ function cycleTimeOfDay(){
 function updateEnvironment(dt){
  updateSkyLife(dt);
  if(!lightingBase||!hemiLight||!sunLight)return;
- const t=TIME_OF_DAY[timeMode]||TIME_OF_DAY.dia,k=1-Math.exp(-Math.max(0,dt)*2.2);
- hemiLight.intensity+=(lightingBase.hemi*t.hemi-hemiLight.intensity)*k;
- sunLight.intensity+=(lightingBase.sun*t.sun-sunLight.intensity)*k;
+ const t=TIME_OF_DAY[timeMode]||TIME_OF_DAY.dia,k=1-Math.exp(-Math.max(0,dt)*2.2);rainBlend+=(Number(raining)-rainBlend)*(1-Math.exp(-Math.max(0,dt)*.8));
+ hemiLight.intensity+=(lightingBase.hemi*t.hemi*(1-.3*rainBlend)-hemiLight.intensity)*k;
+ sunLight.intensity+=(lightingBase.sun*t.sun*(1-.6*rainBlend)-sunLight.intensity)*k;
  const hc=t.hemiColor?BABYLON.Color3.FromHexString(t.hemiColor):BABYLON.Color3.FromHexString(WORLD.hemi),sc=t.sunColor?BABYLON.Color3.FromHexString(t.sunColor):BABYLON.Color3.FromHexString(WORLD.sun);
  hemiLight.diffuse=BABYLON.Color3.Lerp(hemiLight.diffuse,hc,k);sunLight.diffuse=BABYLON.Color3.Lerp(sunLight.diffuse,sc,k);
- const skyTarget=new BABYLON.Color3(...t.sky);
+ const skyTarget=new BABYLON.Color3(t.sky[0]*(1-.38*rainBlend),t.sky[1]*(1-.38*rainBlend),t.sky[2]*(1-.3*rainBlend));
  if(skyMaterial)skyMaterial.emissiveColor=BABYLON.Color3.Lerp(skyMaterial.emissiveColor,skyTarget,k);
  const fogTarget=t.fog?BABYLON.Color3.FromHexString(t.fog):lightingBase.fog;
  scene.fogColor=BABYLON.Color3.Lerp(scene.fogColor,fogTarget,k);
- scene.fogDensity+=(lightingBase.fogDensity*(raining?1.4:1)-scene.fogDensity)*(1-Math.exp(-dt*1.4));
+ scene.fogDensity+=(lightingBase.fogDensity*(1+.4*rainBlend)-scene.fogDensity)*(1-Math.exp(-dt*1.4));
  if(rainGain&&audioContext)rainGain.gain.setTargetAtTime(raining&&soundOn?.12:0,audioContext.currentTime,.25);
  if(nightInsectGain&&audioContext)nightInsectGain.gain.setTargetAtTime(timeMode==='noche'&&!raining&&soundOn?.008:0,audioContext.currentTime,.35);
  if(waterGain&&audioContext)waterGain.gain.setTargetAtTime(((WORLD.rivers||[]).length||(WORLD.lagoons||[]).length)&&soundOn?.12:0,audioContext.currentTime,.6);
