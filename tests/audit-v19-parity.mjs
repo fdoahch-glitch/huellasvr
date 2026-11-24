@@ -260,6 +260,8 @@ check('Panorama y atmósfera replican el motor original v19',()=>{
  assert.ok(main.includes('m.emissiveTexture=pano'));
  assert.ok(main.includes('WORLD.panoRot??23'));
  assert.ok(main.includes("{diameter:875,segments:32}"),'La cúpula de nubes debe conservar la escala original');
+ assert.ok(main.includes('if(false&&quality!==\'baja\')for(let i=0;i<7;i++)'),'Los paneles planos de rayos no deben cubrir la escena');
+ assert.ok(main.includes('waterGlossMat.alpha=.06'),'El brillo del río no debe generar franjas blancas');
  assert.ok(main.includes('const a=rnd()*Math.PI*2,e=.08+rnd()*1.3,r=420'),'El radio estelar debe conservar el valor original');
  assert.ok(!main.includes('createDefaultSkybox'),'No reemplazar el panorama original por un cubemap distinto');
 });
