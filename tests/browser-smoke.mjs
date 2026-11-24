@@ -83,6 +83,15 @@ try{
   if(!Number.isFinite(state.diagnostics.vegetationInstances)||state.diagnostics.vegetationInstances<50)throw new Error(world+' no conserva una densidad vegetal suficiente en '+testQuality+': '+state.diagnostics.vegetationInstances);
   if(state.diagnostics.drinkPoints<1)throw new Error(world+' no precalculó puntos válidos para beber: '+state.diagnostics.drinkPoints);
   if(state.diagnostics.dinoStates?.length!==15||state.diagnostics.dinoStates.some(d=>!d.active||!d.clip))throw new Error(world+' tiene uno o más dinosaurios sin animación activa en '+testQuality);
+  const modeButtons=await page.evaluate(()=>({panorama:document.querySelector('#explore')?.textContent||'',stereo:document.querySelector('#visor')?.textContent||''}));
+  if(!modeButtons.panorama.includes('360°')||!modeButtons.stereo.includes('visor'))throw new Error(world+' no presenta las dos modalidades móviles en el selector inicial: '+JSON.stringify(modeButtons));
+  const stereoOn=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.toggleStereo?.());
+  if(!stereoOn?.enabled||stereoOn.rigCameras!==2)throw new Error(world+' no activó el modo estereoscópico con dos cámaras: '+JSON.stringify(stereoOn));
+  const stereoOff=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.toggleStereo?.());
+  if(stereoOff?.enabled||stereoOff.rigCameras!==0)throw new Error(world+' no restauró la cámara panorámica al salir del modo visor: '+JSON.stringify(stereoOff));
+  const mobileModes=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.mobileModes?.());
+  if(!mobileModes||mobileModes.stereoEnabled)throw new Error(world+' dejó el motor en estado estereoscópico inesperado: '+JSON.stringify(mobileModes));
+  console.log('MOBILE_MODES_PASS',world,JSON.stringify({modeButtons,stereoOn,stereoOff,mobileModes}));
   const herdCheckAll=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.dinoBehaviorCheck?.());
   if(!herdCheckAll||herdCheckAll.count!==15||herdCheckAll.overlaps!==0)throw new Error(world+' presenta manada incompleta o solapada en '+testQuality+': '+JSON.stringify(herdCheckAll));
   if(!state.diagnostics.physics?.enabled||!state.diagnostics.physics?.controller||state.diagnostics.physics.colliders<1)throw new Error(world+' no inicializó Havok en '+testQuality+': '+JSON.stringify(state.diagnostics.physics));
@@ -121,7 +130,7 @@ try{
   const movingHerdCheck=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.dinoBehaviorCheck?.());
   if(!movingHerdCheck||movingHerdCheck.overlaps!==0)throw new Error(world+' perdió la separación durante el movimiento: '+JSON.stringify(movingHerdCheck));
   if(state.diagnostics.meshes<10||state.diagnostics.textures<1)throw new Error(world+' no generó mallas/texturas suficientes: '+JSON.stringify(state.diagnostics));
-  // SwiftShader puede bloquear el render durante segundos en ULTRA; la reproducción dinámica de clips se valida en la pasada funcional. La auditoría estática verifica los cuatro clips de cada GLB también en los modelos de alta calidad.
+  // SwiftShader puede bloquear el render durante segundos en la prueba de máxima carga; la reproducción dinámica de clips se valida en la pasada funcional. La auditoría estática verifica los cuatro clips de cada GLB también en los modelos de alta calidad.
   if(!visualMode&&testQuality==='baja')for(const clip of ['Idle','Walk','Run','Neck_Look']){
    const before=await page.evaluate(name=>window.__HUELLAS_VR_TEST__.setAnimation(name),clip);
    await page.waitForFunction(name=>{
