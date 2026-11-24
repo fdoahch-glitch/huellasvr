@@ -1,10 +1,11 @@
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, statSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const resultsDir=path.join(root,'test-results');mkdirSync(resultsDir,{recursive:true});
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.glb':'model/gltf-binary','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.webp':'image/webp','.mp3':'audio/mpeg','.ogg':'audio/ogg','.wav':'audio/wav'};
 const server=createServer((req,res)=>{
  let pathname;
@@ -34,6 +35,7 @@ try{
    return t.includes('¡Mundo listo!')||t.includes('No se pudo iniciar el mundo');
   },{timeout:180000});
   await page.waitForTimeout(1200);
+  await page.screenshot({path:path.join(resultsDir,world+'.png'),fullPage:false});
   const state=await page.evaluate(()=>{
    const d=window.__HUELLAS_VR_DIAGNOSTICS__?.();
    return {message:document.querySelector('#loadText')?.textContent||'',diagnostics:d||null};
