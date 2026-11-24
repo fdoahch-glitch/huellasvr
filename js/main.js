@@ -103,15 +103,6 @@ function addTerrain(){
 let terrainMap=null;
 let terrainHeightAt=(x,z)=>0;
 let terrainValidAt=(x,z)=>true;
-let terrainSamples=null,terrainSize=300,terrainResolution=256,terrainCenterHeight=0;
-function terrainHeightAt(x,z){
- if(!terrainSamples)return 0;
- const u=(x/terrainSize+.5)*(terrainResolution-1),v=(z/terrainSize+.5)*(terrainResolution-1);
- const ix=Math.max(0,Math.min(terrainResolution-2,Math.floor(u))),iz=Math.max(0,Math.min(terrainResolution-2,Math.floor(v)));
- const fx=Math.max(0,Math.min(1,u-ix)),fz=Math.max(0,Math.min(1,v-iz));
- const a=terrainSamples[iz*terrainResolution+ix],b=terrainSamples[iz*terrainResolution+ix+1],c=terrainSamples[(iz+1)*terrainResolution+ix],d=terrainSamples[(iz+1)*terrainResolution+ix+1];
- return a*(1-fx)*(1-fz)+b*fx*(1-fz)+c*(1-fx)*fz+d*fx*fz-terrainCenterHeight;
-}
 
 function addLighting(){const hemi=new BABYLON.HemisphericLight('ambient',new BABYLON.Vector3(0,1,0),scene);hemi.diffuse=BABYLON.Color3.FromHexString(WORLD.hemi);hemi.groundColor=new BABYLON.Color3(.22,.2,.17);hemi.intensity=.82;const sun=new BABYLON.DirectionalLight('sun',new BABYLON.Vector3(-.5,-1,.35),scene);sun.position=new BABYLON.Vector3(-35,55,-20);sun.diffuse=BABYLON.Color3.FromHexString(WORLD.sun);sun.intensity=.9;scene.environmentIntensity=.7;}
 function addWater(){
