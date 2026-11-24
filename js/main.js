@@ -586,8 +586,21 @@ function onPick(evt){
  }
 }
 function movePlayer(dt){
- if(xr?.baseExperience?.state===BABYLON.WebXRState.IN_XR)return;
  if(!physicsController||!physicsReady)throw new Error('El controlador Havok del jugador no está inicializado.');
+ const inXR=xr?.baseExperience?.state===BABYLON.WebXRState.IN_XR;
+ if(inXR){
+  const view=xr.input?.xrCamera;
+  if(view&&dt>0){
+   const current=physicsController.getPosition(),dx=view.position.x-current.x,dz=view.position.z-current.z,headHeight=Math.max(1.1,Math.min(2.2,view.position.y-terrainHeightAt(current.x,current.z)));
+   const maxSpeed=5,desiredX=Math.max(-maxSpeed,Math.min(maxSpeed,dx/dt)),desiredZ=Math.max(-maxSpeed,Math.min(maxSpeed,dz/dt));
+   const gravity=new BABYLON.Vector3(0,-9.81,0),support=physicsController.checkSupport(Math.max(dt,.001),new BABYLON.Vector3(0,-1,0)),velocity=physicsController.getVelocity(),supported=support.supportedState===(BABYLON.CharacterSupportedState?.SUPPORTED??2);
+   physicsLastSupport=supported?'grounded':support.supportedState===BABYLON.CharacterSupportedState?.SLIDING?'sliding':'airborne';
+   physicsController.setVelocity(new BABYLON.Vector3(desiredX,supported?Math.max(0,velocity.y):Math.max(-22,velocity.y-9.81*dt),desiredZ));
+   physicsController.integrate(Math.max(dt,.001),support,gravity);
+   const next=physicsController.getPosition();view.position.set(next.x,terrainHeightAt(next.x,next.z)+headHeight,next.z);
+  }
+  return;
+ }
  const current=physicsController.getPosition(),camDelta=new BABYLON.Vector3(camera.position.x-current.x,0,camera.position.z-current.z);
  let desiredX=dt>0?camDelta.x/dt:0,desiredZ=dt>0?camDelta.z/dt:0;
  if(moving&&target){
