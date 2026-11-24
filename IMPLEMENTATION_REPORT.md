@@ -36,3 +36,7 @@
 ## Estado de validación
 
 Los commits están en GitHub. La auditoría estática y la prueba de navegador Chromium pasaron. La prueba reproduce Idle, Walk, Run y Neck_Look en una instancia de dinosaurio por mundo y verifica desplazamiento durante Walk/Run. También comprueba que Havok y el controlador cápsula se inicializan. Esto no sustituye la inspección visual de las capturas, las pruebas de colisión/pendientes ni los ensayos en Android, PC físico o visor VR. No se declara resuelta la calidad visual de los terrenos ni la paridad completa con v19.
+
+## Panel de diagnóstico ampliado
+
+El panel `?debug=1` usa `SceneInstrumentation` y `EngineInstrumentation` cuando están disponibles. Muestra FPS, tiempo de actualización JavaScript, frame/render/física, draw calls, GPU frame time, mallas activas, texturas, partículas, heap JS, versión WebGL, resolución, estado de panorama/terreno, Havok, soporte, colisionadores, posición del jugador y clips activos de dinosaurios. VRAM se marca como no disponible en el navegador; el tiempo GPU se muestra como N/D cuando el navegador no expone el timer query.
