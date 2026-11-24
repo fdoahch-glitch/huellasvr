@@ -27,6 +27,18 @@ La métrica de CPU actual mide el bloque de actualización JavaScript, no el tie
 - Reducción escalada de partículas y vegetación.
 - Pausa del render loop cuando la página queda en segundo plano.
 
+## Lectura preliminar de Chromium headless (SwiftShader)
+
+La ejecución automatizada `45348814252` abrió los cinco mundos con perfil `baja`. Los FPS registrados por el panel fueron 8–14, con 581–934 mallas y 51–56 texturas por mundo. Estos números corresponden a Chromium headless usando renderizado software SwiftShader en CI; no representan el rendimiento de una GPU Android/PC y no permiten afirmar ni descartar 60 FPS en hardware real. Sí muestran que esta configuración de prueba no sirve como benchmark de rendimiento.
+
+| Mundo | FPS headless | Mallas | Texturas | Dinosaurios |
+|---|---:|---:|---:|---:|
+| Atacamatitan | 14 | 703 | 56 | 7 |
+| Arackar | 10 | 665 | 54 | 7 |
+| Patagonia | 10 | 581 | 53 | 7 |
+| Stegouros | 10 | 794 | 51 | 5 |
+| Aysén | 8 | 934 | 55 | 8 |
+
 ## No medido todavía
 
 | Métrica | Android | PC |
