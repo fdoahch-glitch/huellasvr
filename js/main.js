@@ -226,7 +226,7 @@ async function spawnDino(id,index,total,center){
  root.position.set(spot.x,terrainHeightAt(spot.x,spot.z),spot.z);
  root.rotation.y=baseYaw+(data.flip?Math.PI:0);
  root.getChildMeshes().forEach(m=>{m.isPickable=true;m.metadata={...(m.metadata||{}),dinoId:id};pickables.push(m);});
- dinoRoots.push({root,id,clips,clipName:idle?.name||'',baseYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},heading:rand(index+71)*Math.PI*2,target:null,state:'idle',timer:2+rand(index+82)*5,radius:Math.min(4,1.5+rand(index+8)*2),running:false,lastFootstep:0,stepDistance:0,footDistance:0,dustDistance:0,footSide:1,lastFootPos:root.position.clone()});
+ dinoRoots.push({root,id,clips,clipName:idle?.name||'',baseYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},heading:rand(index+71)*Math.PI*2,target:null,state:'idle',timer:2+rand(index+82)*5,radius:Math.min(4,1.5+rand(index+8)*2),running:false,lastFootstep:0,stepDistance:0,actualSpeed:0,footDistance:0,dustDistance:0,footSide:1,lastFootPos:root.position.clone()});
  return root;
 }
 const VEGETATION_QUALITY={alta:1,media:.6,baja:.3}[quality]||1;
@@ -454,12 +454,12 @@ function updateDinoFootFX(dt){
 function emitDinoFootFX(d,dx,dz,travelled){
  const L=DINO[d.id].length,groundY=terrainHeightAt(d.root.position.x,d.root.position.z),len=Math.hypot(dx,dz)||1;
  d.footDistance=(d.footDistance||0)+travelled;d.dustDistance=(d.dustDistance||0)+travelled;
- if(L>=2.5&&d.footDistance>Math.max(.9,L*.45)){
+ if(d.footDistance>Math.max(.45,L*.32)){
   d.footDistance=0;d.footSide*=-1;const side=d.footSide*L*.09;
   const x=d.root.position.x-(dz/len)*side,z=d.root.position.z+(dx/len)*side;
-  emitFootprint(x,groundY,z,Math.atan2(dx,dz),Math.max(.35,L*.11));
+  emitFootprint(x,groundY,z,Math.atan2(dx,dz),Math.max(.2,L*.075));
  }
- if(L>=1.5&&d.dustDistance>Math.max(.9,L*.4)&&(d.running||Math.random()<.35)){
+ if(d.dustDistance>Math.max(.55,L*.3)&&(d.running||Math.random()<.35)){
   d.dustDistance=0;emitGroundDust(d.root.position.x,groundY,d.root.position.z,Math.max(.5,L*.16));
  }
 }
@@ -504,7 +504,7 @@ function animateDinos(t,dt){
     const support=[[nx,nz],[nx+Math.sin(d.heading)*r,nz+Math.cos(d.heading)*r],[nx-Math.sin(d.heading)*r,nz-Math.cos(d.heading)*r]];
     if(support.every(p=>terrainValidAt(p[0],p[1]))){
      const heights=support.map(p=>terrainHeightAt(p[0],p[1]));
-     const travelled=Math.hypot(nx-root.position.x,nz-root.position.z);root.position.x=nx;root.position.z=nz;root.position.y=Math.min(...heights);emitDinoFootFX(d,Math.sin(d.heading),Math.cos(d.heading),travelled);
+     const travelled=Math.hypot(nx-root.position.x,nz-root.position.z);root.position.x=nx;root.position.z=nz;root.position.y=Math.min(...heights);d.actualSpeed=step>0?travelled/step:0;emitDinoFootFX(d,Math.sin(d.heading),Math.cos(d.heading),travelled);
     }else{d.state='idle';d.target=null;d.timer=2.5;}
    }
   }else root.position.y=groundY;
@@ -512,8 +512,10 @@ function animateDinos(t,dt){
   const desired=d.state==='look'?'Neck_Look':d.state==='walk'?(d.running?'Run':'Walk'):'Idle';
   if(d.clipName!==desired){
    const clip=d.clips.find(a=>a.name.toLowerCase()===desired.toLowerCase());
-   if(clip){d.clips.forEach(a=>{if(a!==clip)a.stop();});const profile=gait[d.id]||gait.atacamatitan;clip.speedRatio=desired==='Walk'?(profile.walk/.10):desired==='Run'?(profile.run/.50):1;clip.start(true);d.clipName=desired;}
+   if(clip){d.clips.forEach(a=>{if(a!==clip)a.stop();});clip.start(true);d.clipName=desired;}
   }
+  const active=d.clips.find(a=>a.name.toLowerCase()===desired.toLowerCase());
+  if(active){const profile=gait[d.id]||gait.atacamatitan,base=desired==='Run'?.50:desired==='Walk'?.10:1,ratio=(desired==='Walk'||desired==='Run')?(d.actualSpeed>0?d.actualSpeed/(DINO[d.id].length*base):(desired==='Run'?profile.run/.50:profile.walk/.10)):1;active.speedRatio=desired==='Walk'&&profile.reverse?-Math.max(.05,ratio):Math.max(.05,ratio);}
   if(d.state==='walk')root.rotation.y=d.heading+d.baseYaw+(DINO[d.id].flip?Math.PI:0);
   else root.rotation.y=d.heading+d.baseYaw+(DINO[d.id].flip?Math.PI:0);
  });
