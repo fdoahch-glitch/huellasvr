@@ -180,7 +180,7 @@ check('Clips clonados: sufijos numéricos y crossfade',()=>{
 });
 check('Base de montañas busca terreno válido antes de interpolar',()=>{
  assert.ok(main.includes('const mountainBaseAt=(x,z)=>'));
- assert.ok(main.includes('for(let inward=2;inward<=36;inward+=2)'));
+ assert.ok(main.includes('for(let inward=2;inward<=90;inward+=2)'));
  assert.ok(main.includes('edgeY=mountainBaseAt(edgeX,edgeZ)'));
 });
 
@@ -206,7 +206,7 @@ check('Colisionadores simplificados de vegetación y rocas',()=>{
  assert.ok(main.includes('BABYLON.PhysicsShapeType.CYLINDER'));
 });
 
-check('Mezcla del terreno por pendiente y distancia',()=>{
+check('Mezcla del terreno por pendiente y variación procedural estable',()=>{
  assert.ok(main.includes('const smoothMask=(a,b,v)=>'));
  assert.ok(main.includes('normalY=1/Math.sqrt(1+sx*sx+sz*sz)'));
  assert.ok(main.includes('coverage=flat*'));
