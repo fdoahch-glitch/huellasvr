@@ -2,8 +2,25 @@ name: Huellas VR · auditoría de paridad v19
 on:
   push:
     branches: [main]
+    paths:
+      - 'index.html'
+      - 'js/**'
+      - 'tests/**'
+      - 'models/**'
+      - 'img/**'
+      - '.github/workflows/v19-parity-audit.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'index.html'
+      - 'js/**'
+      - 'tests/**'
+      - 'models/**'
+      - 'img/**'
+      - '.github/workflows/v19-parity-audit.yml'
+concurrency:
+  group: huellasvr-parity-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   parity-audit:
     runs-on: ubuntu-24.04
