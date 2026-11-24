@@ -106,7 +106,7 @@ try{
   if(!movingHerdCheck||movingHerdCheck.overlaps!==0)throw new Error(world+' perdió la separación durante el movimiento: '+JSON.stringify(movingHerdCheck));
   if(state.diagnostics.meshes<10||state.diagnostics.textures<1)throw new Error(world+' no generó mallas/texturas suficientes: '+JSON.stringify(state.diagnostics));
   // SwiftShader puede bloquear el render durante segundos en ULTRA; la reproducción dinámica de clips se valida en la pasada funcional. La auditoría estática verifica los cuatro clips de cada GLB también en los modelos de alta calidad.
-  if(!visualMode)for(const clip of ['Idle','Walk','Run','Neck_Look']){
+  if(!visualMode&&testQuality==='baja')for(const clip of ['Idle','Walk','Run','Neck_Look']){
    const before=await page.evaluate(name=>window.__HUELLAS_VR_TEST__.setAnimation(name),clip);
    await page.waitForFunction(name=>{
     const d=window.__HUELLAS_VR_DIAGNOSTICS__?.().dinoStates?.[0];
