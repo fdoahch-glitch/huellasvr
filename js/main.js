@@ -392,7 +392,7 @@ async function addVegetation(){
  for(let si=0;si<specs.length;si++){
   const a=specs[si],count=Math.max(0,Math.round(a.n*VEGETATION_QUALITY));if(!count)continue;
   let container;try{container=await loadContainer(a.file);}catch(e){throw new Error('No se pudo cargar el modelo original '+a.file+': '+e.message);}
-  const points=[],placed=[],rng=n=>rand(seedBase+si*7919+n*17.17);
+  const points=[],placed=[],physicsCandidates=[],rng=n=>rand(seedBase+si*7919+n*17.17);
   for(let i=0,attempt=0;i<count&&attempt<count*80+240;attempt++){
    let x,z;
    if(a.clump&&points.length&&rng(attempt*5+1)<a.clump){
@@ -428,6 +428,7 @@ async function addVegetation(){
     });materialsAdjusted=true;
    }
    const width=a.size[0]+rng(p.index*7+31)*(a.size[1]-a.size[0]),scale=width/dimensions.base,squash=a.squash||1,vertical=.85+rng(p.index*7+37)*.3,sy=scale*squash*vertical;
+    if(physicsReady&&(a.file.includes('araucaria_adulta')||a.file.includes('dead_tree_trunk')||(a.file.includes('rock_07')&&a.size[1]>1)))physicsCandidates.push({x:p.x,z:p.z,width,height:dimensions.height*sy,tree:a.file.includes('araucaria_adulta')||a.file.includes('dead_tree_trunk')});
    visualPivot.position.set(-dimensions.cx,-dimensions.minY,-dimensions.cz);
    root.position.set(p.x,terrainHeightAt(p.x,p.z)-(a.sink||0)*dimensions.height*sy,p.z);
    root.scaling.set(scale,sy,scale);
@@ -435,6 +436,15 @@ async function addVegetation(){
    meshes.forEach(mesh=>{mesh.isPickable=false;mesh.checkCollisions=false;});
    batchMeshes.push(...meshes);batchRoots.push(root);
   }
+   if(physicsReady&&physicsCandidates.length){
+    const selected=physicsCandidates.sort((a,b)=>Math.hypot(a.x,a.z)-Math.hypot(b.x,b.z)).slice(0,24);
+    selected.forEach((candidate,ci)=>{
+     const radius=candidate.tree?Math.max(.32,candidate.width*.035):Math.max(.24,candidate.width*.28),height=Math.max(.6,candidate.height*(candidate.tree?.62:.82));
+     const colliderMesh=BABYLON.MeshBuilder.CreateCylinder('environment-physics-collider-'+worldKey+'-'+si+'-'+ci,{height,diameter:radius*2,tessellation:8},scene);
+     colliderMesh.position.set(candidate.x,terrainHeightAt(candidate.x,candidate.z)+height/2,candidate.z);colliderMesh.isVisible=false;colliderMesh.isPickable=false;colliderMesh.checkCollisions=false;
+     physicsAggregates.push(new BABYLON.PhysicsAggregate(colliderMesh,BABYLON.PhysicsShapeType.CYLINDER,{mass:0,friction:.9,restitution:0},scene));
+    });
+   }
   if(batchMeshes.length){
    batchMeshes.forEach(mesh=>mesh.computeWorldMatrix(true));
    let merged=batchMeshes.length===1?batchMeshes[0]:null;
