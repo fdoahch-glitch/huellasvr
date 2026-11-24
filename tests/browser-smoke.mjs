@@ -79,7 +79,7 @@ try{
   if(!state.diagnostics.terrain.diffuseReady||state.diagnostics.terrain.uvCount<6||!state.diagnostics.terrain.photoSample)throw new Error(world+' textura del terreno no enlazada al mesh: '+JSON.stringify(state.diagnostics.terrain));
   if(!String(state.diagnostics.terrain.materialType||'').includes('PBR'))throw new Error(world+' no usa material PBR en el terreno: '+state.diagnostics.terrain.materialType);
   if(state.diagnostics.dinosaurs!==15)throw new Error(world+' debe cargar exactamente 15 dinosaurios en '+testQuality+'; cargó '+state.diagnostics.dinosaurs);
-  if(state.diagnostics.dinoLod?.available!==15)throw new Error(world+' no cargó los 15 modelos LOD reducidos: '+JSON.stringify(state.diagnostics.dinoLod));
+  if(state.diagnostics.dinoLod?.withoutLow!==0)throw new Error(world+' no cargó los 15 modelos LOD reducidos: '+JSON.stringify(state.diagnostics.dinoLod));
   const lodCheckAll=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.lodCheck?.());
   if(!lodCheckAll||lodCheckAll.count!==15||lodCheckAll.farLow!==15||lodCheckAll.nearHigh!==15||lodCheckAll.available!==15)throw new Error(world+' no cambia los 15 modelos por distancia en '+testQuality+': '+JSON.stringify(lodCheckAll));
   await page.waitForTimeout(350);
@@ -96,7 +96,7 @@ try{
   if(!state.diagnostics.physics?.enabled||!state.diagnostics.physics?.controller||state.diagnostics.physics.colliders<1)throw new Error(world+' no inicializó Havok Physics V2: '+JSON.stringify(state.diagnostics.physics));
   await page.waitForFunction(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().physics?.support==='grounded',{polling:100,timeout:15000});
   if(state.diagnostics.dinosaurs!==15)throw new Error(world+' debe cargar exactamente 15 dinosaurios; cargó '+state.diagnostics.dinosaurs);
-  if(state.diagnostics.dinoLod?.available!==15)throw new Error(world+' no cargó los 15 modelos LOD reducidos: '+JSON.stringify(state.diagnostics.dinoLod));
+  if(state.diagnostics.dinoLod?.withoutLow!==0)throw new Error(world+' no cargó los 15 modelos LOD reducidos: '+JSON.stringify(state.diagnostics.dinoLod));
   const lodCheck=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.lodCheck?.());
   if(!lodCheck||lodCheck.count!==15||lodCheck.farLow!==15||lodCheck.nearHigh!==15||lodCheck.available!==15)throw new Error(world+' no cambió los 15 modelos por distancia con histéresis: '+JSON.stringify(lodCheck));
   await page.waitForTimeout(350);
