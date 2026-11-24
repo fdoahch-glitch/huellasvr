@@ -376,6 +376,7 @@ async function addVegetation(){
   {file:'models/env/rock_07.glb',n:40,size:[.35,.8],sink:.15,squash:1.4,tint:'#e0b898',bright:1.8,rMax:22},
   {file:'models/env/dead_tree_trunk_02.glb',n:F.logs||0,size:[3.5,6],sink:.1,water:3,keep:4,rMin:8,rMax:40}
  ];
+ if(worldKey==='atacamatitan')specs.unshift({file:'models/env/cerro_desierto.glb',n:11,size:[70,120],squash:1.9,sink:.12,bright:1.6,tint:'#ffb090',water:-1,keep:0,rMin:85,rMax:125});
  const home=({atacamatitan:{x:4,z:-4},arackar:{x:4,z:-4},patagonia:{x:4,z:-8},stegouros:{x:3,z:4},aysen:{x:3,z:-8}}[worldKey]||{x:0,z:-10});
  const homes=[{p:home,r:({atacamatitan:9,arackar:8,patagonia:9,stegouros:7,aysen:8}[worldKey]||8)}];
  const hasWater=!!((WORLD.rivers||[]).length||(WORLD.lagoons||[]).length);
