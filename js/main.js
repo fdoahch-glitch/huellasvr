@@ -92,7 +92,7 @@ function addTerrain(){
    m.diffuseTexture=new BABYLON.Texture(WORLD.ground,scene,false,true);m.diffuseTexture.wrapU=m.diffuseTexture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;
    m.diffuseTexture.anisotropicFilteringLevel=8;m.diffuseColor=new BABYLON.Color3(1,1,1);
    m.specularColor=new BABYLON.Color3(.025,.025,.025);m.roughness=.98;
-   const normalPath=worldKey==='atacamatitan'?'img/tex_redsand_n.jpg':worldKey==='arackar'?'img/tex_crack_n.jpg':worldKey==='patagonia'?'img/tex_dirt_n.jpg':worldKey==='stegouros'?'img/tex_leaves_n.jpg':'img/tex_dirt_n.jpg';
+   const normalPath=worldKey==='atacamatitan'?'img/tex_sand_n.jpg':worldKey==='arackar'?'img/tex_gsand_n.jpg':worldKey==='stegouros'?'img/tx_leaves_n.jpg':'img/tx_dirt_n.jpg';
    const normal=new BABYLON.Texture(normalPath,scene,false,true);normal.wrapU=normal.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;normal.uScale=normal.vScale=55;normal.anisotropicFilteringLevel=8;m.bumpTexture=normal;m.bumpTexture.level=.34;
    mesh.material=m;mesh.refreshBoundingInfo();resolve();
   };
@@ -157,6 +157,7 @@ async function spawnDino(id,index,total,center){const data=DINO[id];const path=q
 async function addVegetation(){
  const F=WORLD.flora||{adult:5,young:8,fern:35,fern2:55,pebble:100,rocks:30,logs:5};
  const specs=[
+  ...(worldKey==='atacamatitan'?[['models/env/cerro_desierto.glb',11,70,120,'mountain']]:[]),
   ['models/veg/araucaria_adulta.glb',F.adult||0,2.8,4.8,'tree'],
   ['models/veg/araucaria_joven.glb',F.young||0,1.8,3.6,'tree'],
   ['models/veg/fern_tripo.glb',F.fern||0,.8,1.7,'fern'],
@@ -176,9 +177,9 @@ async function addVegetation(){
   let container;try{container=await loadContainer(file);}catch(e){console.warn('No se pudo cargar vegetación original',file,e);continue;}
   const n=Math.max(0,Math.round(count*Q));
   for(let i=0,placed=0,attempt=0;i<n&&attempt<n*14+80;attempt++){
-   const angle=rand(attempt+si*177+worldKey.length)*Math.PI*2,dist=type==='tree'?20+Math.sqrt(rand(attempt+si*83+9))*43:10+Math.sqrt(rand(attempt+si*31+27))*47;
+   const angle=rand(attempt+si*177+worldKey.length)*Math.PI*2,dist=type==='mountain'?85+Math.sqrt(rand(attempt+si*19+5))*40:type==='tree'?20+Math.sqrt(rand(attempt+si*83+9))*43:10+Math.sqrt(rand(attempt+si*31+27))*47;
    const x=Math.cos(angle)*dist,z=Math.sin(angle)*dist-14;
-   if(!terrainValidAt(x,z))continue;
+   if(type!=='mountain'&&!terrainValidAt(x,z))continue;
    const wd=waterDistance(x,z);
    if(type==='tree'&&wd<5)continue;
    if(type==='ground'&&wd<1.2)continue;
