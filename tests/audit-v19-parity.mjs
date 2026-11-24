@@ -132,11 +132,14 @@ check('Selección de la instancia exacta de dinosaurio',()=>{
  assert.ok(main.includes('const actor=dinoRoots.find(item=>item.root===node)'));
  assert.ok(main.includes('showInfo(actor.id,actor)'));
 });
-check('Dinosaurios beben junto a las orillas reales de cada escena',()=>{
- assert.ok(main.includes('const from=d.root.position,candidates=[]'));
+check('Dinosaurios beben usando puntos de orilla precalculados por mundo',()=>{
+ assert.ok(main.includes('function buildHerdDrinkPoints()'));
+ assert.ok(main.includes('herdDrinkPoints=points'));
+ assert.ok(main.includes('function herdDrinkTarget(d,index)'));
  assert.ok(main.includes('waterDistanceAt(x,z)'));
  assert.ok(main.includes('river.w*.5+1.15'));
  assert.ok(main.includes('WORLD.lagoons||[]'));
+ assert.ok(main.includes('buildHerdDrinkPoints();'));
 });
 check('Diagnóstico mide coste CPU por actualización y carga de partículas',()=>{for(const token of ['cpuUpdateMs','cpuUpdateAvgMs','scene?.particleSystems?.length','CPU actualización JS:'])assert.ok(main.includes(token),'Falta '+token);});
 check('Optimización de vegetación y diagnóstico de rendimiento',()=>{
