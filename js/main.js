@@ -36,6 +36,7 @@ const requested = (params.get('mundo') || 'atacamatitan').toLowerCase();
 const worldKey = WORLDS[requested] ? requested : 'valle';
 const WORLD = WORLDS[worldKey];
 let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, waterGain=null, lightingBase=null, timeMode='dia', skyLife=null, nightInsectGain=null, rainBlend=0, xrGazeActor=null, xrGazeSince=0, xrGazeFired=false;
+let orientationEnabled=false,orientationBase=null,orientationHandler=null,stereoEnabled=false;
 const setProgress=(v,t)=>{$('progressFill').style.width=Math.round(v*100)+'%';$('loadText').textContent=t;};
 function mat(name,color,rough=.9){const m=new BABYLON.StandardMaterial(name,scene);m.diffuseColor=BABYLON.Color3.FromHexString(color);m.specularColor=new BABYLON.Color3(.08,.08,.08);m.roughness=rough;return m;}
 function rand(seed){let x=Math.sin(seed*127.1+311.7)*43758.5453;return x-Math.floor(x);}
@@ -748,7 +749,31 @@ function updateXRGaze(){
  if(xrGazeActor!==actor.root){xrGazeActor=actor.root;xrGazeSince=performance.now();xrGazeFired=false;return;}
  if(!xrGazeFired&&performance.now()-xrGazeSince>=1400){showInfo(actor.id,actor);xrGazeFired=true;}
 }
-function bindControls(){scene.onPointerObservable.add(pi=>{if(pi.type===BABYLON.PointerEventTypes.POINTERPICK)onPick(pi.pickInfo);});canvas.addEventListener('pointerdown',()=>{if(camera.inputs.attached.pointers){}},{passive:true});$('explore').onclick=()=>startExperience(false);$('visor').onclick=()=>startExperience(true);$('vrButton').onclick=enterXR;$('closeInfo').onclick=closeInfo;$('timeButton').onclick=cycleTimeOfDay;$('rainButton').onclick=()=>{raining=!raining;$('rainButton').textContent=raining?'🌧️':'🌧';if(raining){if(!rainSystem){const rainCapacity=quality==='alta'?900:quality==='media'?520:260;rainSystem=new BABYLON.ParticleSystem('rain',rainCapacity,scene);rainSystem.particleTexture=makeParticleTexture();rainSystem.emitter=new BABYLON.Vector3(0,18,-10);rainSystem.minEmitBox=new BABYLON.Vector3(-55,0,-55);rainSystem.maxEmitBox=new BABYLON.Vector3(55,0,55);rainSystem.color1=new BABYLON.Color4(.65,.75,.9,.5);rainSystem.color2=new BABYLON.Color4(.8,.85,1,.35);rainSystem.minSize=.025;rainSystem.maxSize=.05;rainSystem.minLifeTime=1;rainSystem.maxLifeTime=2;rainSystem.emitRate=quality==='alta'?620:quality==='media'?360:180;rainSystem.direction1=new BABYLON.Vector3(0,-1,0);rainSystem.direction2=new BABYLON.Vector3(.2,-1,.2);rainSystem.minEmitPower=8;rainSystem.maxEmitPower=13;}rainSystem.start();}else rainSystem?.stop();};$('soundButton').onclick=()=>{soundOn=!soundOn;$('soundButton').textContent=soundOn?'🔊':'🔇';if(audioMaster&&audioContext)audioMaster.gain.setTargetAtTime(soundOn?.18:0,audioContext.currentTime,.12);};$('qualityButton').onclick=()=>{const next=quality==='alta'?'media':quality==='media'?'baja':'alta';location.search=new URLSearchParams({...Object.fromEntries(params),q:next}).toString();};$('retrySensors').onclick=()=>enterXR();$('continueTouch').onclick=()=>{$('sensorNotice').classList.add('hidden');};}
+function wrapAngleDelta(value,base){let d=(value-base)*Math.PI/180;while(d>Math.PI)d-=Math.PI*2;while(d< -Math.PI)d+=Math.PI*2;return d;}
+async function toggleMobileOrientation(){
+ if(orientationEnabled){window.removeEventListener('deviceorientation',orientationHandler,true);orientationEnabled=false;orientationBase=null;orientationHandler=null;$('sensorButton').textContent='🧭';return;}
+ try{
+  const Orientation=window.DeviceOrientationEvent;
+  if(Orientation&&typeof Orientation.requestPermission==='function'){const permission=await Orientation.requestPermission();if(permission!=='granted')throw new Error('Permiso de orientación denegado.');}
+  if(!Orientation)throw new Error('Este navegador no ofrece sensores de orientación.');
+  orientationBase=null;const startRotation=camera.rotation.clone();
+  orientationHandler=event=>{
+   if(!Number.isFinite(event.alpha)||!Number.isFinite(event.beta)||!Number.isFinite(event.gamma)||xr?.baseExperience?.state===BABYLON.WebXRState.IN_XR)return;
+   const screenAngle=screen.orientation?.angle||window.orientation||0;
+   if(!orientationBase)orientationBase={alpha:event.alpha,beta:event.beta,gamma:event.gamma,screen:screenAngle};
+   const yaw=wrapAngleDelta(event.alpha,orientationBase.alpha)+((screenAngle-orientationBase.screen)*Math.PI/180);
+   const pitch=wrapAngleDelta(event.beta,orientationBase.beta),roll=wrapAngleDelta(event.gamma,orientationBase.gamma);
+   camera.rotation.set(startRotation.x+pitch,startRotation.y+yaw,startRotation.z-roll);
+  };
+  window.addEventListener('deviceorientation',orientationHandler,true);orientationEnabled=true;$('sensorButton').textContent='🧭✓';
+  $('sensorNotice').classList.add('hidden');
+ }catch(error){console.warn('Orientación móvil no disponible',error);$('sensorNotice').classList.remove('hidden');}
+}
+function toggleMobileStereo(){
+ if(stereoEnabled){camera.setCameraRigMode(BABYLON.Camera.RIG_MODE_NONE);stereoEnabled=false;$('stereoButton').textContent='🥽';}
+ else{camera.setCameraRigMode(BABYLON.Camera.RIG_MODE_STEREOSCOPIC_SIDEBYSIDE_PARALLEL,{interaxialDistance:.064});stereoEnabled=true;$('stereoButton').textContent='🥽✓';}
+}
+function bindControls(){scene.onPointerObservable.add(pi=>{if(pi.type===BABYLON.PointerEventTypes.POINTERPICK)onPick(pi.pickInfo);});canvas.addEventListener('pointerdown',()=>{if(camera.inputs.attached.pointers){}},{passive:true});$('explore').onclick=()=>startExperience(false);$('visor').onclick=()=>startExperience(true);$('vrButton').onclick=enterXR;$('sensorButton').onclick=toggleMobileOrientation;$('stereoButton').onclick=toggleMobileStereo;$('closeInfo').onclick=closeInfo;$('timeButton').onclick=cycleTimeOfDay;$('rainButton').onclick=()=>{raining=!raining;$('rainButton').textContent=raining?'🌧️':'🌧';if(raining){if(!rainSystem){const rainCapacity=quality==='alta'?900:quality==='media'?520:260;rainSystem=new BABYLON.ParticleSystem('rain',rainCapacity,scene);rainSystem.particleTexture=makeParticleTexture();rainSystem.emitter=new BABYLON.Vector3(0,18,-10);rainSystem.minEmitBox=new BABYLON.Vector3(-55,0,-55);rainSystem.maxEmitBox=new BABYLON.Vector3(55,0,55);rainSystem.color1=new BABYLON.Color4(.65,.75,.9,.5);rainSystem.color2=new BABYLON.Color4(.8,.85,1,.35);rainSystem.minSize=.025;rainSystem.maxSize=.05;rainSystem.minLifeTime=1;rainSystem.maxLifeTime=2;rainSystem.emitRate=quality==='alta'?620:quality==='media'?360:180;rainSystem.direction1=new BABYLON.Vector3(0,-1,0);rainSystem.direction2=new BABYLON.Vector3(.2,-1,.2);rainSystem.minEmitPower=8;rainSystem.maxEmitPower=13;}rainSystem.start();}else rainSystem?.stop();};$('soundButton').onclick=()=>{soundOn=!soundOn;$('soundButton').textContent=soundOn?'🔊':'🔇';if(audioMaster&&audioContext)audioMaster.gain.setTargetAtTime(soundOn?.18:0,audioContext.currentTime,.12);};$('qualityButton').onclick=()=>{const next=quality==='alta'?'media':quality==='media'?'baja':'alta';location.search=new URLSearchParams({...Object.fromEntries(params),q:next}).toString();};$('retrySensors').onclick=()=>enterXR();$('continueTouch').onclick=()=>{$('sensorNotice').classList.add('hidden');};}
 async function startExperience(withVR){$('loader').style.opacity='0';setTimeout(()=>$('loader').classList.add('hidden'),750);$('hud').classList.remove('hidden');$('worldLabel').textContent=WORLD.title;if(withVR)await enterXR();}
 function installDiagnostics(){
  const snapshot=()=>({
