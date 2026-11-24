@@ -883,45 +883,70 @@ function updateStereoOrientation(){if(stereoEnabled)$('rotate').classList.toggle
 function bindControls(){window.addEventListener('resize',updateStereoOrientation);window.addEventListener('orientationchange',updateStereoOrientation);window.addEventListener('keydown',event=>{if(event.key==='Escape'&&stereoEnabled)toggleMobileStereo();});window.addEventListener('touchstart',()=>{if(!stereoEnabled)return;const now=performance.now();stereoTapTimes=stereoTapTimes.filter(t=>now-t<1200);stereoTapTimes.push(now);if(stereoTapTimes.length>=3)toggleMobileStereo();},{passive:true});$('exitHint').onclick=()=>toggleMobileStereo();scene.onPointerObservable.add(pi=>{if(pi.type===BABYLON.PointerEventTypes.POINTERPICK)onPick(pi.pickInfo);});canvas.addEventListener('pointerdown',()=>{if(camera.inputs.attached.pointers){}},{passive:true});$('explore').onclick=()=>startExperience(false);$('visor').onclick=()=>startExperience(true);$('vrButton').onclick=enterXR;$('sensorButton').onclick=toggleMobileOrientation;$('stereoButton').onclick=toggleMobileStereo;$('closeInfo').onclick=closeInfo;$('timeButton').onclick=cycleTimeOfDay;$('rainButton').onclick=()=>{raining=!raining;$('rainButton').textContent=raining?'🌧️':'🌧';if(raining){if(!rainSystem){const rainCapacity=quality==='alta'?900:quality==='media'?520:260;rainSystem=new BABYLON.ParticleSystem('rain',rainCapacity,scene);rainSystem.particleTexture=makeParticleTexture();rainSystem.emitter=new BABYLON.Vector3(0,18,-10);rainSystem.minEmitBox=new BABYLON.Vector3(-55,0,-55);rainSystem.maxEmitBox=new BABYLON.Vector3(55,0,55);rainSystem.color1=new BABYLON.Color4(.65,.75,.9,.5);rainSystem.color2=new BABYLON.Color4(.8,.85,1,.35);rainSystem.minSize=.025;rainSystem.maxSize=.05;rainSystem.minLifeTime=1;rainSystem.maxLifeTime=2;rainSystem.emitRate=quality==='alta'?620:quality==='media'?360:180;rainSystem.direction1=new BABYLON.Vector3(0,-1,0);rainSystem.direction2=new BABYLON.Vector3(.2,-1,.2);rainSystem.minEmitPower=8;rainSystem.maxEmitPower=13;}rainSystem.start();}else rainSystem?.stop();};$('soundButton').onclick=()=>{soundOn=!soundOn;$('soundButton').textContent=soundOn?'🔊':'🔇';if(audioMaster&&audioContext)audioMaster.gain.setTargetAtTime(soundOn?.18:0,audioContext.currentTime,.12);};$('qualityButton').onclick=()=>{const next=quality==='alta'?'media':quality==='media'?'baja':'alta';location.search=new URLSearchParams({...Object.fromEntries(params),q:next}).toString();};$('retrySensors').onclick=()=>enterXR();$('continueTouch').onclick=()=>{$('sensorNotice').classList.add('hidden');};}
 async function startExperience(withVR){$('loader').style.opacity='0';setTimeout(()=>$('loader').classList.add('hidden'),750);$('hud').classList.remove('hidden');$('worldLabel').textContent=WORLD.title;if(withVR)await enterXR();}
 function installDiagnostics(){
- const snapshot=()=>({
-  world:worldKey,quality,fps:Math.round(engine?.getFps?.()||0),
-  meshes:scene?.meshes?.length||0,activeMeshes:scene?.getActiveMeshes?.().length||0,
-  textures:engine?.getLoadedTexturesCache?.().length||0,dinosaurs:dinoRoots.length,
-  vegetationAssets:assetCache.size,particles:scene?.particleSystems?.length||0,dinoStates:dinoRoots.map(d=>({id:d.id,clip:d.clipName,active:!!d.activeClip,playing:!!d.activeClip?.isPlaying,state:d.state,heading:d.heading,speed:d.actualSpeed,target:d.target?{x:+d.target.x.toFixed(2),z:+d.target.z.toFixed(2)}:null,forwardYaw:d.baseYaw,position:{x:+d.root.position.x.toFixed(2),y:+d.root.position.y.toFixed(2),z:+d.root.position.z.toFixed(2)}})),cpuUpdateMs:Math.round(cpuUpdateMs*100)/100,cpuUpdateAvgMs:Math.round(cpuUpdateAvgMs*100)/100,heapMB:performance.memory?Math.round(performance.memory.usedJSHeapSize/1048576):null,
-  sky:{ready:skyReady,error:skyError,url:WORLD.sky},terrain:{photo:terrainPhotoReady,normal:terrainNormalReady,error:terrainTextureError,ground:WORLD.ground},physics:{enabled:physicsReady,controller:!!physicsController,colliders:physicsAggregates.length,support:physicsLastSupport},xrState:xr?.baseExperience?.state??'desktop'
- });
- window.__HUELLAS_VR_DIAGNOSTICS__=snapshot;
-  if(params.get('test')==='1')window.__HUELLAS_VR_TEST__={
-   setAnimation(name){
-    const d=dinoRoots[0];if(!d)throw new Error('No hay dinosaurios cargados para probar.');
-    if(!['Idle','Walk','Run','Neck_Look'].includes(name))throw new Error('Clip de prueba no permitido: '+name);
-    d.testClip=name;d.clipName='';d.target=null;d.goal=null;d.running=name==='Run';d.lookUntil=name==='Neck_Look'?performance.now()+5000:0;
-    if(name==='Walk'||name==='Run'){
-     const radius=(d.length||DINO[d.id].length)*.3;let found=false;
-     for(let k=0;k<32&&!found;k++){
-      const angle=k*Math.PI/16,sx=Math.sin(angle),cz=Math.cos(angle);
-      for(const distance of [6,5,4,3,2]){
-       const x=d.root.position.x+sx*distance,z=d.root.position.z+cz*distance;
-       const support=[[x,z],[x+sx*radius,z+cz*radius],[x-sx*radius,z-cz*radius]];
-       if(support.every(p=>terrainValidAt(p[0],p[1]))){d.heading=angle;d.target={x,z};d.goal='test';d.state='walk';found=true;break;}
-      }
-     }
-     return {clip:name,movementPathFound:found,position:{x:d.root.position.x,y:d.root.position.y,z:d.root.position.z}};
-    }
-    d.state=name==='Neck_Look'?'look':'idle';d.timer=100;
-    return {clip:name,movementPathFound:false,position:{x:d.root.position.x,y:d.root.position.y,z:d.root.position.z}};
-   }
+ let sceneInstrumentation=null,engineInstrumentation=null;
+ if(params.get('debug')==='1'){
+  try{
+   if(BABYLON.SceneInstrumentation){sceneInstrumentation=new BABYLON.SceneInstrumentation(scene);sceneInstrumentation.captureFrameTime=true;sceneInstrumentation.captureRenderTime=true;sceneInstrumentation.captureActiveMeshesEvaluationTime=true;sceneInstrumentation.capturePhysicsTime=true;sceneInstrumentation.captureAnimationsTime=true;}
+   if(BABYLON.EngineInstrumentation){engineInstrumentation=new BABYLON.EngineInstrumentation(engine);engineInstrumentation.captureGPUFrameTime=true;}
+  }catch(error){console.warn('[Huellas VR] Instrumentación no disponible:',error);}
+ }
+ const snapshot=()=>{
+  const p=physicsController?.getPosition?.()||camera?.position;
+  const gpuCounter=engineInstrumentation?.gpuFrameTimeCounter;
+  return {
+   world:worldKey,quality,fps:Number.isFinite(engine?.getFps?.())?Math.round(engine.getFps()):0,
+   meshes:scene?.meshes?.length||0,activeMeshes:scene?.getActiveMeshes?.().length||0,
+   textures:engine?.getLoadedTexturesCache?.().length||0,dinosaurs:dinoRoots.length,
+   vegetationAssets:assetCache.size,particles:scene?.particleSystems?.length||0,
+   dinoStates:dinoRoots.map(d=>({id:d.id,clip:d.clipName,active:!!d.activeClip,playing:!!d.activeClip?.isPlaying,state:d.state,heading:d.heading,speed:d.actualSpeed,target:d.target?{x:+d.target.x.toFixed(2),z:+d.target.z.toFixed(2)}:null,forwardYaw:d.baseYaw,position:{x:+d.root.position.x.toFixed(2),y:+d.root.position.y.toFixed(2),z:+d.root.position.z.toFixed(2)}})),
+   cpuUpdateMs:Math.round(cpuUpdateMs*100)/100,cpuUpdateAvgMs:Math.round(cpuUpdateAvgMs*100)/100,
+   frameTimeMs:sceneInstrumentation?.frameTimeCounter?.current??null,renderTimeMs:sceneInstrumentation?.renderTimeCounter?.current??null,physicsTimeMs:sceneInstrumentation?.physicsTimeCounter?.current??null,drawCalls:sceneInstrumentation?.drawCallsCounter?.current??null,
+   gpuFrameTimeMs:gpuCounter&&Number.isFinite(gpuCounter.current)?Math.round(gpuCounter.current/1e6*100)/100:null,
+   heapMB:performance.memory?Math.round(performance.memory.usedJSHeapSize/1048576):null,
+   player:p?{x:+p.x.toFixed(2),y:+p.y.toFixed(2),z:+p.z.toFixed(2),groundY:typeof terrainHeightAt==='function'?+terrainHeightAt(p.x,p.z).toFixed(2):null}:null,
+   sky:{ready:skyReady,error:skyError,url:WORLD.sky},terrain:{photo:terrainPhotoReady,normal:terrainNormalReady,error:terrainTextureError,ground:WORLD.ground},
+   physics:{enabled:physicsReady,controller:!!physicsController,colliders:physicsAggregates.length,support:physicsLastSupport},xrState:xr?.baseExperience?.state??'desktop',
+   webglVersion:engine?.webGLVersion??null,renderSize:{width:engine?.getRenderWidth?.()||0,height:engine?.getRenderHeight?.()||0},errors:[skyError,terrainTextureError].filter(Boolean)
   };
+ };
+ window.__HUELLAS_VR_DIAGNOSTICS__=snapshot;
+ if(params.get('test')==='1')window.__HUELLAS_VR_TEST__={
+  setAnimation(name){
+   const d=dinoRoots[0];if(!d)throw new Error('No hay dinosaurios cargados para probar.');
+   if(!['Idle','Walk','Run','Neck_Look'].includes(name))throw new Error('Clip de prueba no permitido: '+name);
+   d.testClip=name;d.clipName='';d.target=null;d.goal=null;d.running=name==='Run';d.lookUntil=name==='Neck_Look'?performance.now()+5000:0;
+   if(name==='Walk'||name==='Run'){
+    const radius=(d.length||DINO[d.id].length)*.3;let found=false;
+    for(let k=0;k<32&&!found;k++){
+     const angle=k*Math.PI/16,sx=Math.sin(angle),cz=Math.cos(angle);
+     for(const distance of [6,5,4,3,2]){
+      const x=d.root.position.x+sx*distance,z=d.root.position.z+cz*distance,support=[[x,z],[x+sx*radius,z+cz*radius],[x-sx*radius,z-cz*radius]];
+      if(support.every(p=>terrainValidAt(p[0],p[1]))){d.heading=angle;d.target={x,z};d.goal='test';d.state='walk';found=true;break;}
+     }
+    }
+    return {clip:name,movementPathFound:found,position:{x:d.root.position.x,y:d.root.position.y,z:d.root.position.z}};
+   }
+   d.state=name==='Neck_Look'?'look':'idle';d.timer=100;
+   return {clip:name,movementPathFound:false,position:{x:d.root.position.x,y:d.root.position.y,z:d.root.position.z}};
+  }
+ };
  if(params.get('debug')!=='1')return;
- const panel=document.createElement('pre');
- panel.id='huellasPerfDiagnostics';
- Object.assign(panel.style,{position:'fixed',left:'8px',top:'8px',zIndex:'10000',margin:'0',padding:'8px 10px',borderRadius:'8px',background:'rgba(0,0,0,.72)',color:'#d9ffe7',font:'12px/1.45 monospace',pointerEvents:'none',whiteSpace:'pre-wrap'});
+ const panel=document.createElement('pre');panel.id='huellasPerfDiagnostics';
+ Object.assign(panel.style,{position:'fixed',left:'8px',top:'8px',zIndex:'10000',margin:'0',padding:'8px 10px',maxWidth:'min(560px,94vw)',maxHeight:'42vh',overflow:'hidden',borderRadius:'8px',background:'rgba(0,0,0,.78)',color:'#d9ffe7',font:'11px/1.4 monospace',pointerEvents:'none',whiteSpace:'pre-wrap'});
  document.body.appendChild(panel);
  let elapsed=0;scene.onBeforeRenderObservable.add(()=>{
   elapsed+=engine.getDeltaTime();if(elapsed<500)return;elapsed=0;
-  const d=snapshot();panel.textContent='HUELLAS VR · DIAGNÓSTICO\n'+
-   'Mundo: '+d.world+' · Calidad: '+d.quality+'\nFPS: '+d.fps+' · Mallas activas: '+d.activeMeshes+'/'+d.meshes+
-   '\nTexturas: '+d.textures+' · Dinosaurios: '+d.dinosaurs+'\nCPU actualización: '+d.cpuUpdateMs+' ms (media '+d.cpuUpdateAvgMs+' ms) · Partículas: '+d.particles+'\nHeap JS: '+(d.heapMB==null?'N/D':d.heapMB+' MB')+' · XR: '+d.xrState
+  const d=snapshot(),fmt=v=>v==null?'N/D':v;
+  const pos=d.player?d.player.x.toFixed(1)+','+d.player.y.toFixed(1)+','+d.player.z.toFixed(1):'N/D';
+  const dinos=d.dinoStates.slice(0,8).map(x=>x.id+':'+x.clip+(x.playing?'▶':'·')).join(' | ');
+  panel.textContent='HUELLAS VR · DIAGNÓSTICO\n'+
+   'Mundo: '+d.world+' · Calidad: '+d.quality+' · WebGL '+fmt(d.webglVersion)+' · '+d.renderSize.width+'×'+d.renderSize.height+
+   '\nFPS: '+d.fps+' · CPU actualización JS: '+d.cpuUpdateMs+' ms (media '+d.cpuUpdateAvgMs+' ms) · frame: '+fmt(d.frameTimeMs)+' ms · render: '+fmt(d.renderTimeMs)+' ms · GPU: '+fmt(d.gpuFrameTimeMs)+' ms'+
+   '\nDraw calls: '+fmt(d.drawCalls)+' · Mallas activas: '+d.activeMeshes+'/'+d.meshes+' · Texturas: '+d.textures+' · Partículas: '+d.particles+
+   '\nTerreno: foto '+(d.terrain.photo?'OK':'...')+' / normal '+(d.terrain.normal?'OK':'...')+' · Panorama: '+(d.sky.ready?'OK':'...')+
+   '\nHavok: '+(d.physics.enabled?'ON':'OFF')+' · soporte: '+d.physics.support+' · colisionadores: '+d.physics.colliders+' · XR: '+d.xrState+
+   '\nJugador xyz: '+pos+' · altura suelo: '+(d.player?d.player.groundY:'N/D')+' · Heap JS: '+(d.heapMB==null?'N/D':d.heapMB+' MB')+
+   '\nDinosaurios: '+dinos+'\nErrores: '+(d.errors.length?d.errors.join(' | '):'ninguno');
  });
 }
 let initStage='preparación';
