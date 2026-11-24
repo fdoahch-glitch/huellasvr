@@ -45,6 +45,13 @@ try{
    await page.screenshot({path:shot,fullPage:false}).catch(()=>{});
    throw new Error(world+' excedió 60 s durante la carga: '+progress+'; '+error.message+'; startup='+JSON.stringify(startup)+'; pageErrors='+pageErrors.slice(0,12).join(' | ')+'; failedRequests='+failedRequests.slice(0,20).join(' | ')+'; screenshot='+shot);
   }
+  const startupMessage=await page.locator('#loadText').textContent().catch(()=>'');
+  if(startupMessage.includes('No se pudo iniciar el mundo')){
+   const shot=path.join(resultsDir,world+'-initialization-error.png');
+   await page.screenshot({path:shot,fullPage:false}).catch(()=>{});
+   throw new Error(world+' falló durante la inicialización: '+startupMessage+'; pageErrors='+pageErrors.slice(0,12).join(' | ')+'; failedRequests='+failedRequests.slice(0,20).join(' | ')+'; screenshot='+shot);
+  }
+  if(!startupMessage.includes('¡Mundo listo!'))throw new Error(world+' no llegó al estado listo; mensaje='+startupMessage);
   await page.locator('#explore').click();
   await page.waitForFunction(()=>!document.querySelector('#hud')?.classList.contains('hidden'),{timeout:5000});
   await page.waitForTimeout(1200);
