@@ -431,11 +431,24 @@ async function addVegetation(){
   }
   if(batchMeshes.length){
    batchMeshes.forEach(mesh=>mesh.computeWorldMatrix(true));
-   const merged=batchMeshes.length>1?BABYLON.Mesh.MergeMeshes(batchMeshes,true,true,undefined,false,true):batchMeshes[0];
+   let merged=batchMeshes.length===1?batchMeshes[0]:null;
+   if(batchMeshes.length>1){
+    try{
+     // No activar multiMultiMaterials: algunos GLB no tienen subMeshes compatibles
+     // y Babylon puede fallar dentro de _MergeMeshesCoroutine leyendo .length.
+     merged=BABYLON.Mesh.MergeMeshes(batchMeshes,true,true,undefined,false,false);
+    }catch(mergeError){
+     console.warn('[Huellas VR] No se pudieron fusionar las mallas de vegetación; se conservan las instancias originales.',a.file,mergeError);
+     merged=null;
+    }
+   }
    if(merged){
     merged.name='vegetation-batch-'+worldKey+'-'+si;merged.isPickable=false;merged.checkCollisions=false;merged.receiveShadows=true;
     shadowGenerator?.addShadowCaster(merged,true);
     batchRoots.forEach(root=>root.dispose(false));
+   }else{
+    // La fusión es una optimización opcional: nunca debe impedir entrar al mundo.
+    batchMeshes.forEach(mesh=>{mesh.isPickable=false;mesh.checkCollisions=false;mesh.receiveShadows=true;shadowGenerator?.addShadowCaster(mesh,true);});
    }
   }
  }
