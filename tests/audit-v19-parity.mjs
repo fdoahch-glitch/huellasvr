@@ -184,6 +184,10 @@ check('Base de montañas busca terreno válido antes de interpolar',()=>{
  assert.ok(main.includes('edgeY=mountainBaseAt(edgeX,edgeZ)'));
 });
 
+check('IA ecológica: personalidades, separación y respuestas sociales',()=>{
+ for(const token of ['function dinoSpacingRadius','function choosePlayerApproach','function chooseDinoSocial','function updateDinoSocial','function tryDinoFlee','dinoBehaviorCheck','exerciseSocial','goal===\'flee\'','d.goal===\'graze\''])assert.ok(main.includes(token),'Falta conducta '+token);
+ assert.ok(main.includes('socialPartner'));assert.ok(main.includes('juvenile,personality'));
+});
 check('API de prueba temporal para reproducir los cuatro clips',()=>{
  assert.ok(main.includes("params.get('test')==='1'"));
  assert.ok(main.includes('window.__HUELLAS_VR_TEST__'));
