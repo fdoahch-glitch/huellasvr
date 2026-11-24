@@ -228,47 +228,81 @@ async function spawnDino(id,index,total,center){
  dinoRoots.push({root,id,clips,clipName:idle?.name||'',baseYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},heading:rand(index+71)*Math.PI*2,target:null,state:'idle',timer:2+rand(index+82)*5,radius:Math.min(4,1.5+rand(index+8)*2),running:false,lastFootstep:0,stepDistance:0,footDistance:0,dustDistance:0,footSide:1,lastFootPos:root.position.clone()});
  return root;
 }
+const VEGETATION_QUALITY={alta:1,media:.6,baja:.3}[quality]||1;
 async function addVegetation(){
- const F=WORLD.flora||{adult:5,young:8,fern:35,fern2:55,pebble:100,rocks:30,logs:5};
+ const F=WORLD.flora||{};
+ const rockTint=({atacamatitan:'#c88a6a',arackar:'#6a625c',patagonia:'#bdb6a6',stegouros:'#a8a294',aysen:'#5d5c5a'}[worldKey]||'#8c8a82');
+ // Catálogo y parámetros extraídos de VEG() del mundo3d original v19.
  const specs=[
-  ...(worldKey==='atacamatitan'?[['models/env/cerro_desierto.glb',11,70,120,'mountain']]:[]),
-  ['models/veg/araucaria_adulta.glb',F.adult||0,15,23,'tree',20,50,5,16],
-  ['models/veg/araucaria_joven.glb',F.young||0,3.5,8,'tree',10,44,3,12],
-  ['models/veg/fern_tripo.glb',F.fern||0,.9,1.8,'fern',2.5,30,1.2,6],
-  ['models/veg/fern_small.glb',F.fern2||0,.7,1.5,'fern',2.5,32,1.2,6],
-  ['models/veg/pebble.glb',F.pebble||0,.12,.45,'ground',0,34,.4,0],
-  ['models/env/rock_07.glb',F.rocks||0,.6,1.8,'ground',6,44,.4,0],
-  ['models/env/dead_tree_trunk_02.glb',F.logs||0,3.5,6,'ground',8,40,3,4]
+  {file:'models/veg/araucaria_adulta.glb',n:F.adult||0,size:[15,23],sink:.02,water:5,keep:3,rMin:20,rMax:50},
+  {file:'models/veg/araucaria_joven.glb',n:F.young||0,size:[3.5,8],sink:.07,water:3,keep:2,rMin:9,rMax:44},
+  {file:'models/veg/fern_tripo.glb',n:F.fern||0,free:true,clump:.65,size:[.9,1.8],sink:.05,water:1.2,keep:0,rMin:2.5,rMax:30},
+  {file:'models/veg/fern_small.glb',n:F.fern2||0,free:true,clump:.6,size:[.7,1.5],sink:0,bright:1.15,water:1.2,keep:0,rMin:2.5,rMax:32},
+  {file:'models/veg/pebble.glb',n:F.pebble||0,free:true,size:[.12,.45],sink:.2,squash:1.5,tint:rockTint,bright:1.6,band:[0,6],rMax:34},
+  {file:'models/env/rock_07.glb',n:F.rocks||0,size:[.6,1.8],sink:.15,squash:1.4,tint:rockTint,bright:1.6,rMin:6,rMax:44},
+  {file:'models/env/dead_tree_trunk_02.glb',n:F.logs||0,size:[3.5,6],sink:.1,water:3,keep:4,rMin:8,rMax:40}
  ];
- const waterDistance=(x,z)=>{
-  let best=1e9;
-  (WORLD.rivers||[]).forEach(r=>{for(let i=1;i<r.pts.length;i++){const a=r.pts[i-1],b=r.pts[i],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1)));best=Math.min(best,Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t)-r.w*.5);}});
-  (WORLD.lagoons||[]).forEach(l=>{const d=Math.hypot((x-l.x)/l.rx,(z-l.z)/l.rz);best=Math.min(best,(d-1)*Math.min(l.rx,l.rz));});
-  return best;
- };
+ const home=({atacamatitan:{x:4,z:-4},arackar:{x:4,z:-4},patagonia:{x:4,z:-8},stegouros:{x:3,z:4},aysen:{x:3,z:-8}}[worldKey]||{x:0,z:-10});
+ const homes=[{p:home,r:({atacamatitan:9,arackar:8,patagonia:9,stegouros:7,aysen:8}[worldKey]||8)}];
+ const hasWater=!!((WORLD.rivers||[]).length||(WORLD.lagoons||[]).length);
+ const waterDistance=(x,z)=>hasWater?waterDistanceAt(x,z):1e9;
+ const seedBase=({atacamatitan:77,arackar:173,patagonia:271,stegouros:367,aysen:463}[worldKey]||77);
  for(let si=0;si<specs.length;si++){
-  const [file,count,minWidth,maxWidth,type,rMin=10,rMax=47,water=1.2,keep=0]=specs[si];if(!count)continue;
-  let container;try{container=await loadContainer(file);}catch(e){console.warn('No se pudo cargar vegetación original',file,e);continue;}
-  const n=Math.max(0,Math.round(count*Q));
-  for(let i=0,attempt=0;i<n&&attempt<n*18+100;attempt++){
-   const angle=rand(attempt+si*177+worldKey.length)*Math.PI*2;
-   const dist=type==='mountain'?85+Math.sqrt(rand(attempt+si*19+5))*40:rMin+Math.sqrt(rand(attempt+si*31+27))*(rMax-rMin);
-   const x=Math.cos(angle)*dist,z=Math.sin(angle)*dist-14;
-   if(type!=='mountain'&&!terrainValidAt(x,z))continue;
+  const a=specs[si],count=Math.max(0,Math.round(a.n*VEGETATION_QUALITY));if(!count)continue;
+  let container;
+  try{container=await loadContainer(a.file);}catch(e){throw new Error('Falta un modelo original de vegetación ('+a.file+'): '+e.message);}
+  const points=[],placed=[];
+  const rng=n=>rand(seedBase+si*7919+n*17.17);
+  const baseRadius=6;
+  for(let i=0,attempt=0;i<count&&attempt<count*80+240;attempt++){
+   let x,z;
+   if(a.clump&&points.length&&rng(attempt*5+1)<a.clump){
+    const q=points[Math.floor(rng(attempt*5+2)*points.length)],ang=rng(attempt*5+3)*Math.PI*2,dist=.6+rng(attempt*5+4)*1.8;
+    x=q.x+Math.cos(ang)*dist;z=q.z+Math.sin(ang)*dist;
+   }else{
+    const ang=rng(attempt*5+1)*Math.PI*2,rMin=a.rMin??7,rMax=a.rMax??52;
+    const radius=rMin+Math.sqrt(rng(attempt*5+2))*(rMax-rMin);
+    x=Math.cos(ang)*radius;z=Math.sin(ang)*radius;
+   }
+   if(Math.hypot(x,z)<baseRadius)continue;
+   if(!terrainValidAt(x,z))continue;
    const wd=waterDistance(x,z);
-   if(wd<water)continue;
-   if(keep&&Math.hypot(x-4,z+4)<keep)continue;
-   const group=container.instantiateModelsToScene(name=>name+'-world-'+si+'-'+i,false,{doNotInstantiate:true});
-   const root=new BABYLON.TransformNode('world-vegetation-'+si+'-'+i,scene);
-   group.rootNodes.forEach(node=>node.parent=root);
-   root.computeWorldMatrix(true);
-   let min=new BABYLON.Vector3(Infinity,Infinity,Infinity),max=new BABYLON.Vector3(-Infinity,-Infinity,-Infinity);
-   root.getChildMeshes(false).forEach(mesh=>{mesh.computeWorldMatrix(true);const box=mesh.getBoundingInfo().boundingBox;min=BABYLON.Vector3.Minimize(min,box.minimumWorld);max=BABYLON.Vector3.Maximize(max,box.maximumWorld);});
-   const base=Math.max(max.x-min.x,max.z-min.z)||1,targetWidth=minWidth+rand(i+si*53+7)*(maxWidth-minWidth),scale=targetWidth/base;
-   root.scaling.setAll(scale);root.position.set(x,type==='mountain'?terrainHeightAt(x,z)-2:terrainHeightAt(x,z),z);root.rotation.y=rand(i+si*97+4)*Math.PI*2;
-   root.getChildMeshes().forEach(m=>{m.isPickable=false;m.checkCollisions=false;});
-   i++;
+   if(a.band){if(wd<a.band[0]||wd>a.band[1])continue;}
+   else if(hasWater&&wd<(a.water??.5))continue;
+   if(!a.free&&homes.some(h=>Math.hypot(x-h.p.x,z-h.p.z)<=h.r+(a.keep||1)))continue;
+   if(a.clump)points.push({x,z});
+   placed.push({x,z,index:i++});
   }
+  // AssetContainer conserva el GLB original y permite crear instancias Babylon compartiendo geometría.
+  const source=container.instantiateModelsToScene(n=>n+'-veg-source-'+si,false);
+  const templateRoot=new BABYLON.TransformNode('veg-template-'+worldKey+'-'+si,scene);
+  source.rootNodes.forEach(n=>n.parent=templateRoot);
+  templateRoot.setEnabled(false);
+  templateRoot.computeWorldMatrix(true);
+  let min=new BABYLON.Vector3(Infinity,Infinity,Infinity),max=new BABYLON.Vector3(-Infinity,-Infinity,-Infinity);
+  templateRoot.getChildMeshes(false).forEach(m=>{m.computeWorldMatrix(true);const bb=m.getBoundingInfo().boundingBox;min=BABYLON.Vector3.Minimize(min,bb.minimumWorld);max=BABYLON.Vector3.Maximize(max,bb.maximumWorld);});
+  const dims=max.subtract(min),base=Math.max(dims.x,dims.z)||1,height=dims.y||base*.5,cx=(min.x+max.x)*.5,cz=(min.z+max.z)*.5;
+  // Normaliza pivote una sola vez; las instancias conservan materiales y jerarquía del modelo fuente.
+  const pivot=new BABYLON.TransformNode('veg-origin-'+worldKey+'-'+si,scene);templateRoot.parent=pivot;
+  pivot.position.set(-cx,-min.y,-cz);pivot.setEnabled(false);
+  templateRoot.getChildMeshes(false).forEach(mesh=>{
+   mesh.isPickable=false;mesh.checkCollisions=false;
+   const materials=mesh.material?[mesh.material,...(mesh.material.subMaterials||[])]:[];
+   materials.forEach(m=>{if(!m)return;if(a.tint){const tint=BABYLON.Color3.FromHexString(a.tint);if(m.diffuseColor)m.diffuseColor.multiplyInPlace(tint);if(m.albedoColor)m.albedoColor.multiplyInPlace(tint);}if(a.bright){if(m.diffuseColor)m.diffuseColor.scaleInPlace(a.bright);if(m.albedoColor)m.albedoColor.scaleInPlace(a.bright);}if(m.roughness!==undefined)m.roughness=Math.max(.85,m.roughness);if(m.metallic!==undefined)m.metallic=0;});
+  });
+  for(let i=0;i<placed.length;i++){
+   const p=placed[i],width=a.size[0]+rng(p.index*7+31)*(a.size[1]-a.size[0]),scale=width/base,squash=a.squash||1;
+   const instanceRoot=new BABYLON.TransformNode('veg-'+si+'-'+i,scene);
+   const cloneRoot=templateRoot.clone('veg-model-'+si+'-'+i,null,true);
+   if(!cloneRoot)continue;
+   cloneRoot.setEnabled(true);cloneRoot.parent=instanceRoot;
+   instanceRoot.position.set(p.x,terrainHeightAt(p.x,p.z)-(a.sink||0)*height*scale*squash,p.z);
+   instanceRoot.scaling.set(scale,scale*squash,scale);
+   instanceRoot.rotation.set((rng(p.index*7+41)-.5)*(a.tilt||0),rng(p.index*7+43)*Math.PI*2,(rng(p.index*7+47)-.5)*(a.tilt||0));
+   cloneRoot.getChildMeshes(false).forEach(m=>{m.isPickable=false;m.checkCollisions=false;});
+   instanceRoot.computeWorldMatrix(true);
+  }
+  pivot.dispose(false,false);
  }
 }
 function addMountains(){
