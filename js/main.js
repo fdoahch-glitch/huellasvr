@@ -35,7 +35,7 @@ const HERD_CONFIG = {
 const requested = (params.get('mundo') || 'atacamatitan').toLowerCase();
 const worldKey = WORLDS[requested] ? requested : 'valle';
 const WORLD = WORLDS[worldKey];
-let havokInstance=null,physicsPlugin=null,physicsController=null,physicsAggregates=[],physicsReady=false,physicsLastSupport='not-started',skyReady=false,skyError=null,terrainPhotoReady=false,terrainNormalReady=false,terrainTextureError=null;
+let havokInstance=null,physicsPlugin=null,physicsController=null,physicsAggregates=[],environmentCollisionZones=[],physicsReady=false,physicsLastSupport='not-started',skyReady=false,skyError=null,terrainPhotoReady=false,terrainNormalReady=false,terrainTextureError=null;
 let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, waterGain=null, lightingBase=null, timeMode='dia', skyLife=null, nightInsectGain=null, rainBlend=0, xrGazeActor=null, xrGazeSince=0, xrGazeFired=false;
 let orientationEnabled=false,orientationBase=null,orientationHandler=null,stereoEnabled=false,stereoWakeLock=null,stereoTapTimes=[],cpuUpdateMs=0,cpuUpdateAvgMs=0,renderLoop=null,contextLost=false,renderPausedForVisibility=false;
 const setProgress=(v,t)=>{$('progressFill').style.width=Math.round(v*100)+'%';$('loadText').textContent=t;};
@@ -173,7 +173,7 @@ function addTerrain(){
    const mesh=new BABYLON.Mesh('original-photo-terrain-'+worldKey,scene),vd=new BABYLON.VertexData();
    vd.positions=positions;vd.indices=indices;vd.normals=normals;vd.uvs=uvs;vd.applyToMesh(mesh,true);
    mesh.isPickable=true;mesh.checkCollisions=true;mesh.receiveShadows=true;mesh.metadata={ground:true};ground=mesh;pickables.push(mesh);
-   const m=new BABYLON.StandardMaterial('photo-terrain-'+worldKey,scene);
+   const m=typeof BABYLON.PBRMaterial==='function'?new BABYLON.PBRMaterial('photo-terrain-pbr-'+worldKey,scene):new BABYLON.StandardMaterial('photo-terrain-'+worldKey,scene);
    const detailProfiles={
     atacamatitan:{sand:{src:'img/tex_sand_d.jpg',mean:[.2189,.1009,.0608],size:2.4},gravel:{src:'img/tx_stones_d.jpg',mean:[.1996,.1575,.1093],size:2.2},crack:{src:'img/tx_stones_d.jpg',mean:[.1996,.1575,.1093],size:2.2},normal:'img/tex_sand_n.jpg',photoLum:.18,photoSat:1.05,tint:[1,1,1]},
     arackar:{sand:{src:'img/tex_crack_d.jpg',mean:[.2,.12,.08],size:3.2},gravel:{src:'img/tex_gsand_d.jpg',mean:[.2967,.163,.0736],size:2.2},crack:{src:'img/tx_stones_d.jpg',mean:[.1996,.1575,.1093],size:2.2},normal:'img/tx_dirt_n.jpg',photoLum:.30,photoSat:.75,tint:[1.08,1.04,.98]},
@@ -185,14 +185,14 @@ function addTerrain(){
    const cc=compositeCanvas.getContext('2d',{alpha:false});
    const loadImage=src=>new Promise((ok,no)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=()=>no(new Error('No se pudo cargar textura '+src));im.src=src;});
    const baseImage=new Image();baseImage.onload=()=>{
-    cc.save();cc.filter='saturate('+(detailProfiles?.photoSat??1)+') brightness('+(1+(detailProfiles?.photoLum??0)*.35)+')';cc.drawImage(baseImage,0,0,2048,2048);cc.restore();
+    cc.save();cc.filter='saturate('+(Math.max(.9,(detailProfiles?.photoSat??1)*1.08))+') contrast(1.045) brightness('+(1.14+(detailProfiles?.photoLum??0)*.28)+')';cc.drawImage(baseImage,0,0,2048,2048);cc.restore();
     if(detailProfiles?.tint){const t=detailProfiles.tint;cc.save();cc.globalCompositeOperation='multiply';cc.fillStyle='rgb('+Math.round(t[0]*255)+','+Math.round(t[1]*255)+','+Math.round(t[2]*255)+')';cc.fillRect(0,0,2048,2048);cc.restore();}
     const finish=()=>{
      const compositeTexture=new BABYLON.DynamicTexture('terrain-composite-'+worldKey,{width:2048,height:2048},scene,false,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
      compositeTexture.getContext().drawImage(compositeCanvas,0,0);compositeTexture.update(false);
      compositeTexture.wrapU=compositeTexture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;compositeTexture.anisotropicFilteringLevel=8;
-     m.diffuseTexture=compositeTexture;m.diffuseColor=new BABYLON.Color3(1,1,1);terrainPhotoReady=true;terrainTextureError=null;
-     m.specularColor=new BABYLON.Color3(.025,.025,.025);m.roughness=.98;
+     if(m.albedoTexture!==undefined){m.albedoTexture=compositeTexture;m.albedoColor=new BABYLON.Color3(1,1,1);m.metallic=0;m.roughness=.96;m.environmentIntensity=.38;}else{m.diffuseTexture=compositeTexture;m.diffuseColor=new BABYLON.Color3(1,1,1);}terrainPhotoReady=true;terrainTextureError=null;
+     if(m.specularColor)m.specularColor=new BABYLON.Color3(.025,.025,.025);if(m.roughness===undefined)m.roughness=.98;
      const normalSrc=detailProfiles?.normal||'img/tx_dirt_n.jpg';
      const normal=new BABYLON.Texture(normalSrc,scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE,()=>{terrainNormalReady=true;mesh.material=m;mesh.refreshBoundingInfo();resolve();},(message,exception)=>{terrainNormalReady=false;terrainTextureError=String(message||exception||'error desconocido');reject(new Error('No se pudo cargar el mapa normal '+normalSrc+': '+terrainTextureError));});
      normal.wrapU=normal.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;normal.uScale=normal.vScale=300/(detailProfiles?.sand?.size||3);normal.anisotropicFilteringLevel=8;m.bumpTexture=normal;m.bumpTexture.level=.7;
@@ -211,7 +211,7 @@ function addTerrain(){
         const sx=(terrainHeightAt(wx+e,wz)-terrainHeightAt(wx-e,wz))/(2*e),sz=(terrainHeightAt(wx,wz+e)-terrainHeightAt(wx,wz-e))/(2*e),normalY=1/Math.sqrt(1+sx*sx+sz*sz);
         flat=smoothMask(.55,.92,normalY);
        }
-       const cameraDistance=Math.hypot(wx-(camera?.position.x||0),wz-(camera?.position.z||0)),distanceFade=1-smoothMask(35,120,cameraDistance),coverage=flat*distanceFade;
+       const coverage=flat*(.82+.18*(1-smoothMask(.25,.9,noise(wx*.018+19,wz*.018-7,29))));
        const wg=Math.max(0,Math.min(1,(noise(wx*.045,wz*.045,5)-.58)/.20)),wc=Math.max(0,Math.min(1,(noise(wx*.03+11.7,wz*.03+11.7,13)-.60)/.20))*(1-wg),weights=[1-wg-wc,wg,wc],p=(y*maskSize+x)*4;
        for(let k=0;k<3;k++){const d=maskData[k].data;d[p]=d[p+1]=d[p+2]=255;d[p+3]=Math.round(255*weights[k]*coverage);}
       }
@@ -296,9 +296,9 @@ function addWater(){
  const wg=wc.createLinearGradient(0,0,0,256);wg.addColorStop(0,waterPal.edge);wg.addColorStop(.48,waterPal.mid);wg.addColorStop(1,waterPal.center);wc.fillStyle=wg;wc.fillRect(0,0,256,256);
  for(let n=0;n<46;n++){const y=(n*37)%256,x=(n*71)%256;wc.beginPath();wc.ellipse(x,y,8+(n%7)*3,1+(n%3),-.15,0,Math.PI*2);wc.strokeStyle='rgba(235,245,238,'+(.045+(n%4)*.018)+')';wc.lineWidth=.8+(n%2)*.45;wc.stroke();}
  waterTex.update(false);waterTex.wrapU=waterTex.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;waterTex.uScale=4;waterTex.vScale=2;waterTex.anisotropicFilteringLevel=4;waterTextures.push({tex:waterTex,speed:-.012});
- const waterMat=new BABYLON.StandardMaterial('original-water-'+worldKey,scene);
- waterMat.diffuseTexture=waterTex;waterMat.diffuseColor=new BABYLON.Color3(1,1,1);
- waterMat.emissiveColor=BABYLON.Color3.FromHexString(waterPal.center).scale(.06);waterMat.specularColor=new BABYLON.Color3(.42,.55,.58);waterMat.alpha=.94;waterMat.roughness=.24;
+ const waterMat=typeof BABYLON.PBRMaterial==='function'?new BABYLON.PBRMaterial('original-water-pbr-'+worldKey,scene):new BABYLON.StandardMaterial('original-water-'+worldKey,scene);
+  if(waterMat.albedoTexture!==undefined){waterMat.albedoTexture=waterTex;waterMat.albedoColor=new BABYLON.Color3(1,1,1);waterMat.metallic=.04;waterMat.roughness=.22;waterMat.environmentIntensity=.8;}else{waterMat.diffuseTexture=waterTex;waterMat.diffuseColor=new BABYLON.Color3(1,1,1);waterMat.specularColor=new BABYLON.Color3(.42,.55,.58);waterMat.roughness=.24;}
+  waterMat.emissiveColor=BABYLON.Color3.FromHexString(waterPal.center).scale(.035);waterMat.alpha=.92;waterMat.transparencyMode=BABYLON.Material.MATERIAL_ALPHABLEND;
  const bankMat=new BABYLON.StandardMaterial('original-water-bank-'+worldKey,scene);bankMat.diffuseColor=BABYLON.Color3.FromHexString(worldKey==='atacamatitan'?'#b9784d':worldKey==='arackar'?'#c9ad7b':'#8c927e');bankMat.roughness=1;
  const glossTex=new BABYLON.DynamicTexture('water-gloss-texture-'+worldKey,256,scene,false,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);glossTex.getContext().drawImage(waterTex.getContext().canvas,0,0);glossTex.update(false);glossTex.wrapU=glossTex.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;glossTex.uScale=6;glossTex.vScale=3;waterTextures.push({tex:glossTex,speed:.018});
  const waterGlossMat=new BABYLON.StandardMaterial('original-water-gloss-'+worldKey,scene);waterGlossMat.diffuseTexture=glossTex;waterGlossMat.useAlphaFromDiffuseTexture=false;waterGlossMat.alpha=.24;waterGlossMat.specularColor=new BABYLON.Color3(.2,.25,.28);waterGlossMat.roughness=.18;waterGlossMat.disableDepthWrite=true;
@@ -456,7 +456,7 @@ async function addVegetation(){
    if(physicsReady&&physicsCandidates.length){
     const selected=physicsCandidates.sort((a,b)=>Math.hypot(a.x,a.z)-Math.hypot(b.x,b.z)).slice(0,24);
     selected.forEach((candidate,ci)=>{
-     const radius=candidate.tree?Math.max(.32,candidate.width*.035):Math.max(.24,candidate.width*.28),height=Math.max(.6,candidate.height*(candidate.tree ? .62 : .82));
+     const radius=candidate.tree?Math.max(.32,candidate.width*.035):Math.max(.24,candidate.width*.28),height=Math.max(.6,candidate.height*(candidate.tree ? .62 : .82));environmentCollisionZones.push({x:candidate.x,z:candidate.z,radius:radius+.18,kind:candidate.tree?'tree':'rock'});
      const colliderMesh=BABYLON.MeshBuilder.CreateCylinder('environment-physics-collider-'+worldKey+'-'+si+'-'+ci,{height,diameter:radius*2,tessellation:8},scene);
      colliderMesh.position.set(candidate.x,terrainHeightAt(candidate.x,candidate.z)+height/2,candidate.z);colliderMesh.isVisible=false;colliderMesh.isPickable=false;colliderMesh.checkCollisions=false;
      physicsAggregates.push(new BABYLON.PhysicsAggregate(colliderMesh,BABYLON.PhysicsShapeType.CYLINDER,{mass:0,friction:.9,restitution:0},scene));
@@ -527,7 +527,7 @@ function addMountains(){
   const shade=.85+.3*n2;colors[k*4]=c.r*shade;colors[k*4+1]=c.g*shade;colors[k*4+2]=c.b*shade;colors[k*4+3]=1;
  }
  const mesh=new BABYLON.Mesh('original-mountain-ring-'+key,scene),vd=new BABYLON.VertexData();vd.positions=positions;vd.indices=indices;vd.normals=normals;vd.colors=colors;vd.applyToMesh(mesh,true);
- const material=new BABYLON.StandardMaterial('original-mountain-material-'+key,scene);material.diffuseColor=new BABYLON.Color3(1,1,1);material.specularColor=new BABYLON.Color3(.015,.015,.015);material.roughness=1;material.useVertexColors=true;material.backFaceCulling=false;mesh.material=material;mesh.isPickable=false;mesh.applyFog=true;mesh.receiveShadows=true;if(physicsReady)physicsAggregates.push(new BABYLON.PhysicsAggregate(mesh,BABYLON.PhysicsShapeType.MESH,{mass:0,friction:.9,restitution:0},scene));
+ const material=typeof BABYLON.PBRMaterial==='function'?new BABYLON.PBRMaterial('original-mountain-pbr-'+key,scene):new BABYLON.StandardMaterial('original-mountain-material-'+key,scene);if(material.albedoColor)material.albedoColor=new BABYLON.Color3(1,1,1);else material.diffuseColor=new BABYLON.Color3(1,1,1);material.metallic=0;material.roughness=.94;material.useVertexColors=true;material.backFaceCulling=false;mesh.material=material;mesh.isPickable=false;mesh.applyFog=true;mesh.receiveShadows=true;shadowGenerator?.addShadowCaster(mesh,true);if(physicsReady)physicsAggregates.push(new BABYLON.PhysicsAggregate(mesh,BABYLON.PhysicsShapeType.MESH,{mass:0,friction:.9,restitution:0},scene));
  if(M.volcano&&M.volcano.smoke){const V=M.volcano,smoke=new BABYLON.ParticleSystem('volcano-smoke-'+key,quality==='baja'?60:150,scene);smoke.particleTexture=makeParticleTexture();smoke.emitter=new BABYLON.Vector3(Math.cos(V.ang)*V.d,V.h*.82,Math.sin(V.ang)*V.d);smoke.minEmitBox=new BABYLON.Vector3(-2,0,-2);smoke.maxEmitBox=new BABYLON.Vector3(2,2,2);smoke.color1=new BABYLON.Color4(.55,.53,.5,.42*V.smoke);smoke.color2=new BABYLON.Color4(.72,.69,.65,.2*V.smoke);smoke.minSize=5;smoke.maxSize=17;smoke.minLifeTime=5;smoke.maxLifeTime=12;smoke.emitRate=20*V.smoke;smoke.direction1=new BABYLON.Vector3(-.08,.8,-.08);smoke.direction2=new BABYLON.Vector3(.08,1.4,.08);smoke.minEmitPower=1;smoke.maxEmitPower=2.5;smoke.updateSpeed=.01;smoke.start();}
 }
 function waterDistanceAt(x,z){
