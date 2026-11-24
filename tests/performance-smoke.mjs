@@ -17,7 +17,7 @@ const server=createServer((req,res)=>{
 await new Promise(resolve=>server.listen(4174,'127.0.0.1',resolve));
 let browser,failed=false,hardwareValidated=false;
 try{
- browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist','--enable-unsafe-swiftshader']});
+ browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-gl=angle','--enable-webgl','--ignore-gpu-blocklist']});
  const results=[];
  for(const world of ['atacamatitan','arackar','patagonia','stegouros','aysen']){
   const page=await browser.newPage({viewport:{width:1280,height:800}});
@@ -33,7 +33,7 @@ try{
    const ext=gl?.getExtension('WEBGL_debug_renderer_info');
    return ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):'renderer-info-unavailable';
   });
-  if(/swiftshader|llvmpipe|software rasterizer|softpipe/i.test(renderer)){
+  if(!renderer||renderer==='renderer-info-unavailable'||/swiftshader|llvmpipe|software rasterizer|softpipe/i.test(renderer)){
    console.log('PERFORMANCE_NOT_MEASURED: '+renderer+'; la prueba funcional/visual no se convierte en una afirmación de FPS real.');
    await page.close();break;
   }
