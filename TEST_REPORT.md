@@ -12,16 +12,19 @@
 
 ## Prueba automatizada de navegador ejecutada
 
-Workflow GitHub Actions: [run 45348814252](https://github.com/fdoahch-glitch/huellasvr/actions/runs/45348814252) — **success**.
+Workflow GitHub Actions: [run 45350786896](https://github.com/fdoahch-glitch/huellasvr/actions/runs/45350786896) — **success**. También pasó la ejecución previa [45348814252](https://github.com/fdoahch-glitch/huellasvr/actions/runs/45348814252).
 
 - Chromium headless con WebGL2/SwiftShader en Ubuntu 24.04.
-- Los cinco mundos cargaron correctamente en perfil `baja`.
+- Los cinco mundos cargaron correctamente en perfil `baja` y se pulsó **Explorar** para capturar y comprobar la escena 3D, no solo el menú.
+- Se verificó que el motor está usando WebGL2.
+- Se verificó la carga del panorama de cada mundo, de la textura fotográfica y del mapa normal del terreno.
+- Se verificó que el controlador Havok reporta apoyo sobre el terreno.
 - Se comprobó que cada mundo expone mallas, texturas y manada de dinosaurios.
 - Se confirmó que Havok Physics V2, el controlador cápsula y al menos un colisionador estático se inicializan.
 - Se reprodujeron `Idle`, `Walk`, `Run` y `Neck_Look` en una instancia por mundo; el test comprobó desplazamiento durante `Walk` y `Run` cuando había una ruta válida.
 - La auditoría estática de Node.js también terminó correctamente.
 
-**Límite:** la prueba no demuestra que cada instancia de cada manada esté libre de deslizamiento, que las patas se apoyen visualmente, ni que el personaje resuelva impactos/escalones en todos los objetos. Tampoco valida WebXR en visor ni rendimiento de hardware físico.
+**Límite:** la inspección visual de las capturas reveló que el domo panorámico estaba recortado por `camera.maxZ` y que el terreno seguía viéndose demasiado uniforme. Se corrigió el tamaño del domo y se añadió diagnóstico de enlace de textura/UV/píxel; esas dos correcciones posteriores requieren una nueva captura aprobada. La prueba tampoco demuestra que cada instancia de manada esté libre de deslizamiento, que las patas se apoyen visualmente, ni que el personaje resuelva impactos/escalones en todos los objetos. No valida WebXR en visor ni rendimiento de hardware físico.
 
 ## Cambios que requieren validación después del commit
 
