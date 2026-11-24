@@ -74,7 +74,7 @@ check('Selección por mirada para visores WebXR sin mando',()=>{
  assert.ok(main.includes('updateXRGaze();'));
 });
 check('Controles de orientación móvil y visor estereoscópico',()=>{
- for(const token of ['function toggleMobileOrientation()','DeviceOrientationEvent.requestPermission','deviceorientation','function toggleMobileStereo()','RIG_MODE_STEREOSCOPIC_SIDEBYSIDE_PARALLEL'])assert.ok(main.includes(token),'Falta '+token);
+ for(const token of ['function toggleMobileOrientation()','Orientation.requestPermission','deviceorientation','function toggleMobileStereo()','RIG_MODE_STEREOSCOPIC_SIDEBYSIDE_PARALLEL'])assert.ok(main.includes(token),'Falta '+token);
  for(const id of ['sensorButton','stereoButton'])assert.ok(html.includes('id="'+id+'"'),'Falta control '+id);
 });
 check('Controles WebXR, suelo local y seguimiento',()=>{
