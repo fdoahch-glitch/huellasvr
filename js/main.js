@@ -113,15 +113,12 @@ function addTerrain(){
     };
     if(!detailProfiles){finish();return;}
     Promise.all([loadImage(detailProfiles.sand),loadImage(detailProfiles.gravel),loadImage(detailProfiles.crack)]).then(images=>{
-     const alphas=[.38,.26,.18];
-     images.forEach((im,k)=>{const pat=cc.createPattern(im,'repeat');if(!pat)return;cc.save();cc.globalAlpha=alphas[k];cc.globalCompositeOperation=k===0?'soft-light':'multiply';cc.fillStyle=pat;cc.fillRect(0,0,2048,2048);cc.restore();});
+     const alphas=[.38,.26,.18],sizes=[2.4,2.2,2.8];
+     images.forEach((im,k)=>{const pat=cc.createPattern(im,'repeat');if(!pat)return;const tilePx=300/sizes[k]/(2048/300);if(pat.setTransform&&typeof DOMMatrix!=='undefined')pat.setTransform(new DOMMatrix().scale(tilePx/im.width,tilePx/im.height));cc.save();cc.globalAlpha=alphas[k];cc.globalCompositeOperation=k===0?'soft-light':'multiply';cc.fillStyle=pat;cc.fillRect(0,0,2048,2048);cc.restore();});
      finish();
     }).catch(reject);
    };
    baseImage.onerror=()=>reject(new Error('No se pudo cargar la textura base '+WORLD.ground));baseImage.src=WORLD.ground;
-   const normalPath=worldKey==='atacamatitan'?'img/tex_sand_n.jpg':worldKey==='arackar'?'img/tex_gsand_n.jpg':worldKey==='stegouros'?'img/tx_leaves_n.jpg':'img/tx_dirt_n.jpg';
-   const normal=new BABYLON.Texture(normalPath,scene,false,true);normal.wrapU=normal.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;normal.uScale=normal.vScale=55;normal.anisotropicFilteringLevel=8;m.bumpTexture=normal;m.bumpTexture.level=.34;
-   mesh.material=m;mesh.refreshBoundingInfo();resolve();
   };
   img.onerror=()=>reject(new Error('No se pudo cargar el mapa de relieve '+WORLD.height));
   img.src=WORLD.height;
