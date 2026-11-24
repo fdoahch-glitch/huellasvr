@@ -34,7 +34,7 @@ Los GLB originales incluyen los clips `Idle`, `Walk`, `Run` y `Neck_Look` en las
 | Terreno | Se construye geometría desde el heightmap y se genera una textura compuesta con canvas. | La composición no recupera toda la mezcla original por pendiente/altura/distancia; las capas se distribuyen mediante máscaras de ruido. El uso de canvas compone una textura final grande y puede consumir memoria. | `js/main.js` | Pendiente reconstruir el material de terreno original con mapas y mezcla por superficie, y medir memoria/RAM. |
 | Montañas | Anillo procedural y volcanes usan `terrainHeightAt`. | La consulta del terreno puede devolver una celda válida cercana cuando la coordenada cae en una máscara inválida; esa aproximación puede separar la base de la montaña del borde real. | `js/main.js` | Se agregó muestreo hacia el interior buscando suelo válido para fijar la base. Falta verificar las cinco escenas visualmente y revisar costuras. |
 | Vegetación | GLB ambientales y Thin Instances; la fusión de algunos lotes se protege con `try/catch`. | La fusión sigue siendo opcional y algunos lotes quedan como mallas separadas. No se debe interpretar el fallback de fusión como migración completada. | `js/main.js` | Mantenerlo solo como recuperación ante fallo; optimizar lotes con Thin Instances y medir draw calls. |
-| Física | Hay colisiones de escena y controles manuales. Cámara con `applyGravity=false` y `checkCollisions=false`. | No se encontró integración Havok Physics V2 ni controlador físico de personaje. Las colisiones actuales no equivalen a física completa. | `js/main.js`, `index.html` | Integración Havok pendiente, incluida verificación de WASM, WebGL2 y WebXR. |
+| Física | Ahora se inicializa Havok Physics V2, un controlador cápsula del jugador y colisionadores estáticos de terreno y montañas. | La carga de Havok y la creación de controlador/colisionador pasan en Chromium; falta probar impactos, pendientes, escalones y movimiento VR en hardware. Los árboles/rocas grandes aún no tienen todos sus colisionadores. | `js/main.js`, `index.html` | Completar colisionadores ambientales selectivos y pruebas de respuesta física. |
 | Cielo y atmósfera | Panorama por mundo, cúpula de nubes, partículas, estrellas, luna, pterosaurios y mariposas procedurales. | El código asigna panorama y efectos, pero falta probar carga, orientación y visibilidad real por mundo. | `js/main.js` | Añadir pruebas de recursos y capturas de cada mundo. |
 | Agua y audio | Ríos/lagunas y audio procedural/ambiente presentes en el motor. | Falta validación visual de orillas, intersecciones, reflejos y mezcla de sonidos contra v19. | `js/main.js` | Pruebas de escena y escucha en navegador/dispositivo. |
 | WebXR | Se crea experiencia `immersive-vr` con `local-floor`, selección por gatillo y mirada. | La presencia de la API en el código no valida controladores, tracking ni sesión real en visor. | `js/main.js`, `index.html` | Probar en visor compatible. |
@@ -55,7 +55,7 @@ Los GLB originales incluyen los clips `Idle`, `Walk`, `Run` y `Neck_Look` en las
 
 ## Riesgos que bloquean declarar la migración terminada
 
-1. No hay Havok Physics V2 conectado.
+1. Havok Physics V2 ya está conectado y arranca en Chromium; la respuesta física completa aún no está validada.
 2. No existe una prueba automatizada de navegador que abra cada mundo y valide los recursos renderizados.
 3. No hay mediciones de FPS, CPU/GPU o memoria en Android y PC dentro de esta auditoría.
 4. No se ha validado una sesión WebXR en visor físico.
