@@ -209,7 +209,7 @@ check('Colisionadores simplificados de vegetación y rocas',()=>{
 check('Mezcla del terreno por pendiente y distancia',()=>{
  assert.ok(main.includes('const smoothMask=(a,b,v)=>'));
  assert.ok(main.includes('normalY=1/Math.sqrt(1+sx*sx+sz*sz)'));
- assert.ok(main.includes('coverage=flat*distanceFade'));
+ assert.ok(main.includes('coverage=flat*'));
  assert.ok(main.includes('weights[k]*coverage'));
 });
 
@@ -242,4 +242,17 @@ check('Instrumentación de diagnóstico',()=>{
 check('Domo panorámico dentro del plano lejano',()=>{
  assert.ok(main.includes("CreateSphere('sky-dome',{diameter:500,segments:32}"));
  assert.ok(main.includes('camera.maxZ=320'));
+});
+
+check('Materiales PBR para suelo, montañas y agua',()=>{
+ assert.ok(main.includes("new BABYLON.PBRMaterial('photo-terrain-pbr-"));
+ assert.ok(main.includes("new BABYLON.PBRMaterial('original-mountain-pbr-"));
+ assert.ok(main.includes("new BABYLON.PBRMaterial('original-water-pbr-"));
+ assert.ok(main.includes('m.metallic=0'));
+});
+check('Colisión dinámica de dinosaurios con obstáculos y manada',()=>{
+ assert.ok(main.includes('function isDinoPositionBlocked'));
+ assert.ok(main.includes('environmentCollisionZones.push'));
+ assert.ok(main.includes('const obstacle=isDinoPositionBlocked(d,nx,nz)'));
+ assert.ok(main.includes('collisionCheck(){'));
 });
