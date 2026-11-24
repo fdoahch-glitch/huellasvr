@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const resultsDir=path.join(root,'test-results');mkdirSync(resultsDir,{recursive:true});
+const visualMode=process.env.HUELLAS_VISUAL_TEST==='1',testQuality=visualMode?'ultra':'baja';
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.glb':'model/gltf-binary','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.webp':'image/webp','.mp3':'audio/mpeg','.ogg':'audio/ogg','.wav':'audio/wav'};
 const server=createServer((req,res)=>{
  let pathname;
@@ -27,7 +28,7 @@ try{
   const pageErrors=[];
   page.on('pageerror',e=>pageErrors.push(String(e.stack||e)));
   page.on('console',m=>{if(m.type()==='error')pageErrors.push('console: '+m.text());});
-  const url='http://127.0.0.1:4173/?mundo='+world+'&q=baja&test=1&debug=1';
+  const url='http://127.0.0.1:4173/?mundo='+world+'&q='+testQuality+'&test=1&debug=1';
   console.log('LOAD',world,url);
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
   try{
@@ -42,7 +43,7 @@ try{
   await page.locator('#explore').click();
   await page.waitForFunction(()=>!document.querySelector('#hud')?.classList.contains('hidden'),{timeout:5000});
   await page.waitForTimeout(1200);
-  await page.screenshot({path:path.join(resultsDir,world+'.png'),fullPage:false});
+  await page.screenshot({path:path.join(resultsDir,world+'-'+testQuality+'.png'),fullPage:false});
   const state=await page.evaluate(()=>{
    const d=window.__HUELLAS_VR_DIAGNOSTICS__?.();
    return {message:document.querySelector('#loadText')?.textContent||'',diagnostics:d||null};
@@ -52,7 +53,10 @@ try{
   if(state.diagnostics.webglVersion!==2)throw new Error(world+' no usó WebGL2: '+state.diagnostics.webglVersion);
   if(!state.diagnostics.visual?.pipeline)throw new Error(world+' no activó el pipeline visual Babylon: '+JSON.stringify(state.diagnostics.visual));
   if(!['gpu','cpu'].includes(state.diagnostics.visual?.particleBackend))throw new Error(world+' no informó backend de partículas válido: '+JSON.stringify(state.diagnostics.visual));
-  if(world==='atacamatitan'&&state.diagnostics.visual?.ssao)throw new Error('SSAO no debe activarse en el perfil bajo de la prueba');
+  if(!visualMode&&world==='atacamatitan'&&state.diagnostics.visual?.ssao)throw new Error('SSAO no debe activarse en el perfil bajo de la prueba');
+  if(visualMode&&!state.diagnostics.visual?.environmentReady)throw new Error(world+' no terminó de cargar IBL local: '+JSON.stringify(state.diagnostics.visual));
+  if(visualMode&&['patagonia','stegouros','aysen','arackar'].includes(world)&&!state.diagnostics.visual?.volumetric)throw new Error(world+' no activó los rayos volumétricos del perfil ultra: '+JSON.stringify(state.diagnostics.visual));
+  if(visualMode&&state.diagnostics.visual?.environmentError)throw new Error(world+' falló la iluminación IBL: '+state.diagnostics.visual.environmentError);
   if(world==='atacamatitan'){const panel=await page.locator('#huellasPerfDiagnostics').textContent();if(!panel||!panel.includes('Draw calls')||!panel.includes('Havok'))throw new Error(world+' no mostró el panel de diagnóstico completo');}
   if(!state.diagnostics.sky?.ready||state.diagnostics.sky.error)throw new Error(world+' no cargó el panorama '+JSON.stringify(state.diagnostics.sky));
   const expectedSky={atacamatitan:'img/atacamatitan_sky.jpg',arackar:'img/arackar_sky.jpg',patagonia:'img/gonkoken_sky.jpg',stegouros:'img/stegouros_sky.jpg',aysen:'img/aysen_sky.jpg'};
