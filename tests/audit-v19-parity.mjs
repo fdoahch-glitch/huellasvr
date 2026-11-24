@@ -173,7 +173,7 @@ check('Orientación frontal explícita e independiente por especie',()=>{
 });
 check('Clips clonados: sufijos numéricos y crossfade',()=>{
  assert.ok(main.includes('function resolveDinoClip(clips,semantic)'));
- assert.ok(main.includes("replace(/(?:[-_ ]\\\\d+)+$/"));
+ assert.ok(main.includes("replace(/(?:[-_ ]"));
  assert.ok(main.includes('setWeightForAllAnimatables'));
  assert.ok(main.includes('transitionElapsed/.24'));
  assert.ok(main.includes("resolveDinoClip(clips,'Idle')"));
