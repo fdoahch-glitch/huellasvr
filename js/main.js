@@ -268,7 +268,17 @@ function addTerrain(){
      maskCanvases.forEach((c,k)=>c.getContext('2d').putImageData(maskData[k],0,0));
      images.forEach((im,k)=>{
       const layer=layers[k],normalized=document.createElement('canvas');normalized.width=im.width;normalized.height=im.height;const nc=normalized.getContext('2d');nc.drawImage(im,0,0);const nd=nc.getImageData(0,0,im.width,im.height),px=nd.data,mean=layer.mean;
-      for(let p=0;p<px.length;p+=4)for(let c=0;c<3;c++){const v=px[p+c]/255,lin=v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4),q=Math.pow(Math.max(.2,Math.min(3,lin/Math.max(.02,mean[c]))),1.5),srgb=q<=.0031308?q*12.92:1.055*Math.pow(q,1/2.4)-.055;px[p+c]=Math.max(0,Math.min(255,Math.round(srgb*255)));}
+      // Curva por canal precalculada: misma normalización byte a byte sin Math.pow por píxel.
+      const lut=mean.map(channelMean=>{
+       const table=new Uint8Array(256),denom=Math.max(.02,channelMean);
+       for(let v=0;v<256;v++){
+        const s=v/255,lin=s<=.04045?s/12.92:Math.pow((s+.055)/1.055,2.4);
+        const q=Math.pow(Math.max(.2,Math.min(3,lin/denom)),1.5),srgb=q<=.0031308?q*12.92:1.055*Math.pow(q,1/2.4)-.055;
+        table[v]=Math.max(0,Math.min(255,Math.round(srgb*255)));
+       }
+       return table;
+      });
+      for(let p=0;p<px.length;p+=4){px[p]=lut[0][px[p]];px[p+1]=lut[1][px[p+1]];px[p+2]=lut[2][px[p+2]];}
       nc.putImageData(nd,0,0);const tile=document.createElement('canvas');tile.width=tile.height=N;const tc=tile.getContext('2d'),pat=tc.createPattern(normalized,'repeat'),tilePx=N*layer.size/300;if(pat?.setTransform&&typeof DOMMatrix!=='undefined')pat.setTransform(new DOMMatrix().scale(tilePx/im.width,tilePx/im.height));tc.fillStyle=pat;tc.fillRect(0,0,N,N);const td=tc.getImageData(0,0,N,N),data=td.data;
       tc.putImageData(td,0,0);tc.globalCompositeOperation='destination-in';tc.drawImage(maskCanvases[k],0,0,N,N);tc.globalCompositeOperation='source-over';cc.save();cc.globalCompositeOperation='multiply';cc.drawImage(tile,0,0);cc.restore();tile.width=tile.height=normalized.width=normalized.height=1;
      });
