@@ -147,20 +147,31 @@ function addTerrain(){
    const cx=cv.getContext('2d',{willReadFrequently:true});cx.drawImage(img,0,0);
    const px=cx.getImageData(0,0,N,N).data,S=width/(mxx-mnx),dx=(mxx-mnx)*S/N,dz=(mxz-mnz)*S/N;
    for(let k=0;k<N*N;k++){H[k]=((px[k*4]*256+px[k*4+1])/65535*(mxy-mny)+mny)*S;valid[k]=px[k*4+2]>127?1:0;}
-   const D=new Uint8Array(N*N),R=14;
+   // Distancia al borde con transformada chamfer de dos pasadas.
+   // Evita crear miles de arrays por píxel y reduce el coste de O(N²·R²) a O(N²).
+   // Unidad 0.25 px: ortogonal=4, diagonal=6 (conservadora para no colocar objetos al borde).
+   const D=new Uint8Array(N*N),D_MAX=56,D_ORTHO=4,D_DIAG=6;
    for(let j=0;j<N;j++)for(let i=0;i<N;i++){
-    if(!valid[j*N+i]){D[j*N+i]=0;continue;}
-    let best=R;
-    for(let r=1;r<=R&&r<best;r++)for(let t=-r;t<=r;t++){
-     const edges=[[i+t,j-r],[i+t,j+r],[i-r,j+t],[i+r,j+t]];
-     for(const [xx,zz] of edges)if(xx<0||zz<0||xx>=N||zz>=N||!valid[zz*N+xx]){best=r;break;}
-    }
-    D[j*N+i]=best;
+    const k=j*N+i;
+    if(!valid[k]){D[k]=0;continue;}
+    D[k]=Math.min(D_MAX,(Math.min(i+1,j+1,N-i,N-j))*D_ORTHO);
+   }
+   for(let j=0;j<N;j++)for(let i=0;i<N;i++){
+    const k=j*N+i;if(!D[k])continue;let v=D[k];
+    if(i>0)v=Math.min(v,D[k-1]+D_ORTHO);
+    if(j>0){v=Math.min(v,D[k-N]+D_ORTHO);if(i>0)v=Math.min(v,D[k-N-1]+D_DIAG);if(i<N-1)v=Math.min(v,D[k-N+1]+D_DIAG);}
+    D[k]=Math.min(D_MAX,v);
+   }
+   for(let j=N-1;j>=0;j--)for(let i=N-1;i>=0;i--){
+    const k=j*N+i;if(!D[k])continue;let v=D[k];
+    if(i<N-1)v=Math.min(v,D[k+1]+D_ORTHO);
+    if(j<N-1){v=Math.min(v,D[k+N]+D_ORTHO);if(i<N-1)v=Math.min(v,D[k+N+1]+D_DIAG);if(i>0)v=Math.min(v,D[k+N-1]+D_DIAG);}
+    D[k]=Math.min(D_MAX,v);
    }
    const slope=(i,j)=>{const l=H[j*N+Math.max(0,i-1)],r=H[j*N+Math.min(N-1,i+1)],u=H[Math.max(0,j-1)*N+i],d=H[Math.min(N-1,j+1)*N+i];return Math.atan(Math.hypot((r-l)/(2*dx),(d-u)/(2*dz)))*57.3;};
    let bi=N>>1,bj=N>>1,bestScore=-1;const RR=22;
    for(let j=RR;j<N-RR;j+=4)for(let i=RR;i<N-RR;i+=4){
-    if(D[j*N+i]<12)continue;const h0=H[j*N+i];let score=0,bad=false;
+    if(D[j*N+i]<48)continue;const h0=H[j*N+i];let score=0,bad=false;
     for(let oy=-RR;oy<=RR&&!bad;oy+=3)for(let ox=-RR;ox<=RR;ox+=3){
      if(ox*ox+oy*oy>RR*RR)continue;const k=(j+oy)*N+i+ox;
      if(!valid[k]){bad=true;break;}if(Math.abs(H[k]-h0)<.9)score++;
@@ -185,7 +196,7 @@ function addTerrain(){
     const [fi,fj]=cell(x,z),i=Math.floor(fi),j=Math.floor(fj);
     if(i<1||j<1||i>=N-2||j>=N-2)return false;
     const k=j*N+i;if(!valid[k]||!valid[k+1]||!valid[k+N]||!valid[k+N+1])return false;
-    return D[Math.round(fj)*N+Math.round(fi)]>=8&&slope(Math.round(fi),Math.round(fj))<32;
+    return D[Math.round(fj)*N+Math.round(fi)]>=32&&slope(Math.round(fi),Math.round(fj))<32;
    };
    const positions=[],uvs=[],indices=[],id=new Int32Array(N*N).fill(-1);
    for(let j=0;j<N;j++)for(let i=0;i<N;i++)if(valid[j*N+i]){
