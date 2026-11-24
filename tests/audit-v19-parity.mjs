@@ -56,7 +56,9 @@ check('Tamaños, cantidades y velocidades de manada del original v19',()=>{
  for(const [key,d] of Object.entries(species)){
   assert.ok(main.includes(' '+key+':{center:'),'Falta configuración de manada '+key);
   const sizeText=d.sizes.map(x=>String(x).replace(/^0[.]/,'.')).join(',');assert.ok(main.includes('sizes:['+sizeText+']'),'Tamaños incorrectos '+key);
-  assert.ok(main.includes(key+':'+d.count),'Cantidad incorrecta '+key);
+  assert.ok(main.includes('totalDinos=10'),'El límite total de dinosaurios debe ser 10');
+  assert.ok(main.includes('basePerSpecies=Math.floor(totalDinos/ids.length)')&&main.includes('extraDinos=totalDinos%ids.length'),'La distribución de los diez dinosaurios entre especies debe ser equilibrada');
+  assert.ok(main.includes('herdSize=basePerSpecies+(speciesIndex<extraDinos?1:0)'),'La carga debe respetar el reparto por especie en cada mundo');
   const gaitId=key==='patagonia'?'gonkoken':key==='aysen'?'chilesaurus':key;assert.ok(main.includes(gaitId+':{walk:'+d.gait.split(',')[0].split(':')[1]+',run:'+d.gait.split(',')[1].split(':')[1]),'Perfil de marcha incorrecto '+key);
  }
  assert.match(main,/function updateHerdMode/);assert.match(main,/function herdDrinkTarget/);
