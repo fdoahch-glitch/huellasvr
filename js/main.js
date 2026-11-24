@@ -148,11 +148,14 @@ function addWater(){
   const pts=river.pts.map(p=>new BABYLON.Vector3(p[0],terrainHeightAt(p[0],p[1])+.11,p[1]));
   if(pts.length<2)return;
   const curve=BABYLON.Curve3.CreateCatmullRomSpline(pts,Math.max(24,pts.length*5),false);
-  const path=curve.getPoints(),left=[],right=[];
+  const path=curve.getPoints(),left=[],right=[],bankLeft=[],bankRight=[];
   for(let i=0;i<path.length;i++){
    const prev=path[Math.max(0,i-1)],next=path[Math.min(path.length-1,i+1)],dx=next.x-prev.x,dz=next.z-prev.z,len=Math.hypot(dx,dz)||1,nx=-dz/len,nz=dx/len;
-   const w=river.w*.5;left.push(new BABYLON.Vector3(path[i].x+nx*w,path[i].y,path[i].z+nz*w));right.push(new BABYLON.Vector3(path[i].x-nx*w,path[i].y,path[i].z-nz*w));
+   const w=river.w*.5,bw=w+1.6;
+   left.push(new BABYLON.Vector3(path[i].x+nx*w,path[i].y+.045,path[i].z+nz*w));right.push(new BABYLON.Vector3(path[i].x-nx*w,path[i].y+.045,path[i].z-nz*w));
+   bankLeft.push(new BABYLON.Vector3(path[i].x+nx*bw,path[i].y+.018,path[i].z+nz*bw));bankRight.push(new BABYLON.Vector3(path[i].x-nx*bw,path[i].y+.018,path[i].z-nz*bw));
   }
+  const bank=BABYLON.MeshBuilder.CreateRibbon('original-river-bank-'+index,{pathArray:[bankLeft,bankRight],sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);bank.material=bankMat;bank.isPickable=false;
   const ribbon=BABYLON.MeshBuilder.CreateRibbon('original-river-'+index,{pathArray:[left,right],sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);ribbon.material=waterMat;ribbon.isPickable=false;
  });
  (WORLD.lagoons||[]).forEach((l,index)=>{
