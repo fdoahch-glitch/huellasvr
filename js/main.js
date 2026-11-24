@@ -327,25 +327,28 @@ function addWater(){
  const wg=wc.createLinearGradient(0,0,0,256);wg.addColorStop(0,waterPal.edge);wg.addColorStop(.48,waterPal.mid);wg.addColorStop(1,waterPal.center);wc.fillStyle=wg;wc.fillRect(0,0,256,256);
  for(let n=0;n<46;n++){const y=(n*37)%256,x=(n*71)%256;wc.beginPath();wc.ellipse(x,y,8+(n%7)*3,1+(n%3),-.15,0,Math.PI*2);wc.strokeStyle='rgba(235,245,238,'+(.045+(n%4)*.018)+')';wc.lineWidth=.8+(n%2)*.45;wc.stroke();}
  waterTex.update(false);waterTex.wrapU=waterTex.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;waterTex.uScale=4;waterTex.vScale=2;waterTex.anisotropicFilteringLevel=Math.min(8,VP.anisotropy);waterTextures.push({tex:waterTex,speed:-.012});
- const waterMat=new BABYLON.StandardMaterial('original-water-unlit-'+worldKey,scene);waterMat.diffuseTexture=waterTex;waterMat.emissiveTexture=waterTex;waterMat.diffuseColor=BABYLON.Color3.FromHexString(waterPal.center);waterMat.emissiveColor=BABYLON.Color3.FromHexString(waterPal.center);waterMat.specularColor=new BABYLON.Color3(.12,.16,.18);waterMat.disableLighting=true;waterMat.backFaceCulling=false;waterMat.alpha=.96;waterMat.transparencyMode=BABYLON.Material.MATERIAL_ALPHABLEND;
+ const waterMat=typeof BABYLON.PBRMaterial==='function'?new BABYLON.PBRMaterial('original-water-pbr-'+worldKey,scene):new BABYLON.StandardMaterial('original-water-'+worldKey,scene);
+  if(waterMat.albedoTexture!==undefined){waterMat.albedoTexture=waterTex;waterMat.albedoColor=new BABYLON.Color3(1,1,1);waterMat.metallic=.08;waterMat.roughness=.16;waterMat.environmentIntensity=.95;}else{waterMat.diffuseTexture=waterTex;waterMat.diffuseColor=new BABYLON.Color3(1,1,1);waterMat.specularColor=new BABYLON.Color3(.52,.64,.68);waterMat.roughness=.18;}
+  if(waterMat.clearCoat){waterMat.clearCoat.isEnabled=true;waterMat.clearCoat.intensity=quality==='ultra'?.2:quality==='alta'?.15:.08;waterMat.clearCoat.roughness=.22;}
+  waterMat.emissiveColor=BABYLON.Color3.FromHexString(waterPal.center).scale(.035);waterMat.alpha=.92;waterMat.transparencyMode=BABYLON.Material.MATERIAL_ALPHABLEND;
  const bankMat=new BABYLON.StandardMaterial('original-water-bank-'+worldKey,scene);bankMat.diffuseColor=BABYLON.Color3.FromHexString(worldKey==='atacamatitan'?'#b9784d':worldKey==='arackar'?'#c9ad7b':'#8c927e');bankMat.roughness=1;
  const glossTex=new BABYLON.DynamicTexture('water-gloss-texture-'+worldKey,256,scene,false,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);glossTex.getContext().drawImage(waterTex.getContext().canvas,0,0);glossTex.update(false);glossTex.wrapU=glossTex.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;glossTex.uScale=6;glossTex.vScale=3;waterTextures.push({tex:glossTex,speed:.018});
- const waterGlossMat=new BABYLON.StandardMaterial('original-water-gloss-'+worldKey,scene);waterGlossMat.diffuseTexture=glossTex;waterGlossMat.useAlphaFromDiffuseTexture=false;waterGlossMat.disableLighting=true;waterGlossMat.alpha=.18;waterGlossMat.specularColor=new BABYLON.Color3(.2,.25,.28);waterGlossMat.roughness=.18;waterGlossMat.disableDepthWrite=true;
+ const waterGlossMat=new BABYLON.StandardMaterial('original-water-gloss-'+worldKey,scene);waterGlossMat.diffuseTexture=glossTex;waterGlossMat.useAlphaFromDiffuseTexture=false;waterGlossMat.alpha=.24;waterGlossMat.specularColor=new BABYLON.Color3(.2,.25,.28);waterGlossMat.roughness=.18;waterGlossMat.disableDepthWrite=true;
  (WORLD.rivers||[]).forEach((river,index)=>{
   const pts=river.pts.map(p=>new BABYLON.Vector3(p[0],terrainHeightAt(p[0],p[1])+.11,p[1]));
   if(pts.length<2)return;
   const curve=BABYLON.Curve3.CreateCatmullRomSpline(pts,Math.max(24,pts.length*5),false);
   const path=curve.getPoints(),left=[],right=[],bankLeft=[],bankRight=[],shoreLeft=[],shoreRight=[];
   for(let i=0;i<path.length;i++){
-   const prev=path[Math.max(0,i-1)],next=path[Math.min(path.length-1,i+1)],dx=next.x-prev.x,dz=next.z-prev.z,len=Math.hypot(dx,dz)||1,nx=-dz/len,nz=dx/len,p=path[i],bed=terrainHeightAt(p.x,p.z),w=river.w*(WORLD.waterW||1)*.5,bw=w+1.6;
+   const prev=path[Math.max(0,i-1)],next=path[Math.min(path.length-1,i+1)],dx=next.x-prev.x,dz=next.z-prev.z,len=Math.hypot(dx,dz)||1,nx=-dz/len,nz=dx/len,p=path[i],bed=terrainHeightAt(p.x,p.z),w=river.w*.5,bw=w+1.6;
    p.y=bed+.11;
    const lx=p.x+nx*w,lz=p.z+nz*w,rx=p.x-nx*w,rz=p.z-nz*w,blx=p.x+nx*bw,blz=p.z+nz*bw,brx=p.x-nx*bw,brz=p.z-nz*bw;
-   left.push(new BABYLON.Vector3(lx,terrainHeightAt(lx,lz)+.045,lz));right.push(new BABYLON.Vector3(rx,terrainHeightAt(rx,rz)+.045,rz));
+   left.push(new BABYLON.Vector3(lx,bed+.155,lz));right.push(new BABYLON.Vector3(rx,bed+.155,rz));
    bankLeft.push(new BABYLON.Vector3(blx,terrainHeightAt(blx,blz)+.025,blz));bankRight.push(new BABYLON.Vector3(brx,terrainHeightAt(brx,brz)+.025,brz));
    shoreLeft.push(new BABYLON.Vector3(lx,terrainHeightAt(lx,lz)+.035,lz));shoreRight.push(new BABYLON.Vector3(rx,terrainHeightAt(rx,rz)+.035,rz));
   }
-  if(WORLD.noBank===false){const bankA=BABYLON.MeshBuilder.CreateRibbon('original-river-bank-left-'+index,{pathArray:[bankLeft,shoreLeft],sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);bankA.material=bankMat;bankA.isPickable=false;
-   const bankB=BABYLON.MeshBuilder.CreateRibbon('original-river-bank-right-'+index,{pathArray:[shoreRight,bankRight],sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);bankB.material=bankMat;bankB.isPickable=false;}
+  const bankA=BABYLON.MeshBuilder.CreateRibbon('original-river-bank-left-'+index,{pathArray:[bankLeft,shoreLeft],sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);bankA.material=bankMat;bankA.isPickable=false;
+  const bankB=BABYLON.MeshBuilder.CreateRibbon('original-river-bank-right-'+index,{pathArray:[shoreRight,bankRight],sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);bankB.material=bankMat;bankB.isPickable=false;
   const ribbon=BABYLON.MeshBuilder.CreateRibbon('original-river-'+index,{pathArray:[left,right],sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);ribbon.material=waterMat;ribbon.isPickable=false;
   const gloss=BABYLON.MeshBuilder.CreateRibbon('original-river-gloss-'+index,{pathArray:[left.map(v=>new BABYLON.Vector3(v.x,v.y+.012,v.z)),right.map(v=>new BABYLON.Vector3(v.x,v.y+.012,v.z))],sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);gloss.material=waterGlossMat;gloss.isPickable=false;
  });
