@@ -1109,6 +1109,11 @@ function installDiagnostics(){
    }
    d.state=name==='Neck_Look'?'look':'idle';d.timer=100;
    return {clip:name,movementPathFound:false,position:{x:d.root.position.x,y:d.root.position.y,z:d.root.position.z}};
+  },
+  advanceDinoSimulation(frames=8){
+   const count=Math.max(1,Math.min(120,Math.floor(frames)||8)),start=performance.now();
+   for(let i=0;i<count;i++)animateDinos(start+i*50,.05);
+   const d=dinoRoots[0];return {frames:count,position:{x:d.root.position.x,y:d.root.position.y,z:d.root.position.z},state:d.state,speed:d.actualSpeed,lastCollision:d.lastCollision||null};
   }
  };
  if(params.get('debug')!=='1')return;
