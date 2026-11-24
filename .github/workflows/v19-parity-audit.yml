@@ -33,6 +33,7 @@ jobs:
         run: |
           echo "Commit bajo prueba: $(git rev-parse HEAD)"
           echo "Prueba de panorama y alfa de nubes restaurados desde el original."
+          echo "Auditoría de orillas de ríos y escala atmosférica original."
           echo "Se validan panorama, ríos, vegetación, cinco mundos y rendimiento por separado."
           git status --short
       - name: Preparar Node.js
