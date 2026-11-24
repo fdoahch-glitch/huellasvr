@@ -499,7 +499,7 @@ function addMountains(){
  const mountainBaseAt=(x,z)=>{
   if(terrainValidAt(x,z))return terrainHeightAt(x,z);
   const radius=Math.hypot(x,z)||1,stepX=x/radius,stepZ=z/radius;
-  for(let inward=2;inward<=36;inward+=2){const sx=x-stepX*inward,sz=z-stepZ*inward;if(terrainValidAt(sx,sz))return terrainHeightAt(sx,sz);}
+  for(let inward=2;inward<=90;inward+=2){const sx=x-stepX*inward,sz=z-stepZ*inward;if(terrainValidAt(sx,sz))return terrainHeightAt(sx,sz);}
   return 0;
  };
  const hash=(x,y)=>{const v=Math.sin(x*127.1+y*311.7+M.seed*74.7)*43758.5453;return v-Math.floor(v);};
@@ -514,7 +514,7 @@ function addMountains(){
   for(let i=0;i<=NA;i++){const theta=i/NA*Math.PI*2,x=Math.cos(theta)*radius,z=Math.sin(theta)*radius,k=j*(NA+1)+i;const edgeX=x*150/radius,edgeZ=z*150/radius,edgeY=mountainBaseAt(edgeX,edgeZ),outerBase=edgeY-12*smooth(150,205,radius);let h=radius<=150?mountainBaseAt(x,z):outerBase;
    M.bands.forEach((band,bi)=>{const mid=(band[0]+band[1])*.5,half=(band[1]-band[0])*.5,profile=Math.max(0,1-Math.pow((radius-mid)/(half*1.25),2)),sc=.009+bi*.0015,n=ridged(x*sc+bi*17,z*sc-bi*9,5),big=fbm(x*.004+bi*3,z*.004,2);let amp=band[2]*(.55+big)*n*profile*1.55*smooth(142,174,radius);if(M.open){const d=Math.atan2(Math.sin(theta-M.open.ang),Math.cos(theta-M.open.ang));amp*=1-M.open.k[bi]*Math.exp(-Math.pow(d/M.open.w,2));}h=Math.max(h,h*.4+amp);});
    if(h>0)h=118*Math.tanh(h/118);
-   if(M.volcano){const V=M.volcano,vx=Math.cos(V.ang)*V.d,vz=Math.sin(V.ang)*V.d,dist=Math.hypot(x-vx,z-vz);if(dist<V.rad){let cone=V.h*Math.pow(1-dist/V.rad,1.2)*(.92+.16*fbm(x*.05,z*.05,2));if(dist<V.rad*.09)cone-=(V.rad*.09-dist)*.8;h=Math.max(h,cone);}}
+   if(M.volcano){const V=M.volcano,vx=Math.cos(V.ang)*V.d,vz=Math.sin(V.ang)*V.d,dist=Math.hypot(x-vx,z-vz);if(dist<V.rad){let cone=V.h*Math.pow(1-dist/V.rad,1.2)*(.92+.16*fbm(x*.05,z*.05,2));const craterRadius=V.rad*.11;if(dist<craterRadius){const craterFloor=V.h*.76+(dist/craterRadius)*V.h*.09;cone=Math.min(cone,craterFloor);}h=Math.max(h,cone);}}
    positions[k*3]=x;positions[k*3+1]=h;positions[k*3+2]=z;heights[k]=h;maxH=Math.max(maxH,h);
   }
  }
