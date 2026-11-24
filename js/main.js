@@ -382,7 +382,7 @@ async function spawnDino(id,index,total,center){
  root.position.set(spot.x,terrainHeightAt(spot.x,spot.z),spot.z);
  root.rotation.y=forwardYaw;
  root.getChildMeshes().forEach(m=>{m.isPickable=true;m.receiveShadows=true;m.metadata={...(m.metadata||{}),dinoId:id};pickables.push(m);shadowGenerator?.addShadowCaster(m,true);});root.metadata.targetLength=targetLength;
- const juvenile=targetLength<=data.length*.58,personalityRoll=rand(index*197+id.length*29),personality=juvenile?(personalityRoll<.68?'playful':personalityRoll<.88?'curious':'shy'):(personalityRoll<.34?'curious':personalityRoll<.62?'social':personalityRoll<.82?'calm':'shy');
+ const juvenile=targetLength<=data.length*.58,personalityRoll=rand(index*197+id.length*29),personality=juvenile?(personalityRoll<.68?'playful':personalityRoll<.88?'curious':'shy'):(index%7===1?'social':personalityRoll<.34?'curious':personalityRoll<.62?'social':personalityRoll<.82?'calm':'shy');
  dinoRoots.push({root,id,length:targetLength,clips,clipName:idle?'Idle':'',activeClip:idle||null,transitionFrom:null,transitionElapsed:0,baseYaw:forwardYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},herdCenter:{...preferred},heading:rand(index+71)*Math.PI*2,target:null,goal:null,state:'idle',timer:1.5+rand(index+82)*4,radius:Math.min(4,1.5+rand(index+8)*2),running:false,restLook:false,drankStamp:-1,juvenile,personality,curiosity:juvenile ? .82 : personality==='curious' ? .68 : personality==='social' ? .34 : .12,nextCuriosityAt:performance.now()+3500+rand(index*211+5)*10000,nextSocialAt:performance.now()+7000+rand(index*277+9)*14000,socialUntil:0,socialPartner:null,lastFootstep:0,stepDistance:0,actualSpeed:0,footDistance:0,dustDistance:0,footSide:1,lastFootPos:root.position.clone()});
  return root;
 }
@@ -765,10 +765,11 @@ function chooseDinoSocial(d,index,t){
  if(rand(index*283+Math.floor(t/5000))>(d.juvenile?.42:.18))return false;
  const active=dinoRoots.filter(a=>a.socialPartner&&a.socialUntil>t).length;
  if(active>=2)return false;
- const candidates=dinoRoots.filter(a=>a!==d&&a.id===d.id&&a.state==='idle'&&!a.socialPartner&&Math.hypot(a.root.position.x-d.root.position.x,a.root.position.z-d.root.position.z)>dinoSpacingRadius(a)+dinoSpacingRadius(d)+1.5&&Math.hypot(a.root.position.x-d.root.position.x,a.root.position.z-d.root.position.z)<20).map(partner=>{
-  const dx=d.root.position.x-partner.root.position.x,dz=d.root.position.z-partner.root.position.z,dist=Math.hypot(dx,dz)||1,stand=dinoSpacingRadius(d)+dinoSpacingRadius(partner)+1.1,x=partner.root.position.x+dx/dist*stand,z=partner.root.position.z+dz/dist*stand;
-  return {partner,x,z,dist};
- }).filter(p=>terrainValidAt(p.x,p.z)&&!isDinoPositionBlocked(d,p.x,p.z).blocked).sort((a,b)=>a.dist-b.dist);
+ const candidates=dinoRoots.filter(a=>a!==d&&a.id===d.id&&a.state==='idle'&&!a.socialPartner&&Math.hypot(a.root.position.x-d.root.position.x,a.root.position.z-d.root.position.z)>dinoSpacingRadius(a)+dinoSpacingRadius(d)+1.5&&Math.hypot(a.root.position.x-d.root.position.x,a.root.position.z-d.root.position.z)<30).map(partner=>{
+  const dx=d.root.position.x-partner.root.position.x,dz=d.root.position.z-partner.root.position.z,dist=Math.hypot(dx,dz)||1,stand=dinoSpacingRadius(d)+dinoSpacingRadius(partner)+1.1,base=Math.atan2(dx,dz);
+  let spot=null;for(let k=0;k<16&&!spot;k++){const a=base+k*Math.PI/8,x=partner.root.position.x+Math.sin(a)*stand,z=partner.root.position.z+Math.cos(a)*stand;if(terrainValidAt(x,z)&&!isDinoPositionBlocked(d,x,z).blocked)spot={x,z};}
+  return spot?{partner,x:spot.x,z:spot.z,dist}:null;
+ }).filter(Boolean).sort((a,b)=>a.dist-b.dist);
  if(!candidates.length)return false;
  const {partner,x,z}=candidates[0];
  const playful=d.juvenile&&partner.juvenile&&d.personality==='playful';
@@ -981,7 +982,7 @@ function installDiagnostics(){
  window.__HUELLAS_VR_DIAGNOSTICS__=snapshot;
  if(params.get('test')==='1')window.__HUELLAS_VR_TEST__={
   dinoBehaviorCheck(){let overlaps=0,minGap=Infinity;for(let i=0;i<dinoRoots.length;i++)for(let j=i+1;j<dinoRoots.length;j++){const a=dinoRoots[i],b=dinoRoots[j],gap=Math.hypot(a.root.position.x-b.root.position.x,a.root.position.z-b.root.position.z)-(dinoSpacingRadius(a)+dinoSpacingRadius(b));minGap=Math.min(minGap,gap);if(gap<-.05)overlaps++;}return {count:dinoRoots.length,overlaps,minGap:Number.isFinite(minGap)?+minGap.toFixed(3):null,juveniles:dinoRoots.filter(d=>d.juvenile).length,approaching:dinoRoots.filter(d=>d.goal==='approach').length,looking:dinoRoots.filter(d=>d.state==='look').length,grazing:dinoRoots.filter(d=>d.state==='graze').length,social:dinoRoots.filter(d=>d.state==='social'||d.state==='play').length,fleeing:dinoRoots.filter(d=>d.goal==='flee').length};},
-  exerciseSocial(){const candidates=dinoRoots.filter(a=>a.juvenile||a.personality==='social');for(const d of candidates){d.nextSocialAt=0;if(chooseDinoSocial(d,dinoRoots.indexOf(d),performance.now()))return {started:true,partner:d.socialPartner?.root?.name||null,juvenile:d.juvenile};}return {started:false,reason:'no-valid-nearby-partner'};},
+  exerciseSocial(){for(const a of dinoRoots){a.state='idle';a.target=null;a.goal=null;a.socialPartner=null;a.socialUntil=0;a.nextSocialAt=0;}const candidates=dinoRoots.filter(a=>a.juvenile||a.personality==='social');for(const d of candidates){if(chooseDinoSocial(d,dinoRoots.indexOf(d),performance.now()))return {started:true,partner:d.socialPartner?.root?.name||null,juvenile:d.juvenile};}return {started:false,reason:'no-valid-nearby-partner'};},
   exercisePlayerApproach(){for(const d of dinoRoots.filter(a=>a.state==='idle'&&!a.socialPartner)){d.curiosity=1;d.nextCuriosityAt=0;if(choosePlayerApproach(d,dinoRoots.indexOf(d),performance.now()))return {started:true,dinosaur:d.root.name,juvenile:d.juvenile};}return {started:false,reason:'no-valid-player-approach-position'};},
   collisionCheck(){const zone=environmentCollisionZones[0];const probe=zone?isDinoPositionBlocked({id:dinoRoots[0]?.id||'atacamatitan',length:0},zone.x,zone.z):{blocked:false,kind:null};return {havok:physicsReady,aggregates:physicsAggregates.length,environmentZones:environmentCollisionZones.length,probeBlocked:probe.blocked,probeKind:probe.kind};},
   setAnimation(name){
