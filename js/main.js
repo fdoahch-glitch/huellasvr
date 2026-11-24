@@ -765,12 +765,12 @@ function chooseDinoSocial(d,index,t){
  if(rand(index*283+Math.floor(t/5000))>(d.juvenile?.42:.18))return false;
  const active=dinoRoots.filter(a=>a.socialPartner&&a.socialUntil>t).length;
  if(active>=2)return false;
- const candidates=dinoRoots.filter(a=>a!==d&&a.id===d.id&&a.state==='idle'&&!a.socialPartner&&Math.hypot(a.root.position.x-d.root.position.x,a.root.position.z-d.root.position.z)>dinoSpacingRadius(a)+dinoSpacingRadius(d)+1.5&&Math.hypot(a.root.position.x-d.root.position.x,a.root.position.z-d.root.position.z)<20);
+ const candidates=dinoRoots.filter(a=>a!==d&&a.id===d.id&&a.state==='idle'&&!a.socialPartner&&Math.hypot(a.root.position.x-d.root.position.x,a.root.position.z-d.root.position.z)>dinoSpacingRadius(a)+dinoSpacingRadius(d)+1.5&&Math.hypot(a.root.position.x-d.root.position.x,a.root.position.z-d.root.position.z)<20).map(partner=>{
+  const dx=d.root.position.x-partner.root.position.x,dz=d.root.position.z-partner.root.position.z,dist=Math.hypot(dx,dz)||1,stand=dinoSpacingRadius(d)+dinoSpacingRadius(partner)+1.1,x=partner.root.position.x+dx/dist*stand,z=partner.root.position.z+dz/dist*stand;
+  return {partner,x,z,dist};
+ }).filter(p=>terrainValidAt(p.x,p.z)&&!isDinoPositionBlocked(d,p.x,p.z).blocked).sort((a,b)=>a.dist-b.dist);
  if(!candidates.length)return false;
- candidates.sort((a,b)=>Math.hypot(a.root.position.x-d.root.position.x,a.root.position.z-d.root.position.z)-Math.hypot(b.root.position.x-d.root.position.x,b.root.position.z-d.root.position.z));
- const partner=candidates[0],dx=d.root.position.x-partner.root.position.x,dz=d.root.position.z-partner.root.position.z,dist=Math.hypot(dx,dz)||1,stand=dinoSpacingRadius(d)+dinoSpacingRadius(partner)+1.1;
- const x=partner.root.position.x+dx/dist*stand,z=partner.root.position.z+dz/dist*stand;
- if(!terrainValidAt(x,z)||isDinoPositionBlocked(d,x,z).blocked)return false;
+ const {partner,x,z}=candidates[0];
  const playful=d.juvenile&&partner.juvenile&&d.personality==='playful';
  d.target={x,z};d.goal=playful?'play':'social';d.socialPartner=partner;d.state='walk';d.running=playful;d.socialUntil=t+10000+rand(index*293+Math.floor(t/1000))*7000;
  partner.socialPartner=d;partner.state='social';partner.goal='social';partner.target=null;partner.running=false;partner.actualSpeed=0;partner.socialUntil=d.socialUntil;partner.timer=8+rand(index*307+Math.floor(t/1000))*8;
@@ -974,7 +974,8 @@ function installDiagnostics(){
  window.__HUELLAS_VR_DIAGNOSTICS__=snapshot;
  if(params.get('test')==='1')window.__HUELLAS_VR_TEST__={
   dinoBehaviorCheck(){let overlaps=0,minGap=Infinity;for(let i=0;i<dinoRoots.length;i++)for(let j=i+1;j<dinoRoots.length;j++){const a=dinoRoots[i],b=dinoRoots[j],gap=Math.hypot(a.root.position.x-b.root.position.x,a.root.position.z-b.root.position.z)-(dinoSpacingRadius(a)+dinoSpacingRadius(b));minGap=Math.min(minGap,gap);if(gap<-.05)overlaps++;}return {count:dinoRoots.length,overlaps,minGap:Number.isFinite(minGap)?+minGap.toFixed(3):null,juveniles:dinoRoots.filter(d=>d.juvenile).length,approaching:dinoRoots.filter(d=>d.goal==='approach').length,looking:dinoRoots.filter(d=>d.state==='look').length,grazing:dinoRoots.filter(d=>d.state==='graze').length,social:dinoRoots.filter(d=>d.state==='social'||d.state==='play').length,fleeing:dinoRoots.filter(d=>d.goal==='flee').length};},
-  exerciseSocial(){const d=dinoRoots.find(a=>a.juvenile)||dinoRoots[0];if(!d)return {started:false,reason:'no-dinosaurs'};d.nextSocialAt=0;const started=chooseDinoSocial(d,dinoRoots.indexOf(d),performance.now());return {started,partner:d.socialPartner?.root?.name||null,juvenile:d.juvenile};},
+  exerciseSocial(){const candidates=dinoRoots.filter(a=>a.juvenile||a.personality==='social');for(const d of candidates){d.nextSocialAt=0;if(chooseDinoSocial(d,dinoRoots.indexOf(d),performance.now()))return {started:true,partner:d.socialPartner?.root?.name||null,juvenile:d.juvenile};}return {started:false,reason:'no-valid-nearby-partner'};},
+  exercisePlayerApproach(){for(const d of dinoRoots){d.curiosity=1;d.nextCuriosityAt=0;if(choosePlayerApproach(d,dinoRoots.indexOf(d),performance.now()))return {started:true,dinosaur:d.root.name,juvenile:d.juvenile};}return {started:false,reason:'no-valid-player-approach-position'};},
   collisionCheck(){const zone=environmentCollisionZones[0];const probe=zone?isDinoPositionBlocked({id:dinoRoots[0]?.id||'atacamatitan',length:0},zone.x,zone.z):{blocked:false,kind:null};return {havok:physicsReady,aggregates:physicsAggregates.length,environmentZones:environmentCollisionZones.length,probeBlocked:probe.blocked,probeKind:probe.kind};},
   setAnimation(name){
    const d=dinoRoots[0];if(!d)throw new Error('No hay dinosaurios cargados para probar.');
