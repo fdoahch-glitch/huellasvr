@@ -73,6 +73,7 @@ check('Selección por mirada para visores WebXR sin mando',()=>{
  assert.ok(main.includes('performance.now()-xrGazeSince>=1400'));
  assert.ok(main.includes('updateXRGaze();'));
 });
+check('Visor móvil recupera salida rápida, bloqueo horizontal y pantalla activa',()=>{for(const token of ["screen.orientation?.lock?.('landscape')","navigator.wakeLock.request('screen')","stereoTapTimes.length>=3","event.key==='Escape'",'function updateStereoOrientation()'])assert.ok(main.includes(token),'Falta '+token);assert.ok(html.includes('id="exitHint"'));});
 check('Controles de orientación móvil y visor estereoscópico',()=>{
  for(const token of ['function toggleMobileOrientation()','Orientation.requestPermission','deviceorientation','function toggleMobileStereo()','RIG_MODE_STEREOSCOPIC_SIDEBYSIDE_PARALLEL'])assert.ok(main.includes(token),'Falta '+token);
  for(const id of ['sensorButton','stereoButton'])assert.ok(html.includes('id="'+id+'"'),'Falta control '+id);
