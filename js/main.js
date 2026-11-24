@@ -57,30 +57,29 @@ function tuneVisualMaterials(root,foliage=false){
 }
 function rand(seed){let x=Math.sin(seed*127.1+311.7)*43758.5453;return x-Math.floor(x);}
 function addSky(){
- // Reproducir el método validado en el Babylon original v20:
- // esfera grande, material sin iluminación y panorama equirectangular.
+ // Replicar el método probado en Babylon v20: esfera de 900 unidades,
+ // material emisivo sin tintes y textura equirectangular.
  const sky=BABYLON.MeshBuilder.CreateSphere('sky-dome',{diameter:900,segments:32},scene);
  sky.isPickable=false;sky.infiniteDistance=true;sky.alwaysSelectAsActiveMesh=true;
  const m=new BABYLON.StandardMaterial('panorama-sky',scene);
  m.backFaceCulling=false;m.disableLighting=true;m.fogEnabled=false;
  m.emissiveColor=new BABYLON.Color3(1,1,1);
- const pano=new BABYLON.Texture(WORLD.sky,scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE,()=>{
-  pano.coordinatesMode=BABYLON.Texture.FIXED_EQUIRECTANGULAR_MODE;
-  pano.wrapU=BABYLON.Texture.CLAMP_ADDRESSMODE;pano.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;
-  pano.anisotropicFilteringLevel=Math.min(8,VP.anisotropy||8);
-  skyReady=true;skyError=null;
-  console.info('[Huellas VR] Panorama equirectangular listo:',WORLD.sky);
- },(message,exception)=>{
-  skyReady=false;skyError=String(message||exception||'error desconocido');
-  console.error('[Huellas VR] Falló panorama:',WORLD.sky,skyError);
- });
- // Asignar antes de que termine la carga, igual que el original; no esperar
- // al callback para configurar el modo de coordenadas.
- pano.coordinatesMode=BABYLON.Texture.FIXED_EQUIRECTANGULAR_MODE;
- m.emissiveTexture=pano;sky.material=m;skyMaterial=m;sky.rotation.y=(WORLD.panoRot??180)*Math.PI/180;
+ sky.material=m;skyMaterial=m;sky.rotation.y=(WORLD.panoRot??180)*Math.PI/180;
  return new Promise((resolve,reject)=>{
-  pano.onLoadObservable.add(()=>resolve(sky));
-  pano.onErrorObservable.add((_,error)=>reject(new Error('No se pudo cargar el panorama esencial '+WORLD.sky+': '+String(error||skyError))));
+  const pano=new BABYLON.Texture(WORLD.sky,scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE,()=>{
+   pano.coordinatesMode=BABYLON.Texture.FIXED_EQUIRECTANGULAR_MODE;
+   pano.wrapU=BABYLON.Texture.CLAMP_ADDRESSMODE;pano.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;
+   pano.anisotropicFilteringLevel=Math.min(8,VP.anisotropy||8);
+   m.emissiveTexture=pano;skyReady=true;skyError=null;
+   console.info('[Huellas VR] Panorama equirectangular listo:',WORLD.sky);resolve(sky);
+  },(message,exception)=>{
+   skyReady=false;skyError=String(message||exception||'error desconocido');
+   console.error('[Huellas VR] Falló panorama:',WORLD.sky,skyError);
+   reject(new Error('No se pudo cargar el panorama esencial '+WORLD.sky+': '+skyError));
+  });
+  // El modo se fija antes de la primera compilación del material.
+  pano.coordinatesMode=BABYLON.Texture.FIXED_EQUIRECTANGULAR_MODE;
+  m.emissiveTexture=pano;
  });
 }
 function addSkyLife(){
