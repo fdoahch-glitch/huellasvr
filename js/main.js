@@ -62,7 +62,7 @@ function addSky(){
  const skyTint=({atacamatitan:[1.02,1,.96],arackar:[1,.97,.92],patagonia:[.9,.95,1],stegouros:[.93,1,.95],aysen:[.96,.98,1]}[worldKey]||[1,1,1]);
  m.emissiveColor=new BABYLON.Color3(...skyTint);sky.material=m;skyMaterial=m;sky.rotation.y=(WORLD.panoRot??23)*Math.PI/180;
  return new Promise((resolve,reject)=>{
-  const pano=new BABYLON.Texture(WORLD.sky,scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE,()=>{skyReady=true;skyError=null;console.info('[Huellas VR] Panorama listo:',WORLD.sky);resolve(sky);},(message,exception)=>{skyReady=false;skyError=String(message||exception||'error desconocido');console.error('[Huellas VR] Falló panorama:',WORLD.sky,skyError);reject(new Error('No se pudo cargar el panorama esencial '+WORLD.sky+': '+skyError));});
+  const pano=new BABYLON.Texture(WORLD.sky,scene,false,false,BABYLON.Texture.TRILINEAR_SAMPLINGMODE,()=>{skyReady=true;skyError=null;console.info('[Huellas VR] Panorama listo:',WORLD.sky);resolve(sky);},(message,exception)=>{skyReady=false;skyError=String(message||exception||'error desconocido');console.error('[Huellas VR] Falló panorama:',WORLD.sky,skyError);reject(new Error('No se pudo cargar el panorama esencial '+WORLD.sky+': '+skyError));});
   pano.anisotropicFilteringLevel=8;m.emissiveTexture=pano;
  });
 }
