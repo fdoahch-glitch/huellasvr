@@ -205,3 +205,10 @@ check('Colisionadores simplificados de vegetación y rocas',()=>{
  assert.ok(main.includes("a.file.includes('araucaria_adulta')"));
  assert.ok(main.includes('BABYLON.PhysicsShapeType.CYLINDER'));
 });
+
+check('Mezcla del terreno por pendiente y distancia',()=>{
+ assert.ok(main.includes('const smoothMask=(a,b,v)=>'));
+ assert.ok(main.includes('normalY=1/Math.sqrt(1+sx*sx+sz*sz)'));
+ assert.ok(main.includes('coverage=flat*distanceFade'));
+ assert.ok(main.includes('weights[k]*coverage'));
+});
