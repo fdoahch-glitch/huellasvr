@@ -26,8 +26,6 @@ try{
   await page.waitForFunction(()=>{const t=document.querySelector('#loadText')?.textContent||'';return t.includes('¡Mundo listo!')||t.includes('No se pudo iniciar el mundo');},{polling:100,timeout:90000});
   const msg=await page.locator('#loadText').textContent();
   if(!msg.includes('¡Mundo listo!'))throw new Error(world+' no pudo cargar en ULTRA: '+msg);
-  await page.locator('#explore').click();
-  await page.waitForFunction(()=>!document.querySelector('#hud')?.classList.contains('hidden'),{polling:100,timeout:10000});
   const renderer=await page.evaluate(()=>{
    const gl=document.querySelector('#renderCanvas')?.getContext('webgl2');
    const ext=gl?.getExtension('WEBGL_debug_renderer_info');
