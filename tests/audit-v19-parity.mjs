@@ -212,3 +212,10 @@ check('Mezcla del terreno por pendiente y distancia',()=>{
  assert.ok(main.includes('coverage=flat*distanceFade'));
  assert.ok(main.includes('weights[k]*coverage'));
 });
+
+check('Panorama esencial se espera y registra fallos',()=>{
+ assert.ok(main.includes('await addSky()'));
+ assert.ok(main.includes('Panorama listo:'));
+ assert.ok(main.includes('Falló panorama:'));
+ assert.ok(main.includes('sky:{ready:skyReady,error:skyError,url:WORLD.sky}'));
+});
