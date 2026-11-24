@@ -35,7 +35,7 @@ const HERD_CONFIG = {
 const requested = (params.get('mundo') || 'atacamatitan').toLowerCase();
 const worldKey = WORLDS[requested] ? requested : 'valle';
 const WORLD = WORLDS[worldKey];
-let havokInstance=null,physicsPlugin=null,physicsController=null,physicsAggregates=[],physicsReady=false,physicsLastSupport='not-started';
+let havokInstance=null,physicsPlugin=null,physicsController=null,physicsAggregates=[],physicsReady=false,physicsLastSupport='not-started',skyReady=false,skyError=null;
 let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, waterGain=null, lightingBase=null, timeMode='dia', skyLife=null, nightInsectGain=null, rainBlend=0, xrGazeActor=null, xrGazeSince=0, xrGazeFired=false;
 let orientationEnabled=false,orientationBase=null,orientationHandler=null,stereoEnabled=false,stereoWakeLock=null,stereoTapTimes=[],cpuUpdateMs=0,cpuUpdateAvgMs=0,renderLoop=null,contextLost=false,renderPausedForVisibility=false;
 const setProgress=(v,t)=>{$('progressFill').style.width=Math.round(v*100)+'%';$('loadText').textContent=t;};
@@ -43,9 +43,14 @@ function mat(name,color,rough=.9){const m=new BABYLON.StandardMaterial(name,scen
 function rand(seed){let x=Math.sin(seed*127.1+311.7)*43758.5453;return x-Math.floor(x);}
 function addSky(){
  const sky=BABYLON.MeshBuilder.CreateSphere('sky-dome',{diameter:900,segments:32},scene);sky.isPickable=false;sky.infiniteDistance=true;
- const m=new BABYLON.StandardMaterial('panorama-sky',scene);m.backFaceCulling=false;m.disableLighting=true;m.emissiveTexture=new BABYLON.Texture(WORLD.sky,scene,false,true);const skyTint=({atacamatitan:[1.02,1,.96],arackar:[1,.97,.92],patagonia:[.9,.95,1],stegouros:[.93,1,.95],aysen:[.96,.98,1]}[worldKey]||[1,1,1]);m.emissiveColor=new BABYLON.Color3(...skyTint);sky.material=m;skyMaterial=m;sky.rotation.y=(WORLD.panoRot??23)*Math.PI/180;return sky;
+ const m=new BABYLON.StandardMaterial('panorama-sky',scene);m.backFaceCulling=false;m.disableLighting=true;
+ const skyTint=({atacamatitan:[1.02,1,.96],arackar:[1,.97,.92],patagonia:[.9,.95,1],stegouros:[.93,1,.95],aysen:[.96,.98,1]}[worldKey]||[1,1,1]);
+ m.emissiveColor=new BABYLON.Color3(...skyTint);sky.material=m;skyMaterial=m;sky.rotation.y=(WORLD.panoRot??23)*Math.PI/180;
+ return new Promise((resolve,reject)=>{
+  const pano=new BABYLON.Texture(WORLD.sky,scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE,()=>{skyReady=true;skyError=null;console.info('[Huellas VR] Panorama listo:',WORLD.sky);resolve(sky);},(message,exception)=>{skyReady=false;skyError=String(message||exception||'error desconocido');console.error('[Huellas VR] Falló panorama:',WORLD.sky,skyError);reject(new Error('No se pudo cargar el panorama esencial '+WORLD.sky+': '+skyError));});
+  pano.anisotropicFilteringLevel=8;m.emissiveTexture=pano;
+ });
 }
-
 function addSkyLife(){
  const anchor=new BABYLON.TransformNode('environment-sky-anchor',scene);
  const cloudTex=new BABYLON.DynamicTexture('moving-cloud-texture',{width:2048,height:512},scene,false,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
@@ -882,7 +887,7 @@ function installDiagnostics(){
   meshes:scene?.meshes?.length||0,activeMeshes:scene?.getActiveMeshes?.().length||0,
   textures:engine?.getLoadedTexturesCache?.().length||0,dinosaurs:dinoRoots.length,
   vegetationAssets:assetCache.size,particles:scene?.particleSystems?.length||0,dinoStates:dinoRoots.map(d=>({id:d.id,clip:d.clipName,active:!!d.activeClip,playing:!!d.activeClip?.isPlaying,state:d.state,heading:d.heading,speed:d.actualSpeed,target:d.target?{x:+d.target.x.toFixed(2),z:+d.target.z.toFixed(2)}:null,forwardYaw:d.baseYaw,position:{x:+d.root.position.x.toFixed(2),y:+d.root.position.y.toFixed(2),z:+d.root.position.z.toFixed(2)}})),cpuUpdateMs:Math.round(cpuUpdateMs*100)/100,cpuUpdateAvgMs:Math.round(cpuUpdateAvgMs*100)/100,heapMB:performance.memory?Math.round(performance.memory.usedJSHeapSize/1048576):null,
-  physics:{enabled:physicsReady,controller:!!physicsController,colliders:physicsAggregates.length,support:physicsLastSupport},xrState:xr?.baseExperience?.state??'desktop'
+  sky:{ready:skyReady,error:skyError,url:WORLD.sky},physics:{enabled:physicsReady,controller:!!physicsController,colliders:physicsAggregates.length,support:physicsLastSupport},xrState:xr?.baseExperience?.state??'desktop'
  });
  window.__HUELLAS_VR_DIAGNOSTICS__=snapshot;
   if(params.get('test')==='1')window.__HUELLAS_VR_TEST__={
@@ -926,7 +931,7 @@ async function init(){
   engine.onContextRestoredObservable.add(()=>{contextLost=false;lastTime=0;console.info('Contexto WebGL2 restaurado.');});
  scene=new BABYLON.Scene(engine);installDiagnostics();scene.clearColor=new BABYLON.Color4(.65,.76,.77,1);scene.collisionsEnabled=true;scene.fogMode=BABYLON.Scene.FOGMODE_EXP2;scene.fogColor=BABYLON.Color3.FromHexString(WORLD.fog);scene.fogDensity=({atacamatitan:.0038,arackar:.0042,patagonia:.0052,stegouros:.0085,aysen:.006,valle:.006}[worldKey]||.0038);
  camera=new BABYLON.UniversalCamera('player-camera',new BABYLON.Vector3(0,1.65,12),scene);camera.minZ=.08;camera.maxZ=320;camera.fov=.92;camera.speed=.35;camera.inertia=.82;camera.angularSensibility=3800;camera.attachControl(canvas,true);camera.keysUp.push(87);camera.keysDown.push(83);camera.keysLeft.push(65);camera.keysRight.push(68);camera.applyGravity=false;camera.checkCollisions=false;camera.ellipsoid=new BABYLON.Vector3(.35,.85,.35);
- initStage='terreno y mapa de altura';setProgress(.08,'Creando el paisaje…');addSky();addSkyLife();addLighting();await addTerrain();camera.position.y=1.65+terrainHeightAt(0,12);initStage='inicialización de Havok Physics V2';await initPhysics();initDinoFootFX();addWater();addSandBars();addMountains();initStage='carga de dinosaurios';setProgress(.2,'Cargando dinosaurios…');
+ initStage='terreno y mapa de altura';setProgress(.08,'Creando el paisaje…');initStage='carga del panorama '+WORLD.sky;await addSky();addSkyLife();addLighting();await addTerrain();camera.position.y=1.65+terrainHeightAt(0,12);initStage='inicialización de Havok Physics V2';await initPhysics();initDinoFootFX();addWater();addSandBars();addMountains();initStage='carga de dinosaurios';setProgress(.2,'Cargando dinosaurios…');
  const ids=WORLD.dinos,baseHerd={atacamatitan:22,arackar:24,patagonia:22,stegouros:18,aysen:28,valle:5}[worldKey]||5,herdSize=Math.max(3,Math.round(baseHerd*Q)),totalDinos=ids.length*herdSize;let loadedDinos=0;for(const id of ids){for(let n=0;n<herdSize;n++){initStage='dinosaurio '+id+' ('+(n+1)+'/'+herdSize+')';await spawnDino(id,n,herdSize,null);loadedDinos++;setProgress(.2+.53*loadedDinos/totalDinos,'Cargando '+DINO[id].name+' · '+loadedDinos+'/'+totalDinos+'…');}}
  initStage='vegetación y modelos ambientales';setProgress(.76,'Poblando el paisaje…');await addVegetation();initStage='bosques y atmósfera';addForest3D();setProgress(.9,'Preparando atmósfera…');addParticles();bindControls();scene.onBeforeRenderObservable.add(()=>{const updateStart=performance.now(),now=updateStart,dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;movePlayer(dt);updateHerdMode(dt);animateDinos(now,dt);updateDinoFootFX(dt);updateEnvironment(dt);updateXRGaze();for(const item of waterTextures)item.tex.uOffset=(item.tex.uOffset+dt*item.speed+1)%1;cpuUpdateMs=performance.now()-updateStart;cpuUpdateAvgMs+=(cpuUpdateMs-cpuUpdateAvgMs)*.08;});
  renderLoop=()=>{if(!contextLost&&scene&&scene.activeCamera)scene.render();};engine.runRenderLoop(renderLoop);
