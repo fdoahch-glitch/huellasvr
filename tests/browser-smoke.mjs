@@ -79,6 +79,11 @@ try{
   if(!state.diagnostics.terrain.diffuseReady||state.diagnostics.terrain.uvCount<6||!state.diagnostics.terrain.photoSample)throw new Error(world+' textura del terreno no enlazada al mesh: '+JSON.stringify(state.diagnostics.terrain));
   if(!String(state.diagnostics.terrain.materialType||'').includes('PBR'))throw new Error(world+' no usa material PBR en el terreno: '+state.diagnostics.terrain.materialType);
   if(state.diagnostics.dinosaurs!==15)throw new Error(world+' debe cargar exactamente 15 dinosaurios en '+testQuality+'; cargó '+state.diagnostics.dinosaurs);
+  if(state.diagnostics.drinkPoints<1)throw new Error(world+' no precalculó puntos válidos para beber: '+state.diagnostics.drinkPoints);
+  if(state.diagnostics.dinoStates?.length!==15||state.diagnostics.dinoStates.some(d=>!d.active||!d.clip))throw new Error(world+' tiene uno o más dinosaurios sin animación activa en '+testQuality);
+  const herdCheckAll=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.dinoBehaviorCheck?.());
+  if(!herdCheckAll||herdCheckAll.count!==15||herdCheckAll.overlaps!==0)throw new Error(world+' presenta manada incompleta o solapada en '+testQuality+': '+JSON.stringify(herdCheckAll));
+  if(!state.diagnostics.physics?.enabled||!state.diagnostics.physics?.controller||state.diagnostics.physics.colliders<1)throw new Error(world+' no inicializó Havok en '+testQuality+': '+JSON.stringify(state.diagnostics.physics));
   if(state.diagnostics.dinoLod?.withoutLow!==0)throw new Error(world+' no cargó los 15 modelos LOD reducidos: '+JSON.stringify(state.diagnostics.dinoLod));
   const lodCheckAll=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.lodCheck?.());
   if(!lodCheckAll||lodCheckAll.count!==15||lodCheckAll.farLow!==15||lodCheckAll.nearHigh!==15||lodCheckAll.available!==15)throw new Error(world+' no cambia los 15 modelos por distancia en '+testQuality+': '+JSON.stringify(lodCheckAll));
