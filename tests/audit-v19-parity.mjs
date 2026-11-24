@@ -261,7 +261,7 @@ check('Panorama y atmósfera replican el motor original v19',()=>{
  assert.ok(main.includes('WORLD.panoRot??23'));
  assert.ok(main.includes("{diameter:875,segments:32}"),'La cúpula de nubes debe conservar la escala original');
  assert.ok(main.includes('if(false&&quality!==\'baja\')for(let i=0;i<7;i++)'),'Los paneles planos de rayos no deben cubrir la escena');
- assert.ok(main.includes('waterGlossMat.alpha=.06'),'El brillo del río no debe generar franjas blancas');
+ assert.ok(!main.includes('original-river-gloss-'),'No debe existir una segunda cinta especular que duplique el cauce y dibuje franjas blancas');
  assert.ok(main.includes('const a=rnd()*Math.PI*2,e=.08+rnd()*1.3,r=420'),'El radio estelar debe conservar el valor original');
  assert.ok(!main.includes('createDefaultSkybox'),'No reemplazar el panorama original por un cubemap distinto');
 });
@@ -293,7 +293,7 @@ check('Colisión dinámica de dinosaurios con obstáculos y manada',()=>{
 });
 
 check('Mejoras visuales Babylon.js/WebGL2: perfiles, PBR, sombras y postprocesado',()=>{
- for(const token of ['VISUAL_PROFILE={ultra:','function tuneVisualMaterials(root,foliage=false)','material.sheen.isEnabled=true','function addEnvironmentLighting()','new BABYLON.EquiRectangularCubeTexture','scene.environmentTexture=environmentTexture','function addVisualPipeline()','DefaultRenderingPipeline','fxaaEnabled=VP.samples<=1','bloomEnabled=VP.bloom>0','shadowGenerator=new BABYLON.ShadowGenerator(VP.shadow','waterMat.metallic=.08','waterGlossMat.disableDepthWrite=true','anisotropicFilteringLevel=VP.anisotropy','function addSSAO()','new BABYLON.SSAORenderingPipeline','function addAdvancedVisualEffects()','new BABYLON.SSRRenderingPipeline','function createParticleSystem(name,capacity)','BABYLON.GPUParticleSystem.IsSupported','new BABYLON.GPUParticleSystem','particleBackend','ssao:!!ssaoPipeline','environmentReady','thinInstances:scene.meshes.some(m=>m.hasThinInstances)'])assert.ok(main.includes(token),'Falta mejora visual '+token);
+ for(const token of ['VISUAL_PROFILE={ultra:','function tuneVisualMaterials(root,foliage=false)','material.sheen.isEnabled=true','function addEnvironmentLighting()','new BABYLON.EquiRectangularCubeTexture','scene.environmentTexture=environmentTexture','function addVisualPipeline()','DefaultRenderingPipeline','fxaaEnabled=VP.samples<=1','bloomEnabled=VP.bloom>0','shadowGenerator=new BABYLON.ShadowGenerator(VP.shadow','waterMat.metallic=.08','waterMat.roughness=.16','anisotropicFilteringLevel=VP.anisotropy','function addSSAO()','new BABYLON.SSAORenderingPipeline','function addAdvancedVisualEffects()','new BABYLON.SSRRenderingPipeline','function createParticleSystem(name,capacity)','BABYLON.GPUParticleSystem.IsSupported','new BABYLON.GPUParticleSystem','particleBackend','ssao:!!ssaoPipeline','environmentReady','thinInstances:scene.meshes.some(m=>m.hasThinInstances)'])assert.ok(main.includes(token),'Falta mejora visual '+token);
  assert.ok(main.includes('addVisualPipeline();bindControls()'));
  assert.ok(main.includes("!['ultra','alta'].includes(quality)")&&main.includes('mobileDevice'),'SSAO debe limitarse a escritorio de alta calidad');
  assert.ok(main.includes('removeSSAO()')&&main.includes('addSSAO()'),'SSAO debe liberarse en VR y restaurarse al salir');
