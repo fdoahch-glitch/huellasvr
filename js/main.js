@@ -78,7 +78,7 @@ function addTerrain(){
    for(let j=0;j<N;j++)for(let i=0;i<N;i++)if(valid[j*N+i]){
     id[j*N+i]=positions.length/3;
     positions.push(mnx*S+(i+.5)*dx-shX,H[j*N+i]-shY,mnz*S+(j+.5)*dz-shZ);
-    uvs.push((mnx*S+(i+.5)*dx-shX)/12,1-(mnz*S+(j+.5)*dz-shZ)/12);
+    uvs.push((i+.5)/N,1-(j+.5)/N);
    }
    for(let j=0;j<N-1;j++)for(let i=0;i<N-1;i++){
     const a=id[j*N+i],b=id[j*N+i+1],c=id[(j+1)*N+i],d=id[(j+1)*N+i+1];
@@ -89,9 +89,36 @@ function addTerrain(){
    vd.positions=positions;vd.indices=indices;vd.normals=normals;vd.uvs=uvs;vd.applyToMesh(mesh,true);
    mesh.isPickable=true;mesh.checkCollisions=true;mesh.metadata={ground:true};ground=mesh;pickables.push(mesh);
    const m=new BABYLON.StandardMaterial('photo-terrain-'+worldKey,scene);
-   m.diffuseTexture=new BABYLON.Texture(WORLD.ground,scene,false,true);m.diffuseTexture.wrapU=m.diffuseTexture.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;m.diffuseTexture.uScale=1;m.diffuseTexture.vScale=1;
-   m.diffuseTexture.anisotropicFilteringLevel=8;m.diffuseColor=new BABYLON.Color3(1,1,1);
-   m.specularColor=new BABYLON.Color3(.025,.025,.025);m.roughness=.98;
+   const detailProfiles={
+    atacamatitan:{sand:'img/tex_sand_d.jpg',gravel:'img/tx_stones_d.jpg',crack:'img/tx_stones_d.jpg'},
+    arackar:{sand:'img/tex_crack_d.jpg',gravel:'img/tex_gsand_d.jpg',crack:'img/tx_stones_d.jpg'},
+    patagonia:{sand:'img/tx_dirt_d.jpg',gravel:'img/tex_gsand_d.jpg',crack:'img/tex_gsand_d.jpg'},
+    stegouros:{sand:'img/tx_leaves_d.jpg',gravel:'img/tx_redplants_d.jpg',crack:'img/tx_stones_d.jpg'},
+    aysen:{sand:'img/tx_dirt_d.jpg',gravel:'img/tx_stones_d.jpg',crack:'img/tx_stones_d.jpg'}
+   }[worldKey];
+   const compositeCanvas=document.createElement('canvas');compositeCanvas.width=compositeCanvas.height=2048;
+   const cc=compositeCanvas.getContext('2d',{alpha:false});
+   const loadImage=src=>new Promise((ok,no)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=()=>no(new Error('No se pudo cargar textura '+src));im.src=src;});
+   const baseImage=new Image();baseImage.onload=()=>{
+    cc.drawImage(baseImage,0,0,2048,2048);
+    const finish=()=>{
+     const compositeTexture=new BABYLON.DynamicTexture('terrain-composite-'+worldKey,{width:2048,height:2048},scene,false,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+     compositeTexture.getContext().drawImage(compositeCanvas,0,0);compositeTexture.update(false);
+     compositeTexture.wrapU=compositeTexture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;compositeTexture.anisotropicFilteringLevel=8;
+     m.diffuseTexture=compositeTexture;m.diffuseColor=new BABYLON.Color3(1,1,1);
+     m.specularColor=new BABYLON.Color3(.025,.025,.025);m.roughness=.98;
+     const normalPath=worldKey==='atacamatitan'?'img/tex_sand_n.jpg':worldKey==='arackar'?'img/tex_gsand_n.jpg':worldKey==='stegouros'?'img/tx_leaves_n.jpg':'img/tx_dirt_n.jpg';
+     const normal=new BABYLON.Texture(normalPath,scene,false,true);normal.wrapU=normal.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;normal.uScale=normal.vScale=55;normal.anisotropicFilteringLevel=8;m.bumpTexture=normal;m.bumpTexture.level=.34;
+     mesh.material=m;mesh.refreshBoundingInfo();resolve();
+    };
+    if(!detailProfiles){finish();return;}
+    Promise.all([loadImage(detailProfiles.sand),loadImage(detailProfiles.gravel),loadImage(detailProfiles.crack)]).then(images=>{
+     const alphas=[.38,.26,.18];
+     images.forEach((im,k)=>{const pat=cc.createPattern(im,'repeat');if(!pat)return;cc.save();cc.globalAlpha=alphas[k];cc.globalCompositeOperation=k===0?'soft-light':'multiply';cc.fillStyle=pat;cc.fillRect(0,0,2048,2048);cc.restore();});
+     finish();
+    }).catch(reject);
+   };
+   baseImage.onerror=()=>reject(new Error('No se pudo cargar la textura base '+WORLD.ground));baseImage.src=WORLD.ground;
    const normalPath=worldKey==='atacamatitan'?'img/tex_sand_n.jpg':worldKey==='arackar'?'img/tex_gsand_n.jpg':worldKey==='stegouros'?'img/tx_leaves_n.jpg':'img/tx_dirt_n.jpg';
    const normal=new BABYLON.Texture(normalPath,scene,false,true);normal.wrapU=normal.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;normal.uScale=normal.vScale=55;normal.anisotropicFilteringLevel=8;m.bumpTexture=normal;m.bumpTexture.level=.34;
    mesh.material=m;mesh.refreshBoundingInfo();resolve();
