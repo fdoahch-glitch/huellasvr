@@ -92,6 +92,9 @@ check('Sonido nocturno original y mezcla de lluvia',()=>{
 check('Catálogo ambiental v19: rocas y helechos GLB complementarios',()=>{
  for(const file of ['models/env/rock_09.glb','models/env/fern_02.glb','models/env/rock_07.glb','models/env/dead_tree_trunk_02.glb']){assert.ok(main.includes(file),'No se instancia '+file);assert.ok(exists(file),'Falta recurso '+file);}
 });
+check('Paisaje sonoro v19: viento, agua, lluvia, insectos y llamados de manada',()=>{
+ for(const token of ['waterGain','nightInsectGain','waterLfo.frequency.value=.7','insectLfo.frequency.value=13','call.frequency.setValueAtTime','function updateDinoFootFX'])assert.ok(main.includes(token),'Falta '+token);
+});
 check('Clima, ciclo horario y sonido',()=>{
  for(const token of ['function cycleTimeOfDay()','function initAmbientAudio()','function updateEnvironment(dt)','rainSystem'])assert.ok(main.includes(token),'Falta '+token);
 });
