@@ -274,7 +274,7 @@ check('Vegetación 3D utiliza los GLB originales de v19 sin bosque procedural du
  assert.ok(main.includes('await addVegetation()'));
  assert.ok(main.includes('models/veg/araucaria_adulta.glb'));
  assert.ok(main.includes('models/veg/fern_tripo.glb'));
- assert.ok(!main.includes('addForest3D();'),'No debe superponerse el bosque procedural sustitutivo');
+ assert.ok(main.includes('addForest3D();'),'Debe conservarse el sistema de bosque 3D del original v19');
  assert.ok(main.includes("CreateDisc('butterfly-left-"),'Las alas ambientales no deben ser paneles rectangulares');
 });
 
