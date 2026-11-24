@@ -340,7 +340,7 @@ function fitRoot(root,targetLength){
 }
 function resolveDinoClip(clips,semantic){
  const target=String(semantic).toLowerCase().replace(/[^a-z]/g,'');
- const normalized=name=>String(name||'').toLowerCase().replace(/(?:[-_ ]\\d+)+$/,'').replace(/[^a-z]/g,'');
+ const normalized=name=>String(name||'').toLowerCase().replace(/(?:[-_ ]\d+)+$/,'').replace(/[^a-z]/g,'');
  return clips.find(group=>normalized(group.name)===target)||clips.find(group=>normalized(group.name).startsWith(target))||null;
 }
 async function spawnDino(id,index,total,center){
