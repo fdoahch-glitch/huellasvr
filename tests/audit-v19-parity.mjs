@@ -99,8 +99,9 @@ check('Cerros desérticos GLB originales en Atacamatitan',()=>{assert.ok(main.in
 check('Catálogo ambiental v19: rocas y helechos GLB complementarios',()=>{
  for(const file of ['models/env/rock_09.glb','models/env/fern_02.glb','models/env/rock_07.glb','models/env/dead_tree_trunk_02.glb']){assert.ok(main.includes(file),'No se instancia '+file);assert.ok(exists(file),'Falta recurso '+file);}
 });
+check('Lluvia recupera densidad y tinte de niebla de v19',()=>{assert.ok(main.includes('1+1.4*rainBlend'));assert.ok(main.includes("BABYLON.Color3.FromHexString('#8d949c')"));assert.ok(main.includes("timeMode==='noche'?.2:1"));});
 check('Lluvia gradual afecta iluminación, cielo, nubes y niebla',()=>{
- for(const token of ['rainBlend+=(Number(raining)-rainBlend)','1-.3*rainBlend','1-.6*rainBlend','1-.38*rainBlend','1+.4*rainBlend','.5+.4*rainBlend'])assert.ok(main.includes(token),'Falta '+token);
+ for(const token of ['rainBlend+=(Number(raining)-rainBlend)','1-.3*rainBlend','1-.6*rainBlend','1-.38*rainBlend','1+1.4*rainBlend','.5+.4*rainBlend'])assert.ok(main.includes(token),'Falta '+token);
 });
 check('Lluvia escalada por calidad para limitar carga GPU en móvil',()=>{
  assert.ok(main.includes("quality==='alta'?900:quality==='media'?520:260"));
