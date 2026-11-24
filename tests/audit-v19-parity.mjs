@@ -93,6 +93,7 @@ check('Sonido nocturno original y mezcla de lluvia',()=>{
  assert.ok(main.includes('nightInsectGain'));assert.ok(main.includes('insectLfo.frequency.value=13'));
  assert.ok(main.includes("timeMode==='noche'&&!raining&&soundOn"));
 });
+check('Cerros desérticos GLB originales en Atacamatitan',()=>{assert.ok(main.includes("worldKey==='atacamatitan')specs.unshift({file:'models/env/cerro_desierto.glb',n:11"));assert.ok(exists('models/env/cerro_desierto.glb'));});
 check('Catálogo ambiental v19: rocas y helechos GLB complementarios',()=>{
  for(const file of ['models/env/rock_09.glb','models/env/fern_02.glb','models/env/rock_07.glb','models/env/dead_tree_trunk_02.glb']){assert.ok(main.includes(file),'No se instancia '+file);assert.ok(exists(file),'Falta recurso '+file);}
 });
