@@ -70,6 +70,18 @@ check('Selección de dinosaurios, información y locomoción',()=>{
 check('Terreno, mezcla de texturas, montañas, ríos y lagunas',()=>{
  for(const token of ['detailProfiles','function addMountains()','function addWater()','function addSandBars()','terrainHeightAt'])assert.ok(main.includes(token),'Falta '+token);
 });
+check('Terreno optimizado: distancia lineal y buffers tipados',()=>{
+ assert.ok(main.includes('transformada chamfer de dos pasadas'));
+ assert.ok(main.includes('D_ORTHO=4,D_DIAG=6'));
+ assert.ok(main.includes('D[Math.round(fj)*N+Math.round(fi)]>=32'));
+ assert.ok(main.includes('new Float32Array(vertexCount*3)'));
+ assert.ok(main.includes('new Uint32Array(quadCount*6)'));
+ assert.ok(main.includes('new Float32Array(positions.length)'));
+});
+check('Materiales de vegetación compartidos se ajustan una vez por GLB',()=>{
+ assert.ok(main.includes('materialsTuned=false'));
+ assert.ok(main.includes('if(!materialsTuned){instances.rootNodes.forEach(node=>tuneVisualMaterials(node,true));materialsTuned=true;}'));
+});
 check('Selección por mirada para visores WebXR sin mando',()=>{
  assert.ok(main.includes('function updateXRGaze()'));
  assert.ok(main.includes('performance.now()-xrGazeSince>=1400'));
