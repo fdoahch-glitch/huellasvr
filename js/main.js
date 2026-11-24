@@ -733,7 +733,7 @@ async function enterXR(){try{
  if(!navigator.xr){$('sensorNotice').classList.remove('hidden');return;}
  if(!xr){
   xr=await scene.createDefaultXRExperienceAsync({floorMeshes:[ground],uiOptions:{sessionMode:'immersive-vr',referenceSpaceType:'local-floor',customButtons:[]},disableTeleportation:true,disableNearInteraction:false});
-  xr.baseExperience.onInitialXRPoseSetObservable.add(xrCamera=>{const px=camera.position.x,pz=camera.position.z;xrCamera.position.x=px;xrCamera.position.y=terrainHeightAt(px,pz);xrCamera.position.z=pz;});
+  xr.baseExperience.onInitialXRPoseSetObservable.add(xrCamera=>{const px=camera.position.x,pz=camera.position.z,headHeight=Math.max(1.1,Math.min(2.2,xrCamera.position.y||1.65));xrCamera.position.x=px;xrCamera.position.y=terrainHeightAt(px,pz)+headHeight;xrCamera.position.z=pz;});
   xr.baseExperience.onStateChangedObservable.add(state=>{const hint=document.querySelector('#hud .hint');if(state===BABYLON.WebXRState.IN_XR&&hint)hint.textContent='Mira un dinosaurio durante 1,4 s para conocerlo · joystick para caminar y girar · gatillo para seleccionar';if(state===BABYLON.WebXRState.NOT_IN_XR){if(hint)hint.textContent='Arrastra para mirar · toca el suelo para caminar · toca un dinosaurio para conocerlo';if(xr.input?.xrCamera){const p=xr.input.xrCamera.position;camera.position.set(p.x,terrainHeightAt(p.x,p.z)+1.65,p.z);}}});
   xr.input.onControllerAddedObservable.add(controller=>{controller.onMotionControllerInitObservable.add(motionController=>{const trigger=motionController.getComponent('xr-standard-trigger');trigger?.onButtonStateChangedObservable.add(component=>{if(!component.pressed)return;const ray=controller.getForwardRay(120),pick=scene.pickWithRay(ray,mesh=>mesh.isPickable);if(pick?.hit)onPick(pick);});});});
   const fm=xr.baseExperience.featuresManager;
@@ -755,6 +755,7 @@ function wrapAngleDelta(value,base){let d=(value-base)*Math.PI/180;while(d>Math.
 async function toggleMobileOrientation(){
  if(orientationEnabled){window.removeEventListener('deviceorientation',orientationHandler,true);orientationEnabled=false;orientationBase=null;orientationHandler=null;$('sensorButton').textContent='🧭';return;}
  try{
+  if(!window.isSecureContext)throw new Error('Los sensores requieren HTTPS.');
   const Orientation=window.DeviceOrientationEvent;
   if(Orientation&&typeof Orientation.requestPermission==='function'){const permission=await Orientation.requestPermission();if(permission!=='granted')throw new Error('Permiso de orientación denegado.');}
   if(!Orientation)throw new Error('Este navegador no ofrece sensores de orientación.');
