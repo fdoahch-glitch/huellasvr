@@ -27,13 +27,13 @@ const WORLDS = {
 const requested = (params.get('mundo') || 'atacamatitan').toLowerCase();
 const worldKey = WORLDS[requested] ? requested : 'valle';
 const WORLD = WORLDS[worldKey];
-let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[];
+let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[];
 const setProgress=(v,t)=>{$('progressFill').style.width=Math.round(v*100)+'%';$('loadText').textContent=t;};
 function mat(name,color,rough=.9){const m=new BABYLON.StandardMaterial(name,scene);m.diffuseColor=BABYLON.Color3.FromHexString(color);m.specularColor=new BABYLON.Color3(.08,.08,.08);m.roughness=rough;return m;}
 function rand(seed){let x=Math.sin(seed*127.1+311.7)*43758.5453;return x-Math.floor(x);}
 function addSky(){
  const sky=BABYLON.MeshBuilder.CreateSphere('sky-dome',{diameter:900,segments:32},scene);sky.isPickable=false;sky.infiniteDistance=true;
- const m=new BABYLON.StandardMaterial('panorama-sky',scene);m.backFaceCulling=false;m.disableLighting=true;m.emissiveTexture=new BABYLON.Texture(WORLD.sky,scene,false,true);m.emissiveColor=new BABYLON.Color3(1,1,1);sky.material=m;sky.rotation.y=(WORLD.panoRot??23)*Math.PI/180;return sky;
+ const m=new BABYLON.StandardMaterial('panorama-sky',scene);m.backFaceCulling=false;m.disableLighting=true;m.emissiveTexture=new BABYLON.Texture(WORLD.sky,scene,false,true);const skyTint=({atacamatitan:[1.02,1,.96],arackar:[1,.97,.92],patagonia:[.9,.95,1],stegouros:[.93,1,.95],aysen:[.96,.98,1]}[worldKey]||[1,1,1]);m.emissiveColor=new BABYLON.Color3(...skyTint);sky.material=m;sky.rotation.y=(WORLD.panoRot??23)*Math.PI/180;return sky;
 }
 function addTerrain(){
  const T=WORLD,meta=T.terrainMeta||[-.5,.5,-.5,.5,-.003,.06],width=T.terrainWidth||300;
@@ -103,30 +103,31 @@ function addTerrain(){
    mesh.isPickable=true;mesh.checkCollisions=true;mesh.metadata={ground:true};ground=mesh;pickables.push(mesh);
    const m=new BABYLON.StandardMaterial('photo-terrain-'+worldKey,scene);
    const detailProfiles={
-    atacamatitan:{sand:'img/tex_sand_d.jpg',gravel:'img/tx_stones_d.jpg',crack:'img/tx_stones_d.jpg',normal:'img/tex_sand_n.jpg',size:2.4},
-    arackar:{sand:'img/tex_crack_d.jpg',gravel:'img/tex_gsand_d.jpg',crack:'img/tx_stones_d.jpg',normal:'img/tex_gsand_n.jpg',size:2.2},
-    patagonia:{sand:'img/tx_dirt_d.jpg',gravel:'img/tex_gsand_d.jpg',crack:'img/tex_gsand_d.jpg',normal:'img/tx_dirt_n.jpg',size:3},
-    stegouros:{sand:'img/tx_leaves_d.jpg',gravel:'img/tx_redplants_d.jpg',crack:'img/tx_stones_d.jpg',normal:'img/tx_leaves_n.jpg',size:2.4},
-    aysen:{sand:'img/tx_dirt_d.jpg',gravel:'img/tx_stones_d.jpg',crack:'img/tx_stones_d.jpg',normal:'img/tx_dirt_n.jpg',size:3}
+    atacamatitan:{sand:{src:'img/tex_sand_d.jpg',mean:[.2189,.1009,.0608],size:2.4},gravel:{src:'img/tx_stones_d.jpg',mean:[.1996,.1575,.1093],size:2.2},crack:{src:'img/tx_stones_d.jpg',mean:[.1996,.1575,.1093],size:2.2},normal:'img/tex_sand_n.jpg',photoLum:.18,photoSat:1.05,tint:[1,1,1]},
+    arackar:{sand:{src:'img/tex_crack_d.jpg',mean:[.2,.12,.08],size:3.2},gravel:{src:'img/tex_gsand_d.jpg',mean:[.2967,.163,.0736],size:2.2},crack:{src:'img/tx_stones_d.jpg',mean:[.1996,.1575,.1093],size:2.2},normal:'img/tx_dirt_n.jpg',photoLum:.30,photoSat:.75,tint:[1.08,1.04,.98]},
+    patagonia:{sand:{src:'img/tx_dirt_d.jpg',mean:[.1534,.1081,.0612],size:3},gravel:{src:'img/tex_gsand_d.jpg',mean:[.2967,.163,.0736],size:2.2},crack:{src:'img/tex_gsand_d.jpg',mean:[.2967,.163,.0736],size:2.2},normal:'img/tx_dirt_n.jpg',photoLum:.14,photoSat:.8,tint:[.97,1,1.02]},
+    stegouros:{sand:{src:'img/tx_leaves_d.jpg',mean:[.2,.1183,.0443],size:2.4},gravel:{src:'img/tx_redplants_d.jpg',mean:[.1399,.0985,.0352],size:2.6},crack:{src:'img/tx_stones_d.jpg',mean:[.1996,.1575,.1093],size:2.2},normal:'img/tx_leaves_n.jpg',photoLum:.06,photoSat:.95,tint:[1,1,1]},
+    aysen:{sand:{src:'img/tx_dirt_d.jpg',mean:[.1534,.1081,.0612],size:3},gravel:{src:'img/tx_stones_d.jpg',mean:[.1996,.1575,.1093],size:2.2},crack:{src:'img/tx_stones_d.jpg',mean:[.1996,.1575,.1093],size:2.2},normal:'img/tx_dirt_n.jpg',photoLum:.12,photoSat:.35,tint:[.95,.96,.98]}
    }[worldKey];
    const compositeCanvas=document.createElement('canvas');compositeCanvas.width=compositeCanvas.height=2048;
    const cc=compositeCanvas.getContext('2d',{alpha:false});
    const loadImage=src=>new Promise((ok,no)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=()=>no(new Error('No se pudo cargar textura '+src));im.src=src;});
    const baseImage=new Image();baseImage.onload=()=>{
-    cc.drawImage(baseImage,0,0,2048,2048);
+    cc.save();cc.filter='saturate('+(detailProfiles?.photoSat??1)+') brightness('+(1+(detailProfiles?.photoLum??0)*.35)+')';cc.drawImage(baseImage,0,0,2048,2048);cc.restore();
+    if(detailProfiles?.tint){const t=detailProfiles.tint;cc.save();cc.globalCompositeOperation='multiply';cc.fillStyle='rgb('+Math.round(t[0]*255)+','+Math.round(t[1]*255)+','+Math.round(t[2]*255)+')';cc.fillRect(0,0,2048,2048);cc.restore();}
     const finish=()=>{
      const compositeTexture=new BABYLON.DynamicTexture('terrain-composite-'+worldKey,{width:2048,height:2048},scene,false,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
      compositeTexture.getContext().drawImage(compositeCanvas,0,0);compositeTexture.update(false);
      compositeTexture.wrapU=compositeTexture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;compositeTexture.anisotropicFilteringLevel=8;
      m.diffuseTexture=compositeTexture;m.diffuseColor=new BABYLON.Color3(1,1,1);
      m.specularColor=new BABYLON.Color3(.025,.025,.025);m.roughness=.98;
-     const normal=new BABYLON.Texture(detailProfiles?.normal||'img/tx_dirt_n.jpg',scene,false,true);normal.wrapU=normal.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;normal.uScale=normal.vScale=300/(detailProfiles?.size||3);normal.anisotropicFilteringLevel=8;m.bumpTexture=normal;m.bumpTexture.level=.7;
+     const normal=new BABYLON.Texture(detailProfiles?.normal||'img/tx_dirt_n.jpg',scene,false,true);normal.wrapU=normal.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;normal.uScale=normal.vScale=300/(detailProfiles?.sand?.size||3);normal.anisotropicFilteringLevel=8;m.bumpTexture=normal;m.bumpTexture.level=.7;
      mesh.material=m;mesh.refreshBoundingInfo();resolve();
     };
     if(!detailProfiles){finish();return;}
-    Promise.all([loadImage(detailProfiles.sand),loadImage(detailProfiles.gravel),loadImage(detailProfiles.crack)]).then(images=>{
-     const alphas=[.38,.26,.18],sizes=[2.4,2.2,2.8];
-     images.forEach((im,k)=>{const pat=cc.createPattern(im,'repeat');if(!pat)return;const tilePx=2048*sizes[k]/300;if(pat.setTransform&&typeof DOMMatrix!=='undefined')pat.setTransform(new DOMMatrix().scale(tilePx/im.width,tilePx/im.height));cc.save();cc.globalAlpha=alphas[k];cc.globalCompositeOperation=k===0?'soft-light':'multiply';cc.fillStyle=pat;cc.fillRect(0,0,2048,2048);cc.restore();});
+    Promise.all([loadImage(detailProfiles.sand.src),loadImage(detailProfiles.gravel.src),loadImage(detailProfiles.crack.src)]).then(images=>{
+     const layers=[detailProfiles.sand,detailProfiles.gravel,detailProfiles.crack],alphas=[.24,.18,.12];
+     images.forEach((im,k)=>{const pat=cc.createPattern(im,'repeat');if(!pat)return;const tilePx=2048*layers[k].size/300;if(pat.setTransform&&typeof DOMMatrix!=='undefined')pat.setTransform(new DOMMatrix().scale(tilePx/im.width,tilePx/im.height));cc.save();cc.globalAlpha=alphas[k];cc.globalCompositeOperation=k===0?'soft-light':'multiply';cc.fillStyle=pat;cc.fillRect(0,0,2048,2048);cc.restore();});
      finish();
     }).catch(reject);
    };
@@ -152,7 +153,7 @@ function addWater(){
  const waterTex=new BABYLON.DynamicTexture('water-ripple-texture-'+worldKey,256,scene,false,BABYLON.Texture.TRILINEAR_SAMPLINGMODE),wc=waterTex.getContext();
  const wg=wc.createLinearGradient(0,0,0,256);wg.addColorStop(0,waterPal.edge);wg.addColorStop(.48,waterPal.mid);wg.addColorStop(1,waterPal.center);wc.fillStyle=wg;wc.fillRect(0,0,256,256);
  for(let n=0;n<46;n++){const y=(n*37)%256,x=(n*71)%256;wc.beginPath();wc.ellipse(x,y,8+(n%7)*3,1+(n%3),-.15,0,Math.PI*2);wc.strokeStyle='rgba(235,245,238,'+(.045+(n%4)*.018)+')';wc.lineWidth=.8+(n%2)*.45;wc.stroke();}
- waterTex.update(false);waterTex.wrapU=waterTex.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;waterTex.uScale=4;waterTex.vScale=2;waterTex.anisotropicFilteringLevel=4;
+ waterTex.update(false);waterTex.wrapU=waterTex.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;waterTex.uScale=4;waterTex.vScale=2;waterTex.anisotropicFilteringLevel=4;waterTextures.push(waterTex);
  const waterMat=new BABYLON.StandardMaterial('original-water-'+worldKey,scene);
  waterMat.diffuseTexture=waterTex;waterMat.diffuseColor=new BABYLON.Color3(1,1,1);
  waterMat.emissiveColor=BABYLON.Color3.FromHexString(waterPal.center).scale(.06);waterMat.specularColor=new BABYLON.Color3(.42,.55,.58);waterMat.alpha=.94;waterMat.roughness=.24;
@@ -173,11 +174,11 @@ function addWater(){
  });
  (WORLD.lagoons||[]).forEach((l,index)=>{
   const disk=BABYLON.MeshBuilder.CreateDisc('original-lagoon-'+index,{radius:1,tessellation:96,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);
-  disk.scaling.set(l.rx,1,l.rz);disk.rotation.x=Math.PI/2;disk.rotation.z=l.rot||0;disk.position.set(l.x,terrainHeightAt(l.x,l.z)+(l.y||.08),l.z);disk.material=waterMat;disk.isPickable=false;
+  disk.scaling.set(l.rx,1,l.rz);disk.rotation.x=Math.PI/2;disk.rotation.y=l.rot||0;const edgeHeights=[];if(l.y==null){for(let k=0;k<16;k++)edgeHeights.push(terrainHeightAt(l.x+Math.cos(k/16*Math.PI*2)*l.rx*1.2,l.z+Math.sin(k/16*Math.PI*2)*l.rz*1.2));}disk.position.set(l.x,l.y!=null?l.y:(Math.max(...edgeHeights)+.03),l.z);disk.material=waterMat;disk.isPickable=false;
  });
 }
 
-function addSandBars(){const c=worldKey==='atacamatitan'?'#c9915a':worldKey==='aysen'?'#a4a197':'#b7a58a';const material=new BABYLON.StandardMaterial('original-sandbar-material',scene);material.diffuseColor=BABYLON.Color3.FromHexString(c);material.roughness=1;(WORLD.bars||[]).forEach((b,i)=>{const mesh=BABYLON.MeshBuilder.CreateDisc('original-sandbar-'+i,{radius:1,tessellation:48,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);mesh.scaling.set(b.rx,1,b.rz);mesh.rotation.x=Math.PI/2;mesh.rotation.z=b.rot||0;mesh.position.set(b.x,terrainHeightAt(b.x,b.z)+.035,b.z);mesh.material=material;mesh.isPickable=false;});}
+function addSandBars(){const c=worldKey==='atacamatitan'?'#c9915a':worldKey==='aysen'?'#a4a197':'#b7a58a';const material=new BABYLON.StandardMaterial('original-sandbar-material',scene);material.diffuseColor=BABYLON.Color3.FromHexString(c);material.roughness=1;(WORLD.bars||[]).forEach((b,i)=>{const mesh=BABYLON.MeshBuilder.CreateDisc('original-sandbar-'+i,{radius:1,tessellation:48,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);mesh.scaling.set(b.rx,1,b.rz);mesh.rotation.x=Math.PI/2;mesh.rotation.y=b.rot||0;mesh.position.set(b.x,terrainHeightAt(b.x,b.z)+.035,b.z);mesh.material=material;mesh.isPickable=false;});}
 async function loadContainer(path){if(assetCache.has(path))return assetCache.get(path);const p=BABYLON.SceneLoader.LoadAssetContainerAsync('',path,scene);assetCache.set(path,p);return p;}
 function findFlatDinoPosition(cx,cz,index){
  let best={x:cx+Math.cos(index*2.4)*8,z:cz+Math.sin(index*2.4)*8},bestScore=Infinity;
@@ -526,7 +527,7 @@ async function init(){
  camera=new BABYLON.UniversalCamera('player-camera',new BABYLON.Vector3(0,1.65,12),scene);camera.minZ=.08;camera.maxZ=320;camera.fov=.92;camera.speed=.35;camera.inertia=.82;camera.angularSensibility=3800;camera.attachControl(canvas,true);camera.keysUp.push(87);camera.keysDown.push(83);camera.keysLeft.push(65);camera.keysRight.push(68);camera.applyGravity=false;camera.checkCollisions=false;camera.ellipsoid=new BABYLON.Vector3(.35,.85,.35);
  setProgress(.08,'Creando el paisaje…');addSky();addLighting();await addTerrain();initDinoFootFX();camera.position.y=1.65+terrainHeightAt(0,12);addWater();addSandBars();addMountains();setProgress(.2,'Cargando dinosaurios…');
  const ids=WORLD.dinos,baseHerd={atacamatitan:22,arackar:24,patagonia:22,stegouros:18,aysen:28,valle:5}[worldKey]||5,herdSize=Math.max(3,Math.round(baseHerd*Q)),totalDinos=ids.length*herdSize;let loadedDinos=0;for(const id of ids){for(let n=0;n<herdSize;n++){await spawnDino(id,n,herdSize,null);loadedDinos++;setProgress(.2+.53*loadedDinos/totalDinos,'Cargando '+DINO[id].name+' · '+loadedDinos+'/'+totalDinos+'…');}}
- setProgress(.76,'Poblando el paisaje…');await addVegetation();addForest3D();setProgress(.9,'Preparando atmósfera…');addParticles();bindControls();scene.onBeforeRenderObservable.add(()=>{const now=performance.now(),dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;movePlayer(dt);animateDinos(now,dt);updateDinoFootFX(dt);});
+ setProgress(.76,'Poblando el paisaje…');await addVegetation();addForest3D();setProgress(.9,'Preparando atmósfera…');addParticles();bindControls();scene.onBeforeRenderObservable.add(()=>{const now=performance.now(),dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;movePlayer(dt);animateDinos(now,dt);updateDinoFootFX(dt);for(const tex of waterTextures)tex.uOffset=(tex.uOffset+dt*.012)%1;});
  engine.runRenderLoop(()=>{if(scene&&scene.activeCamera)scene.render();});window.addEventListener('resize',()=>engine.resize());setProgress(1,'¡Mundo listo!');$('startButtons').classList.remove('hidden');
  }catch(err){console.error(err);$('loadText').textContent='No se pudo iniciar el mundo: '+err.message;$('startButtons').classList.remove('hidden');$('explore').onclick=()=>location.reload();}
 }
