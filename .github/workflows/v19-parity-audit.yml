@@ -33,6 +33,7 @@ jobs:
         run: |
           echo "Commit bajo prueba: $(git rev-parse HEAD)"
           echo "Se validan panorama, ríos, vegetación, cinco mundos y rendimiento por separado."
+          git status --short
       - name: Preparar Node.js
         uses: actions/setup-node@v4
         with:
