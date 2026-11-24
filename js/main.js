@@ -812,12 +812,29 @@ function choosePlayerApproach(d,index,t){
  d.nextCuriosityAt=t+12000+rand(index*227+Math.floor(t/1000))*18000;
  const dx=camera.position.x-d.root.position.x,dz=camera.position.z-d.root.position.z,dist=Math.hypot(dx,dz);
  if(dist<3.5||dist>18)return false;
- const active=dinoRoots.filter(a=>a.goal==='approach'||(a.state==='look'&&a.socialUntil>t)).length;
+ const active=dinoRoots.filter(a=>a!==d&&a.goal==='approach'&&a.state==='walk'&&a.target&&a.socialUntil>t).length;
  if(active>=(d.juvenile?2:1)||rand(index*233+Math.floor(t/7000))>d.curiosity)return false;
- const angle=Math.atan2(dx,dz),side=(rand(index*239+Math.floor(t/9000))>.5?1:-1)*(.35+rand(index*241+Math.floor(t/5000))*.45),face=angle+side,stand=Math.max(2.4,Math.min(5.5,d.length*.22+1.25));
- const x=camera.position.x-Math.sin(face)*stand,z=camera.position.z-Math.cos(face)*stand;
- if(!terrainValidAt(x,z)||isDinoPositionBlocked(d,x,z).blocked)return false;
- d.target={x,z};d.goal='approach';d.state='walk';d.running=!!d.juvenile&&dist>7;d.socialUntil=0;return true;
+ // El destino se busca con la misma regla en todos los mundos y perfiles.
+ // La densidad de Ultra no debe convertir un único punto ocupado en un fallo de IA.
+ const base=Math.atan2(dx,dz),stand=Math.max(2.8,Math.min(6.2,d.length*.22+1.55));
+ const phase=rand(index*239+Math.floor(t/9000))*Math.PI*2;
+ const radii=[stand,stand+1.25,Math.max(2.6,stand-0.7),stand+2.4];
+ let spot=null;
+ rebuildDinoCollisionGrid();
+ for(let ring=0;ring<radii.length&&!spot;ring++){
+  const radius=radii[ring];
+  for(let k=0;k<32;k++){
+   const offset=((k%2===0?1:-1)*Math.ceil(k/2))*Math.PI/16;
+   const a=base+phase+offset;
+   const x=camera.position.x-Math.sin(a)*radius;
+   const z=camera.position.z-Math.cos(a)*radius;
+   if(!terrainValidAt(x,z))continue;
+   if(isDinoPositionBlocked(d,x,z).blocked)continue;
+   spot={x,z};break;
+  }
+ }
+ if(!spot)return false;
+ d.target=spot;d.goal='approach';d.state='walk';d.running=!!d.juvenile&&dist>7;d.socialUntil=0;return true;
 }
 function chooseDinoSocial(d,index,t){
  if(t<d.nextSocialAt||(!d.juvenile&&d.personality!=='social'))return false;
