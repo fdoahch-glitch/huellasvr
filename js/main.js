@@ -328,12 +328,13 @@ function addWater(){
 
 function addSandBars(){const c=worldKey==='atacamatitan'?'#c9915a':worldKey==='aysen'?'#a4a197':'#b7a58a';const material=new BABYLON.StandardMaterial('original-sandbar-material',scene);material.diffuseColor=BABYLON.Color3.FromHexString(c);material.roughness=1;(WORLD.bars||[]).forEach((b,i)=>{const mesh=BABYLON.MeshBuilder.CreateDisc('original-sandbar-'+i,{radius:1,tessellation:48,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);mesh.scaling.set(b.rx,1,b.rz);mesh.rotation.x=Math.PI/2;mesh.rotation.y=b.rot||0;mesh.position.set(b.x,terrainHeightAt(b.x,b.z)+.035,b.z);mesh.material=material;mesh.isPickable=false;});}
 async function loadContainer(path){if(assetCache.has(path))return assetCache.get(path);const p=BABYLON.SceneLoader.LoadAssetContainerAsync('',path,scene).catch(error=>{assetCache.delete(path);error.message='Recurso '+path+': '+(error?.message||String(error));throw error;});assetCache.set(path,p);return p;}
-function findFlatDinoPosition(cx,cz,index,maxRadius=42,supportRadius=2.8){
+function dinoSpacingRadius(d){return Math.max(.55,Math.min(4.5,(d.length||DINO[d.id].length)*.30));}
+function findFlatDinoPosition(cx,cz,index,maxRadius=42,supportRadius=2.8,targetLength=3){
  let best=null,bestScore=Infinity;
- for(let ring=0;ring<=maxRadius;ring+=3)for(let a=0;a<24;a++){
-  const ang=a*Math.PI*2/24,x=cx+Math.cos(ang)*ring,z=cz+Math.sin(ang)*ring;
+ for(let ring=0;ring<=maxRadius;ring+=2.5)for(let a=0;a<32;a++){
+  const ang=a*Math.PI*2/32,x=cx+Math.cos(ang)*ring,z=cz+Math.sin(ang)*ring;
   if(!terrainValidAt(x,z))continue;
-  if(dinoRoots.some(d=>Math.hypot(d.root.position.x-x,d.root.position.z-z)<Math.max(7,supportRadius*2.2)))continue;
+  if(dinoRoots.some(d=>Math.hypot(d.root.position.x-x,d.root.position.z-z)<dinoSpacingRadius(d)+Math.max(.55,Math.min(4.5,targetLength*.30))+.55))continue;
   let lo=1e9,hi=-1e9,ok=true;
   for(let q=0;q<8;q++){const px=x+Math.cos(q*Math.PI/4)*supportRadius,pz=z+Math.sin(q*Math.PI/4)*supportRadius;if(!terrainValidAt(px,pz)){ok=false;break;}const h=terrainHeightAt(px,pz);lo=Math.min(lo,h);hi=Math.max(hi,h);}
   if(!ok)continue;const score=(hi-lo)*5+ring*.015+Math.abs(rand(index*31+a)-.5)*.08;
@@ -376,12 +377,13 @@ async function spawnDino(id,index,total,center){
  const preferred=center||herd?.center||{x:0,z:-15};
  const angle=index*2.4+.7,radius=6+(index%6)*2;
  const seedX=preferred.x+Math.cos(angle)*radius,seedZ=preferred.z+Math.sin(angle)*radius;
- const supportRadius=Math.max(2.8,targetLength*.3+.35),spot=findFlatDinoPosition(seedX,seedZ,index,6,supportRadius)||findFlatDinoPosition(preferred.x,preferred.z,index,42,supportRadius);
+ const supportRadius=Math.max(2.8,targetLength*.3+.35),spot=findFlatDinoPosition(seedX,seedZ,index,10,supportRadius,targetLength)||findFlatDinoPosition(preferred.x,preferred.z,index,48,supportRadius,targetLength);
  if(!spot||!terrainValidAt(spot.x,spot.z))throw new Error('No se encontró suelo firme para '+data.name);
  root.position.set(spot.x,terrainHeightAt(spot.x,spot.z),spot.z);
  root.rotation.y=forwardYaw;
  root.getChildMeshes().forEach(m=>{m.isPickable=true;m.receiveShadows=true;m.metadata={...(m.metadata||{}),dinoId:id};pickables.push(m);shadowGenerator?.addShadowCaster(m,true);});root.metadata.targetLength=targetLength;
- dinoRoots.push({root,id,length:targetLength,clips,clipName:idle?'Idle':'',activeClip:idle||null,transitionFrom:null,transitionElapsed:0,baseYaw:forwardYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},herdCenter:{...preferred},heading:rand(index+71)*Math.PI*2,target:null,goal:null,state:'idle',timer:2+rand(index+82)*5,radius:Math.min(4,1.5+rand(index+8)*2),running:false,restLook:false,drankStamp:-1,lastFootstep:0,stepDistance:0,actualSpeed:0,footDistance:0,dustDistance:0,footSide:1,lastFootPos:root.position.clone()});
+ const juvenile=targetLength<=data.length*.58,personalityRoll=rand(index*197+id.length*29),personality=juvenile?(personalityRoll<.68?'playful':personalityRoll<.88?'curious':'shy'):(personalityRoll<.34?'curious':personalityRoll<.62?'social':personalityRoll<.82?'calm':'shy');
+ dinoRoots.push({root,id,length:targetLength,clips,clipName:idle?'Idle':'',activeClip:idle||null,transitionFrom:null,transitionElapsed:0,baseYaw:forwardYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},herdCenter:{...preferred},heading:rand(index+71)*Math.PI*2,target:null,goal:null,state:'idle',timer:1.5+rand(index+82)*4,radius:Math.min(4,1.5+rand(index+8)*2),running:false,restLook:false,drankStamp:-1,juvenile,personality,curiosity:juvenile ? .82 : personality==='curious' ? .68 : personality==='social' ? .34 : .12,nextCuriosityAt:performance.now()+3500+rand(index*211+5)*10000,socialUntil:0,lastFootstep:0,stepDistance:0,actualSpeed:0,footDistance:0,dustDistance:0,footSide:1,lastFootPos:root.position.clone()});
  return root;
 }
 const VEGETATION_QUALITY={alta:1,media:.6,baja:.3}[quality]||1;
@@ -740,10 +742,22 @@ function herdDrinkTarget(d,index){
  return candidates.length?{x:candidates[0].x,z:candidates[0].z}:null;
 }
 function isDinoPositionBlocked(d,x,z){
- const bodyRadius=Math.max(.35,Math.min(1.35,(d.length||DINO[d.id].length)*.11));
+ const bodyRadius=dinoSpacingRadius(d);
  for(const zone of environmentCollisionZones){const min=bodyRadius+zone.radius;if((x-zone.x)*(x-zone.x)+(z-zone.z)*(z-zone.z)<min*min)return {blocked:true,kind:zone.kind};}
- for(const other of dinoRoots){if(other===d||!other.root||other.state==='rest')continue;const min=bodyRadius+Math.max(.35,Math.min(1.35,(other.length||DINO[other.id].length)*.11));const dx=x-other.root.position.x,dz=z-other.root.position.z;if(dx*dx+dz*dz<min*min)return {blocked:true,kind:'dinosaur'};}
+ for(const other of dinoRoots){if(other===d||!other.root)continue;const min=bodyRadius+dinoSpacingRadius(other)+.45;const dx=x-other.root.position.x,dz=z-other.root.position.z;if(dx*dx+dz*dz<min*min)return {blocked:true,kind:'dinosaur'};}
  return {blocked:false,kind:null};
+}
+function choosePlayerApproach(d,index,t){
+ if(!camera||t<d.nextCuriosityAt||d.curiosity<.2)return false;
+ d.nextCuriosityAt=t+12000+rand(index*227+Math.floor(t/1000))*18000;
+ const dx=camera.position.x-d.root.position.x,dz=camera.position.z-d.root.position.z,dist=Math.hypot(dx,dz);
+ if(dist<3.5||dist>18)return false;
+ const active=dinoRoots.filter(a=>a.goal==='approach'||(a.state==='look'&&a.socialUntil>t)).length;
+ if(active>=(d.juvenile?2:1)||rand(index*233+Math.floor(t/7000))>d.curiosity)return false;
+ const angle=Math.atan2(dx,dz),side=(rand(index*239+Math.floor(t/9000))>.5?1:-1)*(.35+rand(index*241+Math.floor(t/5000))*.45),face=angle+side,stand=Math.max(2.4,Math.min(5.5,d.length*.22+1.25));
+ const x=camera.position.x-Math.sin(face)*stand,z=camera.position.z-Math.cos(face)*stand;
+ if(!terrainValidAt(x,z)||isDinoPositionBlocked(d,x,z).blocked)return false;
+ d.target={x,z};d.goal='approach';d.state='walk';d.running=!!d.juvenile&&dist>7;d.socialUntil=0;return true;
 }
 function animateDinos(t,dt){
  const step=Math.min(.05,Math.max(0,dt||0)),herd=HERD_CONFIG[worldKey];
@@ -762,7 +776,8 @@ function animateDinos(t,dt){
    d.timer-=step;
    if(d.timer<=0){
     d.target=null;d.goal=null;d.running=false;d.actualSpeed=0;
-    if(herd){
+    if(choosePlayerApproach(d,index,t)){d.timer=0;}
+    else if(herd){
      if(herdMode==='rest'&&((index*7+herdStamp)%3!==0||rand(index*31+herdStamp)<.35)){
       d.state='rest';d.restLook=rand(index*43+herdStamp)<.35;d.timer=9+rand(index*47+herdStamp)*10;d.target={rest:true};
      }else{
@@ -791,9 +806,10 @@ function animateDinos(t,dt){
   }
   if(d.state==='walk'&&d.target&&!d.target.rest){
    const dx=d.target.x-root.position.x,dz=d.target.z-root.position.z,dist=Math.hypot(dx,dz);
-   if(dist<(d.goal==='drink'?.9:.35)){
+   if(dist<(d.goal==='drink'?.9:d.goal==='approach'?Math.max(1.8,d.length*.16+1.1):.45)){
     if(d.goal==='drink'){d.state='drink';d.timer=7+rand(index*127+herdStamp)*7;d.drankStamp=herdStamp;}
-    else{d.state='idle';d.timer=2+rand(index*131+Math.floor(t))*4;}
+    else if(d.goal==='approach'){d.state='look';d.lookUntil=t+4500+rand(index*251+Math.floor(t/1000))*4500;d.socialUntil=d.lookUntil;d.timer=0;}
+     else{d.state='idle';d.timer=2+rand(index*131+Math.floor(t))*4;}
     d.target=null;d.running=false;d.actualSpeed=0;
    }else{
     const desired=Math.atan2(dx,dz);let delta=desired-d.heading;
@@ -809,7 +825,8 @@ function animateDinos(t,dt){
     }else{d.state='idle';d.target=null;d.timer=obstacle.blocked?(.25+rand(index*151+Math.floor(t))*.45):2.5;d.actualSpeed=0;d.lastCollision=obstacle.blocked?obstacle.kind:null;}
    }
   }else if(d.state!=='walk')root.position.y=terrainHeightAt(root.position.x,root.position.z);
-  const desired=d.testClip||(d.state==='look'||d.state==='drink'||(d.state==='rest'&&d.restLook)?'Neck_Look':d.state==='walk'?(d.running?'Run':'Walk'):'Idle');
+  if(d.state==='look'&&camera){const tx=camera.position.x-root.position.x,tz=camera.position.z-root.position.z;if(Math.hypot(tx,tz)>.1){const face=Math.atan2(tx,tz);let turn=face-d.heading;while(turn>Math.PI)turn-=Math.PI*2;while(turn< -Math.PI)turn+=Math.PI*2;d.heading+=Math.sign(turn)*Math.min(Math.abs(turn),1.8*step);}}
+   const desired=d.testClip||(d.state==='look'||d.state==='drink'||(d.state==='rest'&&d.restLook)?'Neck_Look':d.state==='walk'?(d.running?'Run':'Walk'):'Idle');
   if(d.clipName!==desired){
    const clip=resolveDinoClip(d.clips,desired);
    if(clip&&clip!==d.activeClip){if(d.transitionFrom&&d.transitionFrom!==d.activeClip)d.transitionFrom.stop();d.transitionFrom=d.activeClip||null;d.transitionElapsed=0;clip.start(true);clip.setWeightForAllAnimatables?.(0);d.activeClip=clip;d.clipName=desired;}
@@ -904,7 +921,7 @@ function installDiagnostics(){
    meshes:scene?.meshes?.length||0,activeMeshes:scene?.getActiveMeshes?.().length||0,
    textures:engine?.getLoadedTexturesCache?.().length||0,dinosaurs:dinoRoots.length,
    vegetationAssets:assetCache.size,particles:scene?.particleSystems?.length||0,
-   dinoStates:dinoRoots.map(d=>({id:d.id,clip:d.clipName,active:!!d.activeClip,playing:!!d.activeClip?.isPlaying,state:d.state,heading:d.heading,speed:d.actualSpeed,target:d.target?{x:+d.target.x.toFixed(2),z:+d.target.z.toFixed(2)}:null,forwardYaw:d.baseYaw,position:{x:+d.root.position.x.toFixed(2),y:+d.root.position.y.toFixed(2),z:+d.root.position.z.toFixed(2)}})),
+   dinoStates:dinoRoots.map(d=>({id:d.id,clip:d.clipName,active:!!d.activeClip,playing:!!d.activeClip?.isPlaying,state:d.state,goal:d.goal,personality:d.personality,juvenile:d.juvenile,heading:d.heading,speed:d.actualSpeed,target:d.target?{x:+d.target.x.toFixed(2),z:+d.target.z.toFixed(2)}:null,forwardYaw:d.baseYaw,position:{x:+d.root.position.x.toFixed(2),y:+d.root.position.y.toFixed(2),z:+d.root.position.z.toFixed(2)}})),
    cpuUpdateMs:Math.round(cpuUpdateMs*100)/100,cpuUpdateAvgMs:Math.round(cpuUpdateAvgMs*100)/100,
    frameTimeMs:sceneInstrumentation?.frameTimeCounter?.current??null,renderTimeMs:sceneInstrumentation?.renderTimeCounter?.current??null,physicsTimeMs:sceneInstrumentation?.physicsTimeCounter?.current??null,drawCalls:sceneInstrumentation?.drawCallsCounter?.current??null,
    gpuFrameTimeMs:gpuCounter&&Number.isFinite(gpuCounter.current)?Math.round(gpuCounter.current/1e6*100)/100:null,
