@@ -310,12 +310,12 @@ check('Colisión dinámica de dinosaurios con obstáculos y manada',()=>{
 });
 
 check('Mejoras visuales Babylon.js/WebGL2: perfiles, PBR, sombras y postprocesado',()=>{
- for(const token of ['VISUAL_PROFILE={ultra:','function tuneVisualMaterials(root,foliage=false)','material.sheen.isEnabled=true','function addEnvironmentLighting()','new BABYLON.EquiRectangularCubeTexture','scene.environmentTexture=environmentTexture','function addVisualPipeline()','DefaultRenderingPipeline','fxaaEnabled=VP.samples<=1','bloomEnabled=VP.bloom>0','shadowGenerator=new BABYLON.ShadowGenerator(VP.shadow','waterMat.metallic=.08','waterMat.roughness=.16','anisotropicFilteringLevel=VP.anisotropy','function addSSAO()','new BABYLON.SSAORenderingPipeline','function addAdvancedVisualEffects()','new BABYLON.SSRRenderingPipeline','function createParticleSystem(name,capacity)','BABYLON.GPUParticleSystem.IsSupported','new BABYLON.GPUParticleSystem','particleBackend','ssao:!!ssaoPipeline','environmentReady','thinInstances:scene.meshes.some(m=>m.hasThinInstances)'])assert.ok(main.includes(token),'Falta mejora visual '+token);
+ for(const token of ['VISUAL_PROFILE={alta:','function tuneVisualMaterials(root,foliage=false)','material.sheen.isEnabled=true','function addEnvironmentLighting()','new BABYLON.EquiRectangularCubeTexture','scene.environmentTexture=environmentTexture','function addVisualPipeline()','DefaultRenderingPipeline','fxaaEnabled=VP.samples<=1','bloomEnabled=VP.bloom>0','shadowGenerator=new BABYLON.ShadowGenerator(VP.shadow','waterMat.metallic=.08','waterMat.roughness=.16','anisotropicFilteringLevel=VP.anisotropy','function addSSAO()','new BABYLON.SSAORenderingPipeline','function addAdvancedVisualEffects()','new BABYLON.SSRRenderingPipeline','function createParticleSystem(name,capacity)','BABYLON.GPUParticleSystem.IsSupported','new BABYLON.GPUParticleSystem','particleBackend','ssao:!!ssaoPipeline','environmentReady','thinInstances:scene.meshes.some(m=>m.hasThinInstances)'])assert.ok(main.includes(token),'Falta mejora visual '+token);
  assert.ok(main.includes('addVisualPipeline();bindControls()'));
- assert.ok(main.includes("!['ultra','alta'].includes(quality)")&&main.includes('mobileDevice'),'SSAO debe limitarse a escritorio de alta calidad');
+ assert.ok(main.includes("quality!=='alta'")&&main.includes('mobileDevice'),'SSAO debe limitarse a escritorio de alta calidad');
  assert.ok(main.includes('removeSSAO()')&&main.includes('addSSAO()'),'SSAO debe liberarse en VR y restaurarse al salir');
  assert.ok(main.includes('createParticleSystem(\'ambient-dust\',VP.particles)')&&main.includes("createParticleSystem('rain',rainCapacity)"),'Polvo y lluvia deben usar GPU con fallback');
- assert.ok(main.includes("quality!=='ultra'||mobileDevice"),'SSR debe limitarse a perfil ultra en escritorio');
+ assert.ok(main.includes("quality!=='alta'||mobileDevice"),'SSR debe limitarse a perfil ultra en escritorio');
  assert.ok(main.includes('state===BABYLON.WebXRState.IN_XR')&&main.includes('ssrPipeline.isEnabled=false'),'Los efectos avanzados deben apagarse al entrar en VR');
  assert.ok(!main.includes('THREE.WebGLRenderer'));
 });
