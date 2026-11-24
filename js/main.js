@@ -765,7 +765,7 @@ function chooseDinoSocial(d,index,t){
  if(!d.testSocial&&rand(index*283+Math.floor(t/5000))>(d.juvenile?.42:.18))return false;
  const active=dinoRoots.filter(a=>a.socialPartner&&a.socialUntil>t).length;
  if(active>=2)return false;
- const candidates=dinoRoots.filter(a=>a!==d&&a.id===d.id&&a.state==='idle'&&!a.socialPartner&&Math.hypot(a.root.position.x-d.root.position.x,a.root.position.z-d.root.position.z)>2&&Math.hypot(a.root.position.x-d.root.position.x,a.root.position.z-d.root.position.z)<45).map(partner=>{
+ const candidates=dinoRoots.filter(a=>a!==d&&a.id===d.id&&a.state==='idle'&&!a.socialPartner&&Math.hypot(a.root.position.x-d.root.position.x,a.root.position.z-d.root.position.z)>2&&Math.hypot(a.root.position.x-d.root.position.x,a.root.position.z-d.root.position.z)<120).map(partner=>{
   const dx=d.root.position.x-partner.root.position.x,dz=d.root.position.z-partner.root.position.z,dist=Math.hypot(dx,dz)||1,stand=dinoSpacingRadius(d)+dinoSpacingRadius(partner)+1.1,base=Math.atan2(dx,dz);
   let spot=null;for(let k=0;k<32&&!spot;k++){const a=base+k*Math.PI/16,x=partner.root.position.x+Math.sin(a)*stand,z=partner.root.position.z+Math.cos(a)*stand;if(terrainValidAt(x,z)&&!isDinoPositionBlocked(d,x,z).blocked)spot={x,z};}
   if(!spot&&dist>=dinoSpacingRadius(d)+dinoSpacingRadius(partner)+.5&&terrainValidAt(d.root.position.x,d.root.position.z))spot={x:d.root.position.x,z:d.root.position.z};
