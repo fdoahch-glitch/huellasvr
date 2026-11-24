@@ -175,13 +175,13 @@ async function addVegetation(){
  const F=WORLD.flora||{adult:5,young:8,fern:35,fern2:55,pebble:100,rocks:30,logs:5};
  const specs=[
   ...(worldKey==='atacamatitan'?[['models/env/cerro_desierto.glb',11,70,120,'mountain']]:[]),
-  ['models/veg/araucaria_adulta.glb',F.adult||0,15,23,'tree'],
-  ['models/veg/araucaria_joven.glb',F.young||0,3.5,8,'tree'],
-  ['models/veg/fern_tripo.glb',F.fern||0,.9,1.8,'fern'],
-  ['models/veg/fern_small.glb',F.fern2||0,.7,1.5,'fern'],
-  ['models/veg/pebble.glb',F.pebble||0,.12,.45,'ground'],
-  ['models/env/rock_07.glb',F.rocks||0,.6,1.8,'ground'],
-  ['models/env/dead_tree_trunk_02.glb',F.logs||0,3.5,6,'ground']
+  ['models/veg/araucaria_adulta.glb',F.adult||0,15,23,'tree',20,50,5,16],
+  ['models/veg/araucaria_joven.glb',F.young||0,3.5,8,'tree',10,44,3,12],
+  ['models/veg/fern_tripo.glb',F.fern||0,.9,1.8,'fern',2.5,30,1.2,6],
+  ['models/veg/fern_small.glb',F.fern2||0,.7,1.5,'fern',2.5,32,1.2,6],
+  ['models/veg/pebble.glb',F.pebble||0,.12,.45,'ground',0,34,.4,0],
+  ['models/env/rock_07.glb',F.rocks||0,.6,1.8,'ground',6,44,.4,0],
+  ['models/env/dead_tree_trunk_02.glb',F.logs||0,3.5,6,'ground',8,40,3,4]
  ];
  const waterDistance=(x,z)=>{
   let best=1e9;
@@ -190,17 +190,17 @@ async function addVegetation(){
   return best;
  };
  for(let si=0;si<specs.length;si++){
-  const [file,count,minWidth,maxWidth,type]=specs[si];if(!count)continue;
+  const [file,count,minWidth,maxWidth,type,rMin=10,rMax=47,water=1.2,keep=0]=specs[si];if(!count)continue;
   let container;try{container=await loadContainer(file);}catch(e){console.warn('No se pudo cargar vegetación original',file,e);continue;}
   const n=Math.max(0,Math.round(count*Q));
   for(let i=0,attempt=0;i<n&&attempt<n*18+100;attempt++){
    const angle=rand(attempt+si*177+worldKey.length)*Math.PI*2;
-   const dist=type==='mountain'?85+Math.sqrt(rand(attempt+si*19+5))*40:type==='tree'?20+Math.sqrt(rand(attempt+si*83+9))*30:10+Math.sqrt(rand(attempt+si*31+27))*37;
+   const dist=type==='mountain'?85+Math.sqrt(rand(attempt+si*19+5))*40:rMin+Math.sqrt(rand(attempt+si*31+27))*(rMax-rMin);
    const x=Math.cos(angle)*dist,z=Math.sin(angle)*dist-14;
    if(type!=='mountain'&&!terrainValidAt(x,z))continue;
    const wd=waterDistance(x,z);
-   if(type==='tree'&&wd<5)continue;
-   if(type==='ground'&&wd<1.2)continue;
+   if(wd<water)continue;
+   if(keep&&Math.hypot(x-4,z+4)<keep)continue;
    const group=container.instantiateModelsToScene(name=>name+'-world-'+si+'-'+i,false,{doNotInstantiate:true});
    const root=new BABYLON.TransformNode('world-vegetation-'+si+'-'+i,scene);
    group.rootNodes.forEach(node=>node.parent=root);
@@ -249,7 +249,7 @@ function addMountains(){
   const shade=.85+.3*n2;colors[k*4]=c.r*shade;colors[k*4+1]=c.g*shade;colors[k*4+2]=c.b*shade;colors[k*4+3]=1;
  }
  const mesh=new BABYLON.Mesh('original-mountain-ring-'+key,scene),vd=new BABYLON.VertexData();vd.positions=positions;vd.indices=indices;vd.normals=normals;vd.colors=colors;vd.applyToMesh(mesh,true);
- const material=new BABYLON.StandardMaterial('original-mountain-material-'+key,scene);material.diffuseColor=new BABYLON.Color3(1,1,1);material.specularColor=new BABYLON.Color3(.015,.015,.015);material.roughness=1;material.useVertexColors=true;material.backFaceCulling=false;mesh.material=material;mesh.isPickable=false;mesh.applyFog=true;mesh.alwaysSelectAsActiveMesh=true;
+ const material=new BABYLON.StandardMaterial('original-mountain-material-'+key,scene);material.diffuseColor=new BABYLON.Color3(1,1,1);material.specularColor=new BABYLON.Color3(.015,.015,.015);material.roughness=1;material.useVertexColors=true;material.backFaceCulling=false;mesh.material=material;mesh.isPickable=false;mesh.applyFog=true;
  if(M.volcano&&M.volcano.smoke){const V=M.volcano,smoke=new BABYLON.ParticleSystem('volcano-smoke-'+key,quality==='baja'?60:150,scene);smoke.particleTexture=makeParticleTexture();smoke.emitter=new BABYLON.Vector3(Math.cos(V.ang)*V.d,V.h*.82,Math.sin(V.ang)*V.d);smoke.minEmitBox=new BABYLON.Vector3(-2,0,-2);smoke.maxEmitBox=new BABYLON.Vector3(2,2,2);smoke.color1=new BABYLON.Color4(.55,.53,.5,.42*V.smoke);smoke.color2=new BABYLON.Color4(.72,.69,.65,.2*V.smoke);smoke.minSize=5;smoke.maxSize=17;smoke.minLifeTime=5;smoke.maxLifeTime=12;smoke.emitRate=20*V.smoke;smoke.direction1=new BABYLON.Vector3(-.08,.8,-.08);smoke.direction2=new BABYLON.Vector3(.08,1.4,.08);smoke.minEmitPower=1;smoke.maxEmitPower=2.5;smoke.updateSpeed=.01;smoke.start();}
 }
 function waterDistanceAt(x,z){
@@ -267,7 +267,7 @@ function addForest3D(){
  const grassMat=new BABYLON.StandardMaterial('forest-grass-'+FT,scene);grassMat.diffuseTexture=new BABYLON.Texture('img/'+FT+'_grass.png',scene);grassMat.useAlphaFromDiffuseTexture=true;grassMat.transparencyMode=BABYLON.Material.MATERIAL_ALPHATEST;grassMat.alphaCutOff=.35;grassMat.backFaceCulling=false;
  const merge=(meshes,name)=>{meshes.forEach(m=>m.computeWorldMatrix(true));const merged=BABYLON.Mesh.MergeMeshes(meshes,true,true,undefined,false,true);if(merged)merged.name=name;return merged;};
  const adultTrunk=BABYLON.MeshBuilder.CreateCylinder('adult-araucaria-trunk-geo',{height:1,diameterTop:.028,diameterBottom:.052,tessellation:8},scene);adultTrunk.position.y=.5;adultTrunk.bakeCurrentTransformIntoVertices();adultTrunk.position.set(0,0,0);
- const adultTiers=[];for(let i=0;i<5;i++){const radius=.17-i*.022,y=.74+i*.045,c=BABYLON.MeshBuilder.CreateCylinder('adult-crown-tier-'+i,{height:.05,diameterTop:.015,diameterBottom:radius*2,tessellation:11},scene);c.position.y=y;adultTiers.push(c);}
+ const adultTiers=[];for(let i=0;i<5;i++){const radius=.17-i*.022,y=.74+i*.045,c=BABYLON.MeshBuilder.CreateCylinder('adult-crown-tier-'+i,{height:.05,diameterTop:0,diameterBottom:radius*2,tessellation:11},scene);c.position.y=y;adultTiers.push(c);}
  const adultTop=BABYLON.MeshBuilder.CreateCylinder('adult-crown-top',{height:.14,diameterTop:0,diameterBottom:.1,tessellation:8},scene);adultTop.position.y=.95;adultTiers.push(adultTop);
  const adultCrown=merge(adultTiers,'adult-araucaria-crown-geo');
  const youngTrunk=BABYLON.MeshBuilder.CreateCylinder('young-araucaria-trunk-geo',{height:.5,diameterTop:.04,diameterBottom:.07,tessellation:6},scene);youngTrunk.position.y=.25;youngTrunk.bakeCurrentTransformIntoVertices();youngTrunk.position.set(0,0,0);
