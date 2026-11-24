@@ -256,7 +256,8 @@ check('Instrumentación de diagnóstico',()=>{
 });
 
 check('Domo panorámico dentro del plano lejano y nubes visibles',()=>{
- assert.ok(main.includes("CreateSphere('sky-dome',{diameter:500,segments:32}"));
+ assert.ok(main.includes("skyDome=scene.createDefaultSkybox(skyCubeTexture,true,500,0)"));
+ assert.ok(main.includes("skyDome.name='sky-dome'"));
  assert.ok(main.includes('camera.maxZ=320'));
  assert.ok(main.includes("{diameter:498,segments:32}"),'La capa de nubes debe quedar dentro del domo panorámico');
  assert.ok(main.includes('new BABYLON.Texture(WORLD.sky,scene,false,true'),'El panorama debe conservar la orientación vertical del original');
@@ -274,7 +275,9 @@ check('Vegetación 3D utiliza los GLB originales de v19 sin bosque procedural du
  assert.ok(main.includes('await addVegetation()'));
  assert.ok(main.includes('models/veg/araucaria_adulta.glb'));
  assert.ok(main.includes('models/veg/fern_tripo.glb'));
- assert.ok(main.includes('addForest3D();'),'Debe conservarse el sistema de bosque 3D del original v19');
+ assert.ok(!main.includes('addForest3D();'),'No debe dibujar copas procedurales separadas de sus troncos');
+ assert.ok(main.includes('WORLD.forestN?.adult'),'La densidad de araucarias adultas debe conservar la cifra v19');
+ assert.ok(main.includes('WORLD.forestN?.young'),'La densidad de araucarias jóvenes debe conservar la cifra v19');
  assert.ok(main.includes("CreateDisc('butterfly-left-"),'Las alas ambientales no deben ser paneles rectangulares');
 });
 
