@@ -37,10 +37,11 @@ const HERD_CONFIG = {
 const requested = (params.get('mundo') || 'atacamatitan').toLowerCase();
 const worldKey = WORLDS[requested] ? requested : 'valle';
 const WORLD = WORLDS[worldKey];
-let havokInstance=null,physicsPlugin=null,physicsController=null,physicsAggregates=[],environmentCollisionZones=[],physicsReady=false,physicsLastSupport='not-started',skyReady=false,skyError=null,terrainPhotoReady=false,terrainNormalReady=false,terrainTextureError=null;
+let havokInstance=null,physicsPlugin=null,physicsController=null,physicsAggregates=[],environmentCollisionZones=[],physicsReady=false,physicsLastSupport='not-started',skyReady=false,skyError=null,terrainPhotoReady=false,terrainNormalReady=false,terrainTextureError=null,herdDrinkPoints=[];
 let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, visualPipeline=null, ssaoPipeline=null, ssrPipeline=null, volumetricLight=null, environmentTexture=null, environmentReady=false, environmentError=null, particleBackend='cpu', soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, waterGain=null, lightingBase=null, timeMode='dia', skyLife=null, nightInsectGain=null, rainBlend=0, xrGazeActor=null, xrGazeSince=0, xrGazeFired=false;
 let orientationEnabled=false,orientationBase=null,orientationHandler=null,stereoEnabled=false,stereoWakeLock=null,stereoTapTimes=[],cpuUpdateMs=0,cpuUpdateAvgMs=0,cpuStageMs={player:0,herd:0,dinosaurs:0,footFx:0,environment:0,gaze:0,water:0,total:0},frameTimeSamples=[],lastPerfFrameAt=0,ambientAudioMixKey='',renderLoop=null,contextLost=false,renderPausedForVisibility=false,renderLoopStarted=false,particleTextureCache=null,collisionCellSize=12,environmentCollisionGrid=new Map(),dinoCollisionGrid=new Map(),collisionGridReady=false;
 const setProgress=(v,t)=>{$('progressFill').style.width=Math.round(v*100)+'%';$('loadText').textContent=t;};
+const DINO_TURN_ANGLES=[0,.22,-.22,.44,-.44,.68,-.68,.94,-.94,1.2,-1.2,1.55,-1.55,Math.PI];
 function mat(name,color,rough=.9){const m=new BABYLON.StandardMaterial(name,scene);m.diffuseColor=BABYLON.Color3.FromHexString(color);m.specularColor=new BABYLON.Color3(.08,.08,.08);m.roughness=rough;return m;}
 function tuneVisualMaterials(root,foliage=false){
  if(!root?.getChildMeshes)return;
@@ -439,28 +440,40 @@ function resolveDinoClip(clips,semantic){
  return clips.find(group=>normalized(group.name)===target)||clips.find(group=>normalized(group.name).startsWith(target))||null;
 }
 async function spawnDino(id,index,total,center){
- const data=DINO[id],path=(quality==='baja'||index>=5)?data.low:data.file;
- let container;try{container=await loadContainer(path);}catch(e){if(path!==data.file)container=await loadContainer(data.file);else throw e;}
- const root=new BABYLON.TransformNode('dino-'+id+'-'+index,scene);
- const instances=container.instantiateModelsToScene(n=>n+'-'+index,false,{doNotInstantiate:true});
- instances.rootNodes.forEach(n=>n.parent=root);
- const clips=instances.animationGroups||[],idle=resolveDinoClip(clips,'Idle')||clips[0];
- clips.forEach(a=>{if(a!==idle)a.stop();});
- if(idle){idle.start(true);idle.setWeightForAllAnimatables?.(1);}
- root.metadata={dinoId:id};
+ const data=DINO[id],root=new BABYLON.TransformNode('dino-'+id+'-'+index,scene);
+ const highVisual=new BABYLON.TransformNode('dino-high-'+id+'-'+index,scene);highVisual.parent=root;
+ const highContainer=await loadContainer(data.file),highInstances=highContainer.instantiateModelsToScene(n=>n+'-high-'+index,false,{doNotInstantiate:true});
+ highInstances.rootNodes.forEach(n=>n.parent=highVisual);
+ const highClips=highInstances.animationGroups||[];
+ const lowVisual=new BABYLON.TransformNode('dino-low-'+id+'-'+index,scene);lowVisual.parent=root;let lowClips=[],hasLow=false;
+ try{const lowContainer=await loadContainer(data.low),lowInstances=lowContainer.instantiateModelsToScene(n=>n+'-low-'+index,false,{doNotInstantiate:true});lowInstances.rootNodes.forEach(n=>n.parent=lowVisual);lowClips=lowInstances.animationGroups||[];hasLow=lowVisual.getChildMeshes(false).length>0;}catch(error){lowVisual.dispose(false,true);console.warn('[Huellas VR] LOD reducido no disponible para '+id+'; se conserva el modelo completo.',error); }
  const herd=HERD_CONFIG[worldKey],sizes=herd?.sizes||[],sizeIndex=sizes.length>1&&total>1?Math.round(index*(sizes.length-1)/(total-1)):index,baseSize=sizes[sizeIndex]??(sizes.length?sizes[index%sizes.length]*(.82+((index*37)%17)/70):data.length*(index===0?1:.82+rand(index+2)*.12));
- const targetLength=+baseSize.toFixed(2);fitRoot(root,targetLength);tuneVisualMaterials(root);const forwardYaw=data.forwardYaw??0;
- const preferred=center||herd?.center||{x:0,z:-15};
- const angle=index*2.4+.7,radius=6+(index%6)*2;
+ const targetLength=+baseSize.toFixed(2);fitRoot(highVisual,targetLength);tuneVisualMaterials(highVisual);
+ if(hasLow){fitRoot(lowVisual,targetLength);tuneVisualMaterials(lowVisual,true);lowVisual.setEnabled(false);}else lowVisual.setEnabled(false);
+ const clips=highClips,idle=resolveDinoClip(clips,'Idle')||clips[0];clips.forEach(a=>{if(a!==idle)a.stop();});
+ if(idle){idle.start(true);idle.setWeightForAllAnimatables?.(1);}
+ lowClips.forEach(a=>a.stop());
+ root.metadata={dinoId:id,targetLength};
+ const forwardYaw=data.forwardYaw??0,preferred=center||herd?.center||{x:0,z:-15},angle=index*2.4+.7,radius=6+(index%6)*2;
  const seedX=preferred.x+Math.cos(angle)*radius,seedZ=preferred.z+Math.sin(angle)*radius;
  const supportRadius=Math.max(2.8,targetLength*.3+.35),spot=findFlatDinoPosition(seedX,seedZ,index,10,supportRadius,targetLength)||findFlatDinoPosition(preferred.x,preferred.z,index,48,supportRadius,targetLength);
  if(!spot||!terrainValidAt(spot.x,spot.z))throw new Error('No se encontró suelo firme para '+data.name);
- root.position.set(spot.x,terrainHeightAt(spot.x,spot.z),spot.z);
- root.rotation.y=forwardYaw;
- root.getChildMeshes().forEach(m=>{m.isPickable=true;m.receiveShadows=true;m.metadata={...(m.metadata||{}),dinoId:id};pickables.push(m);shadowGenerator?.addShadowCaster(m,true);});root.metadata.targetLength=targetLength;
+ root.position.set(spot.x,terrainHeightAt(spot.x,spot.z),spot.z);root.rotation.y=forwardYaw;
+ for(const mesh of [...highVisual.getChildMeshes(),...(hasLow?lowVisual.getChildMeshes():[])]){mesh.isPickable=true;mesh.receiveShadows=true;mesh.metadata={...(mesh.metadata||{}),dinoId:id};pickables.push(mesh);if(mesh.parent===highVisual||mesh.isEnabled())shadowGenerator?.addShadowCaster(mesh,true);}
  const juvenile=targetLength<=data.length*.58,personalityRoll=rand(index*197+id.length*29),personality=juvenile?(personalityRoll<.68?'playful':personalityRoll<.88?'curious':'shy'):(index%7===1?'social':personalityRoll<.34?'curious':personalityRoll<.62?'social':personalityRoll<.82?'calm':'shy');
- dinoRoots.push({root,id,length:targetLength,clips,clipName:idle?'Idle':'',activeClip:idle||null,transitionFrom:null,transitionElapsed:0,baseYaw:forwardYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},herdCenter:{...preferred},heading:rand(index+71)*Math.PI*2,target:null,goal:null,state:'idle',timer:1.5+rand(index+82)*4,radius:Math.min(4,1.5+rand(index+8)*2),running:false,restLook:false,drankStamp:-1,juvenile,personality,curiosity:juvenile ? .82 : personality==='curious' ? .68 : personality==='social' ? .34 : .12,nextCuriosityAt:performance.now()+3500+rand(index*211+5)*10000,nextSocialAt:performance.now()+7000+rand(index*277+9)*14000,socialUntil:0,socialPartner:null,lastFootstep:0,stepDistance:0,actualSpeed:0,footDistance:0,dustDistance:0,footSide:1,lastFootPos:root.position.clone()});
+ dinoRoots.push({root,id,length:targetLength,clips,highClips,lowClips,highVisual,lowVisual,hasLow,lodLevel:'high',nextLodCheck:0,animationPaused:false,clipName:idle?'Idle':'',activeClip:idle||null,transitionFrom:null,transitionElapsed:0,baseYaw:forwardYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},herdCenter:{...preferred},heading:rand(index+71)*Math.PI*2,target:null,goal:null,state:'idle',timer:1.5+rand(index+82)*4,radius:Math.min(4,1.5+rand(index+8)*2),running:false,restLook:false,drankStamp:-1,juvenile,personality,curiosity:juvenile ? .82 : personality==='curious' ? .68 : personality==='social' ? .34 : .12,nextCuriosityAt:performance.now()+3500+rand(index*211+5)*10000,nextSocialAt:performance.now()+7000+rand(index*277+9)*14000,socialUntil:0,socialPartner:null,lastFootstep:0,stepDistance:0,actualSpeed:0,footDistance:0,dustDistance:0,footSide:1,lastFootPos:root.position.clone()});
  return root;
+}
+function updateDinoLod(d,t){
+ if(!d.hasLow||!camera)return;
+ if(t<(d.nextLodCheck||0))return;d.nextLodCheck=t+250;
+ const dx=camera.position.x-d.root.position.x,dz=camera.position.z-d.root.position.z,distanceSq=dx*dx+dz*dz;
+ const far=d.lodLevel==='high'?distanceSq>72*72:distanceSq>55*55;
+ const next=far?'low':'high';if(next===d.lodLevel)return;
+ if(d.activeClip?.isPlaying)d.activeClip.stop();if(d.transitionFrom?.isPlaying)d.transitionFrom.stop();
+ d.highVisual.setEnabled(next==='high');d.lowVisual.setEnabled(next==='low');
+ d.lodLevel=next;d.clips=next==='low'?d.lowClips:d.highClips;d.activeClip=null;d.transitionFrom=null;d.clipName='';
+ d.animationPaused=false;
 }
 const VEGETATION_QUALITY={alta:1,media:.6,baja:.3}[quality]||1;
 async function addVegetation(){
@@ -830,31 +843,23 @@ function updateHerdMode(dt){
  const order=['graze','drink','rest'];herdMode=order[(order.indexOf(herdMode)+1)%order.length];herdStamp++;
  herdModeTimer=({graze:28,drink:40,rest:22}[herdMode]||28)+rand(herdStamp*71)*6;
 }
-function herdDrinkTarget(d,index){
- const from=d.root.position,candidates=[];
- // Busca la orilla desde la posición real del animal; no usa coordenadas aproximadas
- // que podían quedar lejos del río o dentro del agua.
- (WORLD.rivers||[]).forEach(river=>{
+function buildHerdDrinkPoints(){
+ const points=[],add=(x,z)=>{const gap=waterDistanceAt(x,z);if(terrainValidAt(x,z)&&gap>=.25&&gap<=3.5)points.push({x,z});};
+ for(const river of WORLD.rivers||[]){
   for(let i=1;i<river.pts.length;i++){
-   const a=river.pts[i-1],b=river.pts[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz)||1;
-   const t=Math.max(0,Math.min(1,((from.x-a[0])*dx+(from.z-a[1])*dz)/(len*len)));
-   const cx=a[0]+dx*t,cz=a[1]+dz*t,nx=-dz/len,nz=dx/len,edge=river.w*.5+1.15;
-   for(const side of [-1,1]){
-    const x=cx+nx*edge*side,z=cz+nz*edge*side,waterGap=waterDistanceAt(x,z);
-    if(terrainValidAt(x,z)&&waterGap>=.25&&waterGap<=3.5)candidates.push({x,z,score:Math.hypot(x-from.x,z-from.z)+Math.abs(waterGap-1.15)*.8});
-   }
+   const a=river.pts[i-1],b=river.pts[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz)||1,nx=-dz/len,nz=dx/len,edge=river.w*.5+1.15;
+   for(const t of [0,.25,.5,.75,1]){const cx=a[0]+dx*t,cz=a[1]+dz*t;add(cx+nx*edge,cz+nz*edge);add(cx-nx*edge,cz-nz*edge);}
   }
- });
- (WORLD.lagoons||[]).forEach(lagoon=>{
-  const dx=from.x-lagoon.x,dz=from.z-lagoon.z;
-  const theta=Math.atan2(dz/Math.max(lagoon.rz,1),dx/Math.max(lagoon.rx,1));
-  for(let offset=-2;offset<=2;offset++){
-   const a=theta+offset*.16,x=lagoon.x+Math.cos(a)*(lagoon.rx+1.4),z=lagoon.z+Math.sin(a)*(lagoon.rz+1.4),waterGap=waterDistanceAt(x,z);
-   if(terrainValidAt(x,z)&&waterGap>=.25&&waterGap<=3.5)candidates.push({x,z,score:Math.hypot(x-from.x,z-from.z)+Math.abs(waterGap-1.4)});
-  }
- });
- candidates.sort((a,b)=>a.score-b.score);
- return candidates.length?{x:candidates[0].x,z:candidates[0].z}:null;
+ }
+ for(const lagoon of WORLD.lagoons||[]){
+  for(let i=0;i<32;i++){const a=i*Math.PI/16;add(lagoon.x+Math.cos(a)*(lagoon.rx+1.4),lagoon.z+Math.sin(a)*(lagoon.rz+1.4));}
+ }
+ herdDrinkPoints=points;
+}
+function herdDrinkTarget(d,index){
+ const from=d.root.position;let best=null,bestDistance=Infinity;
+ for(const point of herdDrinkPoints){const dx=point.x-from.x,dz=point.z-from.z,distance=dx*dx+dz*dz;if(distance<bestDistance){bestDistance=distance;best=point;}}
+ return best;
 }
 function collisionCellKey(x,z){return Math.floor(x/collisionCellSize)+','+Math.floor(z/collisionCellSize);}
 function freezeStaticEnvironmentTransforms(){
@@ -869,7 +874,7 @@ function freezeStaticEnvironmentTransforms(){
  return frozen;
 }
 function buildEnvironmentCollisionGrid(){environmentCollisionGrid.clear();for(const zone of environmentCollisionZones){const key=collisionCellKey(zone.x,zone.z);let bucket=environmentCollisionGrid.get(key);if(!bucket)environmentCollisionGrid.set(key,bucket=[]);bucket.push(zone);}collisionGridReady=true;}
-function rebuildDinoCollisionGrid(){dinoCollisionGrid.clear();for(const actor of dinoRoots){if(!actor.root)continue;const p=actor.root.position,key=collisionCellKey(p.x,p.z);let bucket=dinoCollisionGrid.get(key);if(!bucket)dinoCollisionGrid.set(key,bucket=[]);bucket.push(actor);}}
+function rebuildDinoCollisionGrid(){for(const bucket of dinoCollisionGrid.values())bucket.length=0;for(const actor of dinoRoots){if(!actor.root)continue;const p=actor.root.position,key=collisionCellKey(p.x,p.z);let bucket=dinoCollisionGrid.get(key);if(!bucket)dinoCollisionGrid.set(key,bucket=[]);bucket.push(actor);}}
 function nearbyGridItems(grid,x,z,radius){const out=[],minX=Math.floor((x-radius)/collisionCellSize),maxX=Math.floor((x+radius)/collisionCellSize),minZ=Math.floor((z-radius)/collisionCellSize),maxZ=Math.floor((z+radius)/collisionCellSize);for(let gx=minX;gx<=maxX;gx++)for(let gz=minZ;gz<=maxZ;gz++){const bucket=grid.get(gx+','+gz);if(bucket)out.push(...bucket);}return out;}
 function isDinoPositionBlocked(d,x,z){const bodyRadius=dinoSpacingRadius(d),zones=collisionGridReady?nearbyGridItems(environmentCollisionGrid,x,z,bodyRadius+10):environmentCollisionZones;for(const zone of zones){const min=bodyRadius+zone.radius,dx=x-zone.x,dz=z-zone.z;if(dx*dx+dz*dz<min*min)return {blocked:true,kind:zone.kind};}const actors=dinoCollisionGrid.size?nearbyGridItems(dinoCollisionGrid,x,z,10):dinoRoots;for(const other of actors){if(other===d||!other.root)continue;const min=bodyRadius+dinoSpacingRadius(other)+.45,dx=x-other.root.position.x,dz=z-other.root.position.z;if(dx*dx+dz*dz<min*min)return {blocked:true,kind:'dinosaur'};}return {blocked:false,kind:null};}
 function choosePlayerApproach(d,index,t){
@@ -946,6 +951,7 @@ function animateDinos(t,dt){
  const frameStep=Math.min(.05,Math.max(0,dt||0)),herd=HERD_CONFIG[worldKey];
  rebuildDinoCollisionGrid();
  dinoRoots.forEach((d,index)=>{
+  updateDinoLod(d,t);
   const root=d.root,L=d.length||DINO[d.id].length,profile=({
    atacamatitan:{walk:.10,run:.50,},arackar:{walk:.16,run:.72,},
    gonkoken:{walk:.08,run:1,},stegouros:{walk:.22,run:.60,},
@@ -1005,21 +1011,20 @@ function animateDinos(t,dt){
     d.target=null;d.running=false;d.actualSpeed=0;
    }else{
     const desired=Math.atan2(dx,dz),nominal=L*(d.running?profile.run:profile.walk),r=L*.3;
-    const turnAngles=[0,.22,-.22,.44,-.44,.68,-.68,.94,-.94,1.2,-1.2,1.55,-1.55,Math.PI];
     let chosenStep=null,lastBlocked=null;
-    for(const offset of turnAngles){
+    for(const offset of DINO_TURN_ANGLES){
      const angle=desired+offset,nx=root.position.x+Math.sin(angle)*nominal*step,nz=root.position.z+Math.cos(angle)*nominal*step;
-     const support=[[nx,nz],[nx+Math.sin(angle)*r,nz+Math.cos(angle)*r],[nx-Math.sin(angle)*r,nz-Math.cos(angle)*r]];
      const obstacle=isDinoPositionBlocked(d,nx,nz);
      if(obstacle.blocked){lastBlocked=obstacle.kind;continue;}
-     if(!support.every(p=>terrainValidAt(p[0],p[1])))continue;
-     chosenStep={angle,nx,nz,support};break;
+     const sx=Math.sin(angle)*r,sz=Math.cos(angle)*r;
+     if(!terrainValidAt(nx,nz)||!terrainValidAt(nx+sx,nz+sz)||!terrainValidAt(nx-sx,nz-sz))continue;
+     chosenStep={angle,nx,nz};break;
     }
     if(chosenStep){
      let delta=chosenStep.angle-d.heading;while(delta>Math.PI)delta-=Math.PI*2;while(delta< -Math.PI)delta+=Math.PI*2;
      d.heading+=Math.sign(delta)*Math.min(Math.abs(delta),1.8*step);
-     const heights=chosenStep.support.map(p=>terrainHeightAt(p[0],p[1])),travelled=Math.hypot(chosenStep.nx-root.position.x,chosenStep.nz-root.position.z);
-     root.position.x=chosenStep.nx;root.position.z=chosenStep.nz;root.position.y=Math.min(...heights);d.actualSpeed=step>0?travelled/step:0;d.lastCollision=null;
+     const x=chosenStep.nx,z=chosenStep.nz,travelled=Math.hypot(x-root.position.x,z-root.position.z),h0=terrainHeightAt(x,z),h1=terrainHeightAt(x+Math.sin(chosenStep.angle)*r,z+Math.cos(chosenStep.angle)*r),h2=terrainHeightAt(x-Math.sin(chosenStep.angle)*r,z-Math.cos(chosenStep.angle)*r);
+     root.position.x=x;root.position.z=z;root.position.y=Math.min(h0,h1,h2);d.actualSpeed=step>0?travelled/step:0;d.lastCollision=null;
      emitDinoFootFX(d,Math.sin(d.heading),Math.cos(d.heading),travelled);
     }else{
      d.actualSpeed=0;d.lastCollision=lastBlocked||'terrain';
@@ -1043,6 +1048,9 @@ function animateDinos(t,dt){
    const ratio=d.state==='walk'&&d.actualSpeed>0?Math.max(.35,Math.min(1.5,d.actualSpeed/(L*gaitBase))):1;d.activeClip.speedRatio=ratio;
    if(d.transitionFrom){d.transitionElapsed+=step;const blend=Math.min(1,d.transitionElapsed/.24);d.activeClip.setWeightForAllAnimatables?.(blend);d.transitionFrom.setWeightForAllAnimatables?.(1-blend);if(blend>=1){d.transitionFrom.stop();d.transitionFrom=null;d.activeClip.setWeightForAllAnimatables?.(1);}}
   }
+  const farIdle=playerDistance>115&&d.state==='idle'&&!d.testClip&&!d.transitionFrom;
+  if(farIdle&&!d.animationPaused){d.activeClip?.pause?.();d.animationPaused=true;}
+  else if(!farIdle&&d.animationPaused){d.activeClip?.play?.(true);d.animationPaused=false;}
   root.rotation.y=d.heading+d.baseYaw;
  });
 }
@@ -1126,7 +1134,7 @@ function installDiagnostics(){
   return {
    world:worldKey,quality,fps:Number.isFinite(engine?.getFps?.())?Math.round(engine.getFps()):0,
    meshes:scene?.meshes?.length||0,activeMeshes:scene?.getActiveMeshes?.().length||0,frozenWorldMatrices:scene?.meshes?.filter(m=>m.isWorldMatrixFrozen).length||0,collisionBuckets:{environment:environmentCollisionGrid.size,dinosaurs:dinoCollisionGrid.size},renderLoopStarted,
-   textures:engine?.getLoadedTexturesCache?.().length||0,dinosaurs:dinoRoots.length,
+   textures:engine?.getLoadedTexturesCache?.().length||0,dinosaurs:dinoRoots.length,dinoLod:{high:dinoRoots.filter(d=>d.lodLevel==='high').length,low:dinoRoots.filter(d=>d.lodLevel==='low').length,withoutLow:dinoRoots.filter(d=>!d.hasLow).length,animated:dinoRoots.filter(d=>!!d.activeClip?.isPlaying).length,paused:dinoRoots.filter(d=>d.animationPaused).length},
    vegetationAssets:assetCache.size,particles:scene?.particleSystems?.length||0,visual:{pipeline:!!visualPipeline,bloom:!!visualPipeline?.bloomEnabled,ssao:!!ssaoPipeline,ssr:!!ssrPipeline&&!!ssrPipeline.isEnabled,volumetric:!!volumetricLight&&!!volumetricLight.isEnabled,environment:!!environmentTexture,environmentReady,environmentError,clearCoat:scene.materials.some(m=>!!m.clearCoat?.isEnabled),foliageSheen:scene.materials.some(m=>!!m.sheen?.isEnabled),thinInstances:scene.meshes.some(m=>m.hasThinInstances),particleBackend,shadowMap:VP.shadow,anisotropy:VP.anisotropy,profile:quality},
    dinoStates:dinoRoots.map(d=>({id:d.id,clip:d.clipName,active:!!d.activeClip,playing:!!d.activeClip?.isPlaying,state:d.state,goal:d.goal,personality:d.personality,juvenile:d.juvenile,socialPartner:d.socialPartner?.root?.name||null,heading:d.heading,speed:d.actualSpeed,target:d.target?{x:+d.target.x.toFixed(2),z:+d.target.z.toFixed(2)}:null,forwardYaw:d.baseYaw,position:{x:+d.root.position.x.toFixed(2),y:+d.root.position.y.toFixed(2),z:+d.root.position.z.toFixed(2)}})),
    cpuUpdateMs:Math.round(cpuUpdateMs*100)/100,cpuUpdateAvgMs:Math.round(cpuUpdateAvgMs*100)/100,cpuStagesMs:{...cpuStageMs},frameP50Ms:percentile(frameTimeSamples,50),frameP95Ms:percentile(frameTimeSamples,95),frameP99Ms:percentile(frameTimeSamples,99),fps1PercentLow:frameTimeSamples.length?Math.round(1000/Math.max(.01,percentile(frameTimeSamples,95))):null,frameSamples:frameTimeSamples.length,
@@ -1141,6 +1149,7 @@ function installDiagnostics(){
  };
  window.__HUELLAS_VR_DIAGNOSTICS__=snapshot;
  if(params.get('test')==='1')window.__HUELLAS_VR_TEST__={
+  lodCheck(){const original={x:camera.position.x,y:camera.position.y,z:camera.position.z};camera.position.set(5000,original.y,5000);const farAt=performance.now()+300;for(const d of dinoRoots){d.nextLodCheck=0;updateDinoLod(d,farAt);}const far=dinoRoots.filter(d=>d.lodLevel==='low').length;camera.position.set(original.x,original.y,original.z);const nearAt=farAt+300;for(const d of dinoRoots){d.nextLodCheck=0;updateDinoLod(d,nearAt);}const near=dinoRoots.filter(d=>d.lodLevel==='high').length;return {count:dinoRoots.length,farLow:far,nearHigh:near,available:dinoRoots.filter(d=>d.hasLow).length};},
   dinoBehaviorCheck(){let overlaps=0,minGap=Infinity;for(let i=0;i<dinoRoots.length;i++)for(let j=i+1;j<dinoRoots.length;j++){const a=dinoRoots[i],b=dinoRoots[j],gap=Math.hypot(a.root.position.x-b.root.position.x,a.root.position.z-b.root.position.z)-(dinoSpacingRadius(a)+dinoSpacingRadius(b));minGap=Math.min(minGap,gap);if(gap<-.05)overlaps++;}return {count:dinoRoots.length,overlaps,minGap:Number.isFinite(minGap)?+minGap.toFixed(3):null,juveniles:dinoRoots.filter(d=>d.juvenile).length,approaching:dinoRoots.filter(d=>d.goal==='approach').length,looking:dinoRoots.filter(d=>d.state==='look').length,grazing:dinoRoots.filter(d=>d.state==='graze').length,social:dinoRoots.filter(d=>d.state==='social'||d.state==='play').length,fleeing:dinoRoots.filter(d=>d.goal==='flee').length};},
   exerciseSocial(){for(const a of dinoRoots){a.state='idle';a.target=null;a.goal=null;a.socialPartner=null;a.socialUntil=0;a.nextSocialAt=0;}const candidates=dinoRoots.filter(a=>a.juvenile||a.personality==='social');for(const d of candidates){d.testSocial=true;const started=chooseDinoSocial(d,dinoRoots.indexOf(d),performance.now());d.testSocial=false;if(started)return {started:true,partner:d.socialPartner?.root?.name||null,juvenile:d.juvenile};}return {started:false,reason:'no-valid-nearby-partner',candidates:candidates.length,positions:dinoRoots.map(d=>({name:d.root.name,personality:d.personality,state:d.state,x:+d.root.position.x.toFixed(1),z:+d.root.position.z.toFixed(1),radius:dinoSpacingRadius(d)}))};},
   exercisePlayerApproach(){const t=performance.now(),candidates=dinoRoots.filter(a=>a.state==='idle'&&!a.socialPartner),diagnostics=candidates.map(d=>{const dx=camera.position.x-d.root.position.x,dz=camera.position.z-d.root.position.z,dist=Math.hypot(dx,dz);return {name:d.root.name,dist:+dist.toFixed(2),inRange:dist>=3.5&&dist<=18,terrain:terrainValidAt(camera.position.x,camera.position.z),curiosity:d.curiosity};});for(const d of candidates){d.curiosity=1;d.nextCuriosityAt=0;if(choosePlayerApproach(d,dinoRoots.indexOf(d),t))return {started:true,dinosaur:d.root.name,juvenile:d.juvenile,diagnostics};}return {started:false,reason:'no-valid-player-approach-position',camera:{x:+camera.position.x.toFixed(2),z:+camera.position.z.toFixed(2)},candidateCount:candidates.length,nearby:diagnostics.filter(d=>d.dist<=25).slice(0,12),nearest:diagnostics.sort((a,b)=>a.dist-b.dist).slice(0,5)};},
@@ -1212,7 +1221,7 @@ async function init(){
   engine.onContextRestoredObservable.add(()=>{contextLost=false;lastTime=0;console.info('Contexto WebGL2 restaurado.');});
  scene=new BABYLON.Scene(engine);installDiagnostics();scene.clearColor=new BABYLON.Color4(.65,.76,.77,1);scene.collisionsEnabled=true;scene.fogMode=BABYLON.Scene.FOGMODE_EXP2;scene.fogColor=BABYLON.Color3.FromHexString(WORLD.fog);scene.fogDensity=({atacamatitan:.0020,arackar:.0020,patagonia:.0022,stegouros:.0028,aysen:.0024,valle:.0024}[worldKey]||.0038);
  camera=new BABYLON.UniversalCamera('player-camera',new BABYLON.Vector3(0,1.65,12),scene);camera.rotation.y=Math.PI;camera.minZ=.08;camera.maxZ=320;camera.fov=.92;camera.speed=.35;camera.inertia=.82;camera.angularSensibility=3800;camera.attachControl(canvas,true);camera.keysUp.push(87);camera.keysDown.push(83);camera.keysLeft.push(65);camera.keysRight.push(68);camera.applyGravity=false;camera.checkCollisions=false;camera.ellipsoid=new BABYLON.Vector3(.35,.85,.35);
- initStage='terreno y mapa de altura';setProgress(.08,'Creando el paisaje…');initStage='carga del panorama '+WORLD.sky;await addSky();addSkyLife();addLighting();await addTerrain();camera.position.y=1.65+terrainHeightAt(0,12);initStage='inicialización de Havok Physics V2';await initPhysics();initDinoFootFX();addWater();addSandBars();addMountains();initStage='carga de dinosaurios';setProgress(.2,'Cargando dinosaurios…');
+ initStage='terreno y mapa de altura';setProgress(.08,'Creando el paisaje…');initStage='carga del panorama '+WORLD.sky;await addSky();addSkyLife();addLighting();await addTerrain();camera.position.y=1.65+terrainHeightAt(0,12);initStage='inicialización de Havok Physics V2';await initPhysics();initDinoFootFX();addWater();buildHerdDrinkPoints();addSandBars();addMountains();initStage='carga de dinosaurios';setProgress(.2,'Cargando dinosaurios…');
  const ids=WORLD.dinos,totalDinos=15,basePerSpecies=Math.floor(totalDinos/ids.length),extraDinos=totalDinos%ids.length;let loadedDinos=0;for(let speciesIndex=0;speciesIndex<ids.length;speciesIndex++){const id=ids[speciesIndex],herdSize=basePerSpecies+(speciesIndex<extraDinos?1:0);for(let n=0;n<herdSize;n++){initStage='dinosaurio '+id+' ('+(n+1)+'/'+herdSize+')';await spawnDino(id,n,herdSize,null);loadedDinos++;setProgress(.2+.53*loadedDinos/totalDinos,'Cargando '+DINO[id].name+' · '+loadedDinos+'/'+totalDinos+'…');}}
  initStage='vegetación y modelos ambientales';setProgress(.76,'Poblando el paisaje…');await addVegetation();buildEnvironmentCollisionGrid();initStage='bosques y atmósfera';/* Se replica la densidad forestal v19 con los GLB originales instanciados en addVegetation(). */setProgress(.9,'Preparando atmósfera e iluminación…');addParticles();addVisualPipeline();bindControls();scene.onBeforeRenderObservable.add(()=>{const now=performance.now(),debugPerf=params.get('debug')==='1',updateStart=now,dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;if(debugPerf){if(lastPerfFrameAt){frameTimeSamples.push(now-lastPerfFrameAt);if(frameTimeSamples.length>300)frameTimeSamples.shift();}lastPerfFrameAt=now;}let stage=updateStart;movePlayer(dt);if(debugPerf){let mark=performance.now();cpuStageMs.player=mark-stage;stage=mark;}updateHerdMode(dt);if(debugPerf){let mark=performance.now();cpuStageMs.herd=mark-stage;stage=mark;}animateDinos(now,dt);if(debugPerf){let mark=performance.now();cpuStageMs.dinosaurs=mark-stage;stage=mark;}updateDinoFootFX(dt);if(debugPerf){let mark=performance.now();cpuStageMs.footFx=mark-stage;stage=mark;}updateEnvironment(dt);if(debugPerf){let mark=performance.now();cpuStageMs.environment=mark-stage;stage=mark;}updateXRGaze();if(debugPerf){let mark=performance.now();cpuStageMs.gaze=mark-stage;stage=mark;}for(const item of waterTextures)item.tex.uOffset=(item.tex.uOffset+dt*item.speed+1)%1;if(debugPerf){let mark=performance.now();cpuStageMs.water=mark-stage;}cpuUpdateMs=performance.now()-updateStart;cpuUpdateAvgMs+=(cpuUpdateMs-cpuUpdateAvgMs)*.08;if(debugPerf)cpuStageMs.total=cpuUpdateMs;});
  renderLoop=()=>{if(!contextLost&&scene&&scene.activeCamera)scene.render();};if(!renderLoopStarted){engine.runRenderLoop(renderLoop);renderLoopStarted=true;}
