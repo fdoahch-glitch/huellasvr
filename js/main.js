@@ -772,7 +772,7 @@ function chooseDinoSocial(d,index,t){
  if(!candidates.length)return false;
  const {partner,x,z}=candidates[0];
  const playful=d.juvenile&&partner.juvenile&&d.personality==='playful';
- d.target={x,z};d.goal=playful?'play':'social';d.socialPartner=partner;d.state='walk';d.running=playful;d.socialUntil=t+10000+rand(index*293+Math.floor(t/1000))*7000;
+ d.target={x,z};d.goal=playful?'play':'social';d.socialPartner=partner;d.playDirection=rand(index*337+Math.floor(t/1000))>.5?1:-1;d.state='walk';d.running=playful;d.socialUntil=t+10000+rand(index*293+Math.floor(t/1000))*7000;
  partner.socialPartner=d;partner.state='social';partner.goal='social';partner.target=null;partner.running=false;partner.actualSpeed=0;partner.socialUntil=d.socialUntil;partner.timer=8+rand(index*307+Math.floor(t/1000))*8;
  return true;
 }
@@ -781,7 +781,14 @@ function updateDinoSocial(d,t,step){
  if(!partner||!partner.root||d.socialUntil<=t){d.socialPartner=null;if(d.state==='social'||d.state==='play'){d.state='idle';d.goal=null;d.timer=1.5;d.actualSpeed=0;}return;}
  const dx=partner.root.position.x-d.root.position.x,dz=partner.root.position.z-d.root.position.z;
  if(Math.hypot(dx,dz)>.1){const face=Math.atan2(dx,dz);let turn=face-d.heading;while(turn>Math.PI)turn-=Math.PI*2;while(turn< -Math.PI)turn+=Math.PI*2;d.heading+=Math.sign(turn)*Math.min(Math.abs(turn),1.7*step);}
- if(d.state==='social'||d.state==='play'){d.timer-=step;if(d.timer<=0){d.socialUntil=t;d.socialPartner=null;d.state='idle';d.goal=null;d.timer=1.5;}}
+ if(d.state==='play'){
+  d.timer-=step;
+  if(d.timer<=0&&d.socialUntil>t){
+   const angle=Math.atan2(d.root.position.x-partner.root.position.x,d.root.position.z-partner.root.position.z)+(d.playDirection||1)*.9,stand=dinoSpacingRadius(d)+dinoSpacingRadius(partner)+1.35,x=partner.root.position.x+Math.sin(angle)*stand,z=partner.root.position.z+Math.cos(angle)*stand;
+   if(terrainValidAt(x,z)&&!isDinoPositionBlocked(d,x,z).blocked){d.target={x,z};d.goal='play';d.state='walk';d.running=true;d.timer=0;}
+   else d.timer=1.2;
+  }
+ }else if(d.state==='social'){d.timer-=step;if(d.timer<=0){d.socialUntil=t;d.socialPartner=null;d.state='idle';d.goal=null;d.timer=1.5;}}
 }
 function tryDinoFlee(d,index,t){
  if(d.personality!=='shy'||(d.state==='walk'&&d.goal==='flee')||!camera)return false;
@@ -845,7 +852,7 @@ function animateDinos(t,dt){
    if(dist<(d.goal==='drink'?.9:d.goal==='approach'?Math.max(1.8,d.length*.16+1.1):.45)){
     if(d.goal==='drink'){d.state='drink';d.timer=7+rand(index*127+herdStamp)*7;d.drankStamp=herdStamp;}
     else if(d.goal==='approach'){d.state='look';d.lookUntil=t+4500+rand(index*251+Math.floor(t/1000))*4500;d.socialUntil=d.lookUntil;d.timer=0;}
-    else if(d.goal==='social'||d.goal==='play'){d.state=d.goal==='play'?'play':'social';d.timer=5+rand(index*313+Math.floor(t/1000))*5;d.socialUntil=Math.max(d.socialUntil,t+d.timer*1000);}
+    else if(d.goal==='social'||d.goal==='play'){d.state=d.goal==='play'?'play':'social';d.timer=d.goal==='play'?2.2:5+rand(index*313+Math.floor(t/1000))*5;d.socialUntil=Math.max(d.socialUntil,t+(d.goal==='play'?11000:d.timer*1000));}
     else if(d.goal==='graze'){d.state='graze';d.timer=5+rand(index*317+Math.floor(t/1000))*8;}
     else if(d.goal==='flee'){d.state='idle';d.timer=4+rand(index*331+Math.floor(t/1000))*4;d.goal=null;}
     else{d.state='idle';d.timer=2+rand(index*131+Math.floor(t))*4;}
