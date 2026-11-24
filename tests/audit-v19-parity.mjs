@@ -75,8 +75,8 @@ check('Clima, ciclo horario y sonido',()=>{
  for(const token of ['function cycleTimeOfDay()','function initAmbientAudio()','function updateEnvironment(dt)','rainSystem'])assert.ok(main.includes(token),'Falta '+token);
 });
 check('Optimización de vegetación y diagnóstico de rendimiento',()=>{
- assert.match(main,/BABYLON\\.Mesh\\.MergeMeshes/);assert.match(main,/__HUELLAS_VR_DIAGNOSTICS__/);
- assert.match(main,/media: \.6, baja: \.3/);assert.match(main,/mobileDevice \|\|/);
+ assert.ok(main.includes('BABYLON.Mesh.MergeMeshes'));assert.ok(main.includes('__HUELLAS_VR_DIAGNOSTICS__'));
+ assert.ok(main.includes('media: .6, baja: .3'));assert.ok(main.includes('mobileDevice ||'));
 });
 check('Todos los recursos GLB referenciados existen',()=>{
  const refs=[...new Set([...main.matchAll(/['"](models\/[^'"]+\.glb)['"]/g)].map(m=>m[1]))];
