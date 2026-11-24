@@ -12,6 +12,7 @@ const html=read('index.html');
 const check=(label,fn)=>{try{fn();console.log('PASS',label);}catch(e){console.error('FAIL',label,'-',e.message);process.exitCode=1;}};
 
 check('Sintaxis JavaScript',()=>{new vm.Script(main);new vm.Script(home);});
+check('Solo existen perfiles baja, media y alta; no hay ULTRA',()=>{assert.match(main,/VISUAL_PROFILE=\{alta:/);assert.match(main,/media:/);assert.match(main,/baja:/);assert.doesNotMatch(main,/ultra/i);});
 check('Motor Babylon.js + WebGL2; sin Three.js/A-Frame',()=>{
  assert.match(html,/babylon\.js/);assert.match(main,/new BABYLON\.Engine/);assert.match(main,/engine\.webGLVersion<2/);
  assert.doesNotMatch(main,/\bAFRAME\b|\bTHREE\b/);
@@ -56,7 +57,7 @@ check('Tamaños, cantidades y velocidades de manada del original v19',()=>{
  for(const [key,d] of Object.entries(species)){
   assert.ok(main.includes(' '+key+':{center:'),'Falta configuración de manada '+key);
   const sizeText=d.sizes.map(x=>String(x).replace(/^0[.]/,'.')).join(',');assert.ok(main.includes('sizes:['+sizeText+']'),'Tamaños incorrectos '+key);
-  assert.ok(main.includes('totalDinos=10'),'El límite total de dinosaurios debe ser 10');
+  assert.ok(main.includes('totalDinos=15'),'El límite total de dinosaurios debe ser 15');
   assert.ok(main.includes('basePerSpecies=Math.floor(totalDinos/ids.length)')&&main.includes('extraDinos=totalDinos%ids.length'),'La distribución de los diez dinosaurios entre especies debe ser equilibrada');
   assert.ok(main.includes('herdSize=basePerSpecies+(speciesIndex<extraDinos?1:0)'),'La carga debe respetar el reparto por especie en cada mundo');
   const gaitId=key==='patagonia'?'gonkoken':key==='aysen'?'chilesaurus':key;assert.ok(main.includes(gaitId+':{walk:'+d.gait.split(',')[0].split(':')[1]+',run:'+d.gait.split(',')[1].split(':')[1]),'Perfil de marcha incorrecto '+key);
