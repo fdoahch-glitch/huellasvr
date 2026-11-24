@@ -854,12 +854,12 @@ function buildHerdDrinkPoints(){
  const points=[],add=(x,z)=>{const gap=waterDistanceAt(x,z);if((terrainValidNearWaterAt(x,z)||terrainValidAt(x,z))&&gap>=.25&&gap<=3.5){points.push({x,z,waterGap:gap});return true;}return false;};
  for(const river of WORLD.rivers||[]){
   for(let i=1;i<river.pts.length;i++){
-   const a=river.pts[i-1],b=river.pts[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz)||1,nx=-dz/len,nz=dx/len,edge=river.w*.5+1.15;
-   for(let sample=0;sample<=10;sample++){const t=sample/10,cx=a[0]+dx*t,cz=a[1]+dz*t;add(cx+nx*edge,cz+nz*edge);add(cx-nx*edge,cz-nz*edge);}
+   const a=river.pts[i-1],b=river.pts[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz)||1,nx=-dz/len,nz=dx/len,edge=river.w*.5+1.15,shore=edge+1.4;
+   for(let sample=0;sample<=10;sample++){const t=sample/10,cx=a[0]+dx*t,cz=a[1]+dz*t;add(cx+nx*shore,cz+nz*shore);add(cx-nx*shore,cz-nz*shore);}
   }
  }
  for(const lagoon of WORLD.lagoons||[]){
-  for(let i=0;i<64;i++){const a=i*Math.PI/32;add(lagoon.x+Math.cos(a)*(lagoon.rx+1.4),lagoon.z+Math.sin(a)*(lagoon.rz+1.4));}
+  for(let i=0;i<64;i++){const a=i*Math.PI/32;add(lagoon.x+Math.cos(a)*(lagoon.rx+2.5),lagoon.z+Math.sin(a)*(lagoon.rz+2.5));}
  }
  herdDrinkPoints=points;
 }
