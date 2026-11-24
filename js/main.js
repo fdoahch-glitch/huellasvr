@@ -267,7 +267,7 @@ async function addVegetation(){
   }
   let dimensions=null,materialsAdjusted=false;
   for(let i=0;i<placed.length;i++){
-   const p=placed[i],instances=container.instantiateModelsToScene(n=>n+'-veg-'+si+'-'+i,false);
+   const p=placed[i],instances=container.instantiateModelsToScene(n=>n+'-veg-'+si+'-'+i,false,{doNotInstantiate:false});
    const root=new BABYLON.TransformNode('world-vegetation-'+si+'-'+i,scene);
    instances.rootNodes.forEach(node=>node.parent=root);root.computeWorldMatrix(true);
    const meshes=root.getChildMeshes(false);
