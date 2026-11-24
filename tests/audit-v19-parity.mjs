@@ -194,3 +194,14 @@ check('Havok Physics V2 y controlador de personaje',()=>{
  assert.ok(html.includes('HavokPhysics_umd.js'));
  for(const token of ['new BABYLON.HavokPlugin','scene.enablePhysics','new BABYLON.PhysicsCharacterController','new BABYLON.PhysicsAggregate','physicsController.integrate'])assert.ok(main.includes(token),'Falta '+token);
 });
+
+check('Sincronización física de WebXR',()=>{
+ assert.ok(main.includes('const inXR=xr?.baseExperience?.state===BABYLON.WebXRState.IN_XR'));
+ assert.ok(main.includes('const view=xr.input?.xrCamera'));
+ assert.ok(main.includes('view.position.set(next.x,terrainHeightAt(next.x,next.z)+headHeight,next.z)'));
+});
+check('Colisionadores simplificados de vegetación y rocas',()=>{
+ assert.ok(main.includes('environment-physics-collider-'));
+ assert.ok(main.includes("a.file.includes('araucaria_adulta')"));
+ assert.ok(main.includes('BABYLON.PhysicsShapeType.CYLINDER'));
+});
