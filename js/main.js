@@ -768,7 +768,7 @@ function chooseDinoSocial(d,index,t){
  const candidates=dinoRoots.filter(a=>a!==d&&a.id===d.id&&a.state==='idle'&&!a.socialPartner&&Math.hypot(a.root.position.x-d.root.position.x,a.root.position.z-d.root.position.z)>2&&Math.hypot(a.root.position.x-d.root.position.x,a.root.position.z-d.root.position.z)<45).map(partner=>{
   const dx=d.root.position.x-partner.root.position.x,dz=d.root.position.z-partner.root.position.z,dist=Math.hypot(dx,dz)||1,stand=dinoSpacingRadius(d)+dinoSpacingRadius(partner)+1.1,base=Math.atan2(dx,dz);
   let spot=null;for(let k=0;k<32&&!spot;k++){const a=base+k*Math.PI/16,x=partner.root.position.x+Math.sin(a)*stand,z=partner.root.position.z+Math.cos(a)*stand;if(terrainValidAt(x,z)&&!isDinoPositionBlocked(d,x,z).blocked)spot={x,z};}
-  if(!spot&&dist>=dinoSpacingRadius(d)+dinoSpacingRadius(partner)+.65&&terrainValidAt(d.root.position.x,d.root.position.z))spot={x:d.root.position.x,z:d.root.position.z};
+  if(!spot&&dist>=dinoSpacingRadius(d)+dinoSpacingRadius(partner)+.5&&terrainValidAt(d.root.position.x,d.root.position.z))spot={x:d.root.position.x,z:d.root.position.z};
   return spot?{partner,x:spot.x,z:spot.z,dist}:null;
  }).filter(Boolean).sort((a,b)=>a.dist-b.dist);
  if(!candidates.length)return false;
