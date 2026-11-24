@@ -55,7 +55,7 @@ check('Todos los modelos de dinosaurio y sus animaciones originales',()=>{
 check('Tamaños, cantidades y velocidades de manada del original v19',()=>{
  for(const [key,d] of Object.entries(species)){
   assert.ok(main.includes(' '+key+':{center:'),'Falta configuración de manada '+key);
-  assert.ok(main.includes('sizes:['+d.sizes.join(',')+']'),'Tamaños incorrectos '+key);
+  const sizeText=d.sizes.map(x=>String(x).replace(/^0\\./,'.')).join(',');assert.ok(main.includes('sizes:['+sizeText+']'),'Tamaños incorrectos '+key);
   assert.ok(main.includes(key+':'+d.count),'Cantidad incorrecta '+key);
   const gaitId=key==='patagonia'?'gonkoken':key==='aysen'?'chilesaurus':key;assert.ok(main.includes(gaitId+':{walk:'+d.gait.split(',')[0].split(':')[1]+',run:'+d.gait.split(',')[1].split(':')[1]),'Perfil de marcha incorrecto '+key);
  }
