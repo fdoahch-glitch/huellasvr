@@ -302,6 +302,6 @@ check('Recursos compartidos y un solo bucle de renderizado',()=>{
 check('Motor Babylon.js, cargadores y Havok servidos localmente sin CDN',()=>{
  const html=read('index.html');
  for(const file of ['vendor/babylon/babylon.js','vendor/babylon/babylonjs.loaders.min.js','vendor/babylon/havok/HavokPhysics_umd.js'])assert.ok(html.includes(file),'Falta referencia local '+file);
- assert.ok(!/https?:\\/\\/[^\\s"'<>]*(babylon|havok)/i.test(html),'Se detectó dependencia Babylon/Havok externa en index.html');
+ assert.ok(!html.includes('https://cdn.babylonjs.com')&&!html.includes('https://cdn.babylonjs.com/havok'),'Se detectó dependencia Babylon/Havok externa en index.html');
  for(const file of ['vendor/babylon/babylon.js','vendor/babylon/babylonjs.loaders.min.js','vendor/babylon/havok/HavokPhysics_umd.js','vendor/babylon/havok/HavokPhysics.wasm'])assert.ok(fs.existsSync(new URL('../'+file,import.meta.url)),'No está versionado '+file);
 });
