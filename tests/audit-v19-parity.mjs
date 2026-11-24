@@ -267,9 +267,9 @@ check('Panorama y atmósfera replican el motor original v19',()=>{
 check('Materiales PBR para suelo, montañas y agua',()=>{
  assert.ok(main.includes("new BABYLON.PBRMaterial('photo-terrain-pbr-"));
  assert.ok(main.includes("new BABYLON.PBRMaterial('original-mountain-pbr-"));
- assert.ok(main.includes("new BABYLON.StandardMaterial('original-water-unlit-"));
- assert.ok(main.includes('waterMat.disableLighting=true'));
- assert.ok(main.includes('if(WORLD.noBank===false)'),'El agua debe respetar noBank del mundo v19');
+ assert.ok(main.includes("new BABYLON.PBRMaterial('original-water-pbr-"));
+ assert.ok(main.includes('waterMat.metallic=.08'));
+ assert.ok(main.includes("CreateRibbon('original-river-bank-left-'"),'Las orillas originales deben generarse en cada río');
  assert.ok(main.includes('m.metallic=0'));
 });
 check('Vegetación 3D utiliza los GLB originales de v19 sin bosque procedural duplicado',()=>{
@@ -290,7 +290,7 @@ check('Colisión dinámica de dinosaurios con obstáculos y manada',()=>{
 });
 
 check('Mejoras visuales Babylon.js/WebGL2: perfiles, PBR, sombras y postprocesado',()=>{
- for(const token of ['VISUAL_PROFILE={ultra:','function tuneVisualMaterials(root,foliage=false)','material.sheen.isEnabled=true','function addEnvironmentLighting()','new BABYLON.EquiRectangularCubeTexture','scene.environmentTexture=environmentTexture','function addVisualPipeline()','DefaultRenderingPipeline','fxaaEnabled=VP.samples<=1','bloomEnabled=VP.bloom>0','shadowGenerator=new BABYLON.ShadowGenerator(VP.shadow','waterMat.disableLighting=true','waterGlossMat.disableLighting=true','anisotropicFilteringLevel=VP.anisotropy','function addSSAO()','new BABYLON.SSAORenderingPipeline','function addAdvancedVisualEffects()','new BABYLON.SSRRenderingPipeline','function createParticleSystem(name,capacity)','BABYLON.GPUParticleSystem.IsSupported','new BABYLON.GPUParticleSystem','particleBackend','ssao:!!ssaoPipeline','environmentReady','thinInstances:scene.meshes.some(m=>m.hasThinInstances)'])assert.ok(main.includes(token),'Falta mejora visual '+token);
+ for(const token of ['VISUAL_PROFILE={ultra:','function tuneVisualMaterials(root,foliage=false)','material.sheen.isEnabled=true','function addEnvironmentLighting()','new BABYLON.EquiRectangularCubeTexture','scene.environmentTexture=environmentTexture','function addVisualPipeline()','DefaultRenderingPipeline','fxaaEnabled=VP.samples<=1','bloomEnabled=VP.bloom>0','shadowGenerator=new BABYLON.ShadowGenerator(VP.shadow','waterMat.metallic=.08','waterGlossMat.disableDepthWrite=true','anisotropicFilteringLevel=VP.anisotropy','function addSSAO()','new BABYLON.SSAORenderingPipeline','function addAdvancedVisualEffects()','new BABYLON.SSRRenderingPipeline','function createParticleSystem(name,capacity)','BABYLON.GPUParticleSystem.IsSupported','new BABYLON.GPUParticleSystem','particleBackend','ssao:!!ssaoPipeline','environmentReady','thinInstances:scene.meshes.some(m=>m.hasThinInstances)'])assert.ok(main.includes(token),'Falta mejora visual '+token);
  assert.ok(main.includes('addVisualPipeline();bindControls()'));
  assert.ok(main.includes("!['ultra','alta'].includes(quality)")&&main.includes('mobileDevice'),'SSAO debe limitarse a escritorio de alta calidad');
  assert.ok(main.includes('removeSSAO()')&&main.includes('addSSAO()'),'SSAO debe liberarse en VR y restaurarse al salir');
