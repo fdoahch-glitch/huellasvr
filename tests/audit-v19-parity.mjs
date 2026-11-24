@@ -230,3 +230,7 @@ check('Escalones del controlador Havok',()=>{
  assert.ok(main.includes('physicsController.maxStepHeight=.35'));
  assert.ok(main.includes('physicsController.maxSlopeCosine=Math.cos(50*Math.PI/180)'));
 });
+
+check('Mapeo de panoramas por mundo',()=>{
+ for(const path of ['atacamatitan_sky.jpg','arackar_sky.jpg','gonkoken_sky.jpg','stegouros_sky.jpg','aysen_sky.jpg'])assert.ok(main.includes(path),'Falta panorama '+path);
+});
