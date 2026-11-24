@@ -123,7 +123,7 @@ check('Dinosaurios beben junto a las orillas reales de cada escena',()=>{
  assert.ok(main.includes('river.w*.5+1.15'));
  assert.ok(main.includes('WORLD.lagoons||[]'));
 });
-check('Diagnóstico mide coste CPU por actualización y carga de partículas',()=>{for(const token of ['cpuUpdateMs','cpuUpdateAvgMs','scene?.particleSystems?.length','CPU actualización:'])assert.ok(main.includes(token),'Falta '+token);});
+check('Diagnóstico mide coste CPU por actualización y carga de partículas',()=>{for(const token of ['cpuUpdateMs','cpuUpdateAvgMs','scene?.particleSystems?.length','CPU actualización JS:'])assert.ok(main.includes(token),'Falta '+token);});
 check('Optimización de vegetación y diagnóstico de rendimiento',()=>{
  assert.ok(main.includes('BABYLON.Mesh.MergeMeshes'));assert.ok(main.includes('__HUELLAS_VR_DIAGNOSTICS__'));
  assert.ok(main.includes('media: .6, baja: .3'));assert.ok(main.includes('mobileDevice ||'));
