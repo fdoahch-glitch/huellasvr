@@ -321,8 +321,12 @@ check('Mejoras visuales Babylon.js/WebGL2: perfiles, PBR, sombras y postprocesad
 });
 
 
-check('Optimización de rendimiento: colisiones espaciales e IA LOD',()=>{
- for(const token of ['function buildEnvironmentCollisionGrid()','function rebuildDinoCollisionGrid()','function nearbyGridItems(','collisionGridReady?nearbyGridItems','playerDistance>65','d.nextLodUpdate=t+200'])assert.ok(main.includes(token),'Falta optimización '+token);
+check('LOD dinámico por distancia, modelos dobles y animaciones adaptativas',()=>{
+ for(const token of ['function updateDinoLod(d,t)','d.highVisual.setEnabled(next===\'high\')','d.lowVisual.setEnabled(next===\'low\')','distanceSq>72*72','distanceSq>55*55','d.activeClip?.pause?.()','d.activeClip?.play?.()','DINO_TURN_ANGLES'])assert.ok(main.includes(token),'Falta LOD/animación '+token);
+ assert.doesNotMatch(main,/index\\s*>=\\s*5/);
+});
+check('IA de bebida precalculada y cuadrícula espacial reutilizable',()=>{
+ for(const token of ['function buildHerdDrinkPoints()','function herdDrinkTarget(d,index)','herdDrinkPoints=points','for(const bucket of dinoCollisionGrid.values())bucket.length=0','function buildEnvironmentCollisionGrid()','function nearbyGridItems('])assert.ok(main.includes(token),'Falta optimización CPU '+token);
 });
 check('Preparación completa del mundo antes de habilitar la experiencia',()=>{
  assert.ok(main.includes('await scene.whenReadyAsync()'),'La carga no espera texturas y materiales');
