@@ -138,3 +138,25 @@ check('Cielos, mapas de terreno y texturas de las cinco escenas',()=>{
  for(const key of keys)for(const suffix of ['_sky.jpg','_c.jpg','_h.png'])assert.ok(exists('img/'+key+suffix),'Falta img/'+key+suffix);
  for(const file of ['img/tex_sand_d.jpg','img/tex_sand_n.jpg','img/tex_crack_d.jpg','img/tex_gsand_d.jpg','img/tex_gsand_n.jpg','img/tx_dirt_d.jpg','img/tx_dirt_n.jpg','img/tx_leaves_d.jpg','img/tx_leaves_n.jpg','img/tx_redplants_d.jpg','img/tx_redplants_n.jpg','img/tx_stones_d.jpg','img/tx_stones_n.jpg'])assert.ok(exists(file),'Falta '+file);
 });
+
+check('Ciclo de vida WebGL2: pausa en segundo plano y recuperación de contexto',()=>{
+ for(const token of ['onContextLostObservable','onContextRestoredObservable','visibilitychange','stopRenderLoop(renderLoop)','runRenderLoop(renderLoop)','pagehide','pageshow'])assert.ok(main.includes(token),'Falta '+token);
+ assert.ok(main.includes('if(!contextLost&&scene&&scene.activeCamera)scene.render()'));
+});
+check('Errores de carga: salida segura sin bucle de recarga',()=>{
+ assert.ok(main.includes("$('explore').textContent='Volver al inicio'"));
+ assert.ok(main.includes("$('visor').disabled=true"));
+ assert.ok(main.includes("location.href=location.pathname"));
+ assert.doesNotMatch(main,/location\.reload\(\)/);
+});
+check('Todos los controles DOM usados por el motor existen en index.html',()=>{
+ const ids=[...new Set([...main.matchAll(/\$\('([^']+)'\)/g)].map(m=>m[1]))];
+ for(const id of ids)assert.ok(html.includes('id="'+id+'"'),'Falta elemento #'+id);
+});
+check('Recursos locales literales del motor presentes en el repositorio',()=>{
+ const paths=[...new Set([...(main+'\\n'+html).matchAll(/(?:models|img)\/[A-Za-z0-9_./-]+\.(?:glb|jpg|png|webp)/g)].map(m=>m[0]))];
+ for(const file of paths)assert.ok(exists(file),'Recurso no encontrado: '+file);
+});
+check('Diagnóstico de rendimiento expone CPU, GPU y estado XR',()=>{
+ for(const token of ['__HUELLAS_VR_DIAGNOSTICS__','cpuUpdateAvgMs','activeMeshes','getLoadedTexturesCache','xrState','heapMB'])assert.ok(main.includes(token),'Falta diagnóstico '+token);
+});
