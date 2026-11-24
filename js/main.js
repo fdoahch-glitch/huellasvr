@@ -37,7 +37,7 @@ const HERD_CONFIG = {
 const requested = (params.get('mundo') || 'atacamatitan').toLowerCase();
 const worldKey = WORLDS[requested] ? requested : 'valle';
 const WORLD = WORLDS[worldKey];
-let havokInstance=null,physicsPlugin=null,physicsController=null,physicsAggregates=[],environmentCollisionZones=[],physicsReady=false,physicsLastSupport='not-started',skyReady=false,skyError=null,terrainPhotoReady=false,terrainNormalReady=false,terrainTextureError=null,herdDrinkPoints=[],dinoCollisionBucketPool=[],environmentCollisionScratch=[],dinoCollisionScratch=[];
+let havokInstance=null,physicsPlugin=null,physicsController=null,physicsAggregates=[],environmentCollisionZones=[],physicsReady=false,physicsLastSupport='not-started',skyReady=false,skyError=null,terrainPhotoReady=false,terrainNormalReady=false,terrainTextureError=null,herdDrinkPoints=[],dinoCollisionBucketPool=[],environmentCollisionScratch=[],dinoCollisionScratch=[],terrainValidNearWaterAt=()=>false;
 let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, visualPipeline=null, ssaoPipeline=null, ssrPipeline=null, volumetricLight=null, environmentTexture=null, environmentReady=false, environmentError=null, particleBackend='cpu', soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, waterGain=null, lightingBase=null, timeMode='dia', skyLife=null, nightInsectGain=null, rainBlend=0, xrGazeActor=null, xrGazeSince=0, xrGazeFired=false;
 let orientationEnabled=false,orientationBase=null,orientationHandler=null,stereoEnabled=false,stereoWakeLock=null,stereoTapTimes=[],cpuUpdateMs=0,cpuUpdateAvgMs=0,cpuStageMs={player:0,herd:0,dinosaurs:0,footFx:0,environment:0,gaze:0,water:0,total:0},frameTimeSamples=[],lastPerfFrameAt=0,ambientAudioMixKey='',renderLoop=null,contextLost=false,renderPausedForVisibility=false,renderLoopStarted=false,particleTextureCache=null,collisionCellSize=12,environmentCollisionGrid=new Map(),dinoCollisionGrid=new Map(),collisionGridReady=false;
 const setProgress=(v,t)=>{$('progressFill').style.width=Math.round(v*100)+'%';$('loadText').textContent=t;};
@@ -201,6 +201,12 @@ function addTerrain(){
     if(i<1||j<1||i>=N-2||j>=N-2)return false;
     const k=j*N+i;if(!valid[k]||!valid[k+1]||!valid[k+N]||!valid[k+N+1])return false;
     return D[Math.round(fj)*N+Math.round(fi)]>=32&&slope(Math.round(fi),Math.round(fj))<32;
+   };
+   terrainValidNearWaterAt=(x,z)=>{
+    const [fi,fj]=cell(x,z),i=Math.floor(fi),j=Math.floor(fj);
+    if(i<1||j<1||i>=N-2||j>=N-2)return false;
+    const k=j*N+i;if(!valid[k]||!valid[k+1]||!valid[k+N]||!valid[k+N+1])return false;
+    return D[Math.round(fj)*N+Math.round(fi)]>=4&&slope(Math.round(fi),Math.round(fj))<32;
    };
    // Geometría con buffers tipados: evita arrays JS dinámicos y copias durante el montaje del terreno.
    let vertexCount=0;
@@ -845,21 +851,21 @@ function updateHerdMode(dt){
  herdModeTimer=({graze:28,drink:40,rest:22}[herdMode]||28)+rand(herdStamp*71)*6;
 }
 function buildHerdDrinkPoints(){
- const points=[],add=(x,z)=>{const gap=waterDistanceAt(x,z);if(terrainValidAt(x,z)&&gap>=.25&&gap<=3.5)points.push({x,z});};
+ const points=[],add=(x,z)=>{const gap=waterDistanceAt(x,z);if((terrainValidNearWaterAt(x,z)||terrainValidAt(x,z))&&gap>=.25&&gap<=3.5){points.push({x,z,waterGap:gap});return true;}return false;};
  for(const river of WORLD.rivers||[]){
   for(let i=1;i<river.pts.length;i++){
    const a=river.pts[i-1],b=river.pts[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz)||1,nx=-dz/len,nz=dx/len,edge=river.w*.5+1.15;
-   for(const t of [0,.25,.5,.75,1]){const cx=a[0]+dx*t,cz=a[1]+dz*t;add(cx+nx*edge,cz+nz*edge);add(cx-nx*edge,cz-nz*edge);}
+   for(let sample=0;sample<=10;sample++){const t=sample/10,cx=a[0]+dx*t,cz=a[1]+dz*t;add(cx+nx*edge,cz+nz*edge);add(cx-nx*edge,cz-nz*edge);}
   }
  }
  for(const lagoon of WORLD.lagoons||[]){
-  for(let i=0;i<32;i++){const a=i*Math.PI/16;add(lagoon.x+Math.cos(a)*(lagoon.rx+1.4),lagoon.z+Math.sin(a)*(lagoon.rz+1.4));}
+  for(let i=0;i<64;i++){const a=i*Math.PI/32;add(lagoon.x+Math.cos(a)*(lagoon.rx+1.4),lagoon.z+Math.sin(a)*(lagoon.rz+1.4));}
  }
  herdDrinkPoints=points;
 }
 function herdDrinkTarget(d,index){
- const from=d.root.position;let best=null,bestDistance=Infinity;
- for(const point of herdDrinkPoints){const dx=point.x-from.x,dz=point.z-from.z,distance=dx*dx+dz*dz;if(distance<bestDistance){bestDistance=distance;best=point;}}
+ const from=d.root.position;let best=null,bestScore=Infinity;
+ for(const point of herdDrinkPoints){const dx=point.x-from.x,dz=point.z-from.z,score=dx*dx+dz*dz+point.waterGap*point.waterGap*2;if(score<bestScore){bestScore=score;best=point;}}
  return best;
 }
 function collisionCellKey(x,z){return Math.floor(x/collisionCellSize)+','+Math.floor(z/collisionCellSize);}
