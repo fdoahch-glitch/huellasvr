@@ -307,3 +307,15 @@ check('Motor Babylon.js, cargadores y Havok servidos localmente sin CDN',()=>{
  assert.ok(!html.includes('https://cdn.babylonjs.com')&&!html.includes('https://cdn.babylonjs.com/havok'),'Se detectó dependencia Babylon/Havok externa en index.html');
  for(const file of ['vendor/babylon/babylon.js','vendor/babylon/babylonjs.loaders.min.js','vendor/babylon/havok/HavokPhysics_umd.js','vendor/babylon/havok/HavokPhysics.wasm'])assert.ok(fs.existsSync(new URL('../'+file,import.meta.url)),'No está versionado '+file);
 });
+
+
+check('Optimización CPU ULTRA: mezcla de audio sin automatizaciones por fotograma y colores reutilizados',()=>{
+ const start=main.indexOf('function updateEnvironment(dt){'),end=main.indexOf('function initAmbientAudio()',start),environment=main.slice(start,end);
+ assert.ok(start>=0&&end>start,'No se encuentra el actualizador ambiental');
+ assert.equal((environment.match(/setTargetAtTime/g)||[]).length,0,'Audio programa eventos WebAudio repetidos en cada fotograma');
+ for(const token of ['function syncAmbientAudioMix()','ambientAudioMixKey','ENVIRONMENT_COLOR_CACHE','ENVIRONMENT_COLOR_SCRATCH','BABYLON.Color3.LerpToRef'])assert.ok(main.includes(token),'Falta optimización CPU '+token);
+});
+check('Diagnóstico de rendimiento ULTRA: tiempos por sistema y percentiles de fotograma',()=>{
+ for(const token of ['cpuStagesMs','frameP50Ms','frameP95Ms','frameP99Ms','fps1PercentLow','frameTimeSamples','gpuFrameTimeMs','captureGPUFrameTime'])assert.ok(main.includes(token),'Falta métrica '+token);
+ for(const token of ['cpuStageMs.player','cpuStageMs.herd','cpuStageMs.dinosaurs','cpuStageMs.footFx','cpuStageMs.environment','cpuStageMs.gaze','cpuStageMs.water'])assert.ok(main.includes(token),'Falta desglose CPU '+token);
+});
