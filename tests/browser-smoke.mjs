@@ -25,9 +25,11 @@ try{
  browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist','--enable-unsafe-swiftshader']});
  for(const world of ['atacamatitan','arackar','patagonia','stegouros','aysen']){
   const page=await browser.newPage({viewport:{width:1280,height:800}});
-  const pageErrors=[];
+  const pageErrors=[],failedRequests=[];
   page.on('pageerror',e=>pageErrors.push(String(e.stack||e)));
   page.on('console',m=>{if(m.type()==='error')pageErrors.push('console: '+m.text());});
+  page.on('requestfailed',r=>failedRequests.push(r.url()+': '+(r.failure()?.errorText||'request failed')));
+  page.on('response',r=>{if(r.status()>=400)failedRequests.push(r.status()+' '+r.url());});
   const url='http://127.0.0.1:4173/?mundo='+world+'&q='+testQuality+'&test=1&debug=1';
   console.log('LOAD',world,url);
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
@@ -37,8 +39,11 @@ try{
     return t.includes('¡Mundo listo!')||t.includes('No se pudo iniciar el mundo');
    },{timeout:60000});
   }catch(error){
-   const progress=await page.locator('#loadText').textContent().catch(()=>'(sin texto de carga)');
-   throw new Error(world+' excedió 60 s durante la carga: '+progress+'; '+error.message);
+   const progress=await page.locator('#loadText').textContent().catch(()=>' (sin texto de carga)');
+   const startup=await page.evaluate(()=>({url:location.href,readyState:document.readyState,homeHidden:document.querySelector('#homeScreen')?.classList.contains('hidden'),mainScript:[...document.scripts].map(s=>s.src).filter(Boolean),babylon:typeof window.BABYLON,havok:typeof window.HavokPhysics,loadText:document.querySelector('#loadText')?.textContent})).catch(e=>({evaluateError:String(e)}));
+   const shot=path.join(resultsDir,world+'-startup-failure.png');
+   await page.screenshot({path:shot,fullPage:false}).catch(()=>{});
+   throw new Error(world+' excedió 60 s durante la carga: '+progress+'; '+error.message+'; startup='+JSON.stringify(startup)+'; pageErrors='+pageErrors.slice(0,12).join(' | ')+'; failedRequests='+failedRequests.slice(0,20).join(' | ')+'; screenshot='+shot);
   }
   await page.locator('#explore').click();
   await page.waitForFunction(()=>!document.querySelector('#hud')?.classList.contains('hidden'),{timeout:5000});
