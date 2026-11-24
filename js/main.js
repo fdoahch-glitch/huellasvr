@@ -269,7 +269,8 @@ async function addVegetation(){
   for(let i=0;i<placed.length;i++){
    const p=placed[i],instances=container.instantiateModelsToScene(n=>n+'-veg-'+si+'-'+i,false,{doNotInstantiate:false});
    const root=new BABYLON.TransformNode('world-vegetation-'+si+'-'+i,scene);
-   instances.rootNodes.forEach(node=>node.parent=root);root.computeWorldMatrix(true);
+   const visualPivot=new BABYLON.TransformNode('vegetation-pivot-'+si+'-'+i,scene);visualPivot.parent=root;
+   instances.rootNodes.forEach(node=>node.parent=visualPivot);root.computeWorldMatrix(true);
    const meshes=root.getChildMeshes(false);
    if(!dimensions){
     let min=new BABYLON.Vector3(Infinity,Infinity,Infinity),max=new BABYLON.Vector3(-Infinity,-Infinity,-Infinity);
@@ -284,7 +285,8 @@ async function addVegetation(){
     });materialsAdjusted=true;
    }
    const width=a.size[0]+rng(p.index*7+31)*(a.size[1]-a.size[0]),scale=width/dimensions.base,squash=a.squash||1,vertical=.85+rng(p.index*7+37)*.3,sy=scale*squash*vertical;
-   root.position.set(p.x-dimensions.cx*scale,terrainHeightAt(p.x,p.z)-dimensions.minY*sy-(a.sink||0)*dimensions.height*sy,p.z-dimensions.cz*scale);
+   visualPivot.position.set(-dimensions.cx,-dimensions.minY,-dimensions.cz);
+   root.position.set(p.x,terrainHeightAt(p.x,p.z)-(a.sink||0)*dimensions.height*sy,p.z);
    root.scaling.set(scale,sy,scale);
    root.rotation.set((rng(p.index*7+41)-.5)*(a.tilt||0),rng(p.index*7+43)*Math.PI*2,(rng(p.index*7+47)-.5)*(a.tilt||0));
    meshes.forEach(mesh=>{mesh.isPickable=false;mesh.checkCollisions=false;});
