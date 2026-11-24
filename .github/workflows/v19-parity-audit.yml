@@ -29,6 +29,10 @@ jobs:
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
+      - name: Registrar revisión exacta del motor original
+        run: |
+          echo "Commit bajo prueba: $(git rev-parse HEAD)"
+          echo "Se validan panorama, ríos, vegetación, cinco mundos y rendimiento por separado."
       - name: Preparar Node.js
         uses: actions/setup-node@v4
         with:
