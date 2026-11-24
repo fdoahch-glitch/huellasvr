@@ -272,7 +272,7 @@ check('Colisión dinámica de dinosaurios con obstáculos y manada',()=>{
 });
 
 check('Mejoras visuales Babylon.js/WebGL2: perfiles, PBR, sombras y postprocesado',()=>{
- for(const token of ['VISUAL_PROFILE={ultra:','function tuneVisualMaterials(root)','function addVisualPipeline()','DefaultRenderingPipeline','fxaaEnabled=true','bloomEnabled=VP.bloom>0','shadowGenerator=new BABYLON.ShadowGenerator(VP.shadow','waterMat.roughness=.16','anisotropicFilteringLevel=VP.anisotropy','visual:{pipeline:!!visualPipeline'])assert.ok(main.includes(token),'Falta mejora visual '+token);
- assert.ok(main.includes('addVisualPipeline();bindControls()'));
+ for(const token of ['VISUAL_PROFILE={ultra:','function tuneVisualMaterials(root)','function addVisualPipeline()','DefaultRenderingPipeline','fxaaEnabled=VP.samples<=1','bloomEnabled=VP.bloom>0','shadowGenerator=new BABYLON.ShadowGenerator(VP.shadow','waterMat.roughness=.16','anisotropicFilteringLevel=VP.anisotropy','function addSSAO()','new BABYLON.SSAORenderingPipeline','function createParticleSystem(name,capacity)','BABYLON.GPUParticleSystem.IsSupported','new BABYLON.GPUParticleSystem','particleBackend','ssao:!!ssaoPipeline'])assert.ok(main.includes(token),'Falta mejora visual '+token);
+ assert.ok(main.includes('addVisualPipeline();bindControls()'));\n assert.ok(main.includes("!['ultra','alta'].includes(quality)")&&main.includes('mobileDevice'),'SSAO debe limitarse a escritorio de alta calidad');\n assert.ok(main.includes('removeSSAO()')&&main.includes('addSSAO()'),'SSAO debe liberarse en VR y restaurarse al salir');\n assert.ok(main.includes('createParticleSystem(\'ambient-dust\',VP.particles)')&&main.includes("createParticleSystem('rain',rainCapacity)"),'Polvo y lluvia deben usar GPU con fallback');
  assert.ok(!main.includes('THREE.WebGLRenderer'));
 });
