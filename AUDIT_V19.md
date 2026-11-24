@@ -124,3 +124,11 @@ El ZIP contiene 20 GLB, 57 JPG, 22 PNG, 2 JS y 1 HTML. No contiene archivos de a
 ### Regresión visual confirmada por capturas de Chromium
 
 Las primeras capturas de mundo mostraron que el domo del panorama no se veía: el domo tenía diámetro 900 (radio 450) y la cámara cortaba en `maxZ=320`, por lo que quedaba fuera del plano lejano. Se corrigió el domo a diámetro 500 para mantenerlo dentro del rango visible. Las capturas también muestran que el suelo sigue viéndose demasiado uniforme aunque el mapa fotográfico y el normal reportan carga; se añadió diagnóstico del material, UV, estado de textura y muestra de píxel para localizar si el problema es el enlace de textura, la geometría o la iluminación. La recuperación visual del terreno aún no se considera terminada.
+
+### Cambios aplicados en restauración visual y colisiones (24-11-2026)
+
+- Se identificó que la cobertura de texturas de detalle del terreno se calculaba con la distancia desde la cámara inicial y quedaba horneada en la textura compuesta. Se sustituyó por una máscara estable basada en pendiente y ruido espacial, y se ajustó moderadamente la lectura de la fotografía original.
+- Se cambió el material de terreno a PBR con albedo compuesto, mapa normal, metalness 0 y roughness alta; se añadió diagnóstico que reconoce `albedoTexture` y `diffuseTexture`.
+- Montañas y agua utilizan PBR cuando está disponible; las montañas se incorporan al shadow map y se amplió el muestreo radial de la base para buscar terreno válido. Se añadió una depresión central al perfil procedural de los volcanes para formar un cráter.
+- Se añadieron zonas de colisión para los colisionadores simplificados de vegetación/rocas y una prueba de evitación en locomoción de dinosaurios. Los dinosaurios continúan siendo agentes cinemáticos, no cuerpos Havok articulados.
+- La nueva prueba de navegador exige terreno PBR y una zona de obstáculo que active el test de colisión. La aprobación de esta ejecución sigue pendiente; no se debe confundir el código añadido con validación final.
