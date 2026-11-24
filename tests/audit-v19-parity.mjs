@@ -255,17 +255,29 @@ check('Instrumentación de diagnóstico',()=>{
  for(const token of ['new BABYLON.SceneInstrumentation(scene)','new BABYLON.EngineInstrumentation(engine)','drawCallsCounter','gpuFrameTimeCounter','physicsTimeCounter','huellasPerfDiagnostics'])assert.ok(main.includes(token),'Falta '+token);
 });
 
-check('Domo panorámico dentro del plano lejano',()=>{
+check('Domo panorámico dentro del plano lejano y nubes visibles',()=>{
  assert.ok(main.includes("CreateSphere('sky-dome',{diameter:500,segments:32}"));
  assert.ok(main.includes('camera.maxZ=320'));
+ assert.ok(main.includes("{diameter:498,segments:32}"),'La capa de nubes debe quedar dentro del domo panorámico');
+ assert.ok(main.includes('new BABYLON.Texture(WORLD.sky,scene,false,true'),'El panorama debe conservar la orientación vertical del original');
 });
 
 check('Materiales PBR para suelo, montañas y agua',()=>{
  assert.ok(main.includes("new BABYLON.PBRMaterial('photo-terrain-pbr-"));
  assert.ok(main.includes("new BABYLON.PBRMaterial('original-mountain-pbr-"));
- assert.ok(main.includes("new BABYLON.PBRMaterial('original-water-pbr-"));
+ assert.ok(main.includes("new BABYLON.StandardMaterial('original-water-unlit-"));
+ assert.ok(main.includes('waterMat.disableLighting=true'));
+ assert.ok(main.includes('if(WORLD.noBank===false)'),'El agua debe respetar noBank del mundo v19');
  assert.ok(main.includes('m.metallic=0'));
 });
+check('Vegetación 3D utiliza los GLB originales de v19 sin bosque procedural duplicado',()=>{
+ assert.ok(main.includes('await addVegetation()'));
+ assert.ok(main.includes('models/veg/araucaria_adulta.glb'));
+ assert.ok(main.includes('models/veg/fern_tripo.glb'));
+ assert.ok(!main.includes('addForest3D();'),'No debe superponerse el bosque procedural sustitutivo');
+ assert.ok(main.includes("CreateDisc('butterfly-left-"),'Las alas ambientales no deben ser paneles rectangulares');
+});
+
 check('Colisión dinámica de dinosaurios con obstáculos y manada',()=>{
  assert.ok(main.includes('function isDinoPositionBlocked'));
  assert.ok(main.includes('environmentCollisionZones.push'));
@@ -274,7 +286,7 @@ check('Colisión dinámica de dinosaurios con obstáculos y manada',()=>{
 });
 
 check('Mejoras visuales Babylon.js/WebGL2: perfiles, PBR, sombras y postprocesado',()=>{
- for(const token of ['VISUAL_PROFILE={ultra:','function tuneVisualMaterials(root,foliage=false)','material.sheen.isEnabled=true','function addEnvironmentLighting()','new BABYLON.EquiRectangularCubeTexture','scene.environmentTexture=environmentTexture','function addVisualPipeline()','DefaultRenderingPipeline','fxaaEnabled=VP.samples<=1','bloomEnabled=VP.bloom>0','shadowGenerator=new BABYLON.ShadowGenerator(VP.shadow','waterMat.roughness=.16','waterMat.clearCoat.isEnabled=true','anisotropicFilteringLevel=VP.anisotropy','function addSSAO()','new BABYLON.SSAORenderingPipeline','function addAdvancedVisualEffects()','new BABYLON.SSRRenderingPipeline','function createParticleSystem(name,capacity)','BABYLON.GPUParticleSystem.IsSupported','new BABYLON.GPUParticleSystem','particleBackend','ssao:!!ssaoPipeline','environmentReady','thinInstances:scene.meshes.some(m=>m.hasThinInstances)'])assert.ok(main.includes(token),'Falta mejora visual '+token);
+ for(const token of ['VISUAL_PROFILE={ultra:','function tuneVisualMaterials(root,foliage=false)','material.sheen.isEnabled=true','function addEnvironmentLighting()','new BABYLON.EquiRectangularCubeTexture','scene.environmentTexture=environmentTexture','function addVisualPipeline()','DefaultRenderingPipeline','fxaaEnabled=VP.samples<=1','bloomEnabled=VP.bloom>0','shadowGenerator=new BABYLON.ShadowGenerator(VP.shadow','waterMat.disableLighting=true','waterGlossMat.disableLighting=true','anisotropicFilteringLevel=VP.anisotropy','function addSSAO()','new BABYLON.SSAORenderingPipeline','function addAdvancedVisualEffects()','new BABYLON.SSRRenderingPipeline','function createParticleSystem(name,capacity)','BABYLON.GPUParticleSystem.IsSupported','new BABYLON.GPUParticleSystem','particleBackend','ssao:!!ssaoPipeline','environmentReady','thinInstances:scene.meshes.some(m=>m.hasThinInstances)'])assert.ok(main.includes(token),'Falta mejora visual '+token);
  assert.ok(main.includes('addVisualPipeline();bindControls()'));
  assert.ok(main.includes("!['ultra','alta'].includes(quality)")&&main.includes('mobileDevice'),'SSAO debe limitarse a escritorio de alta calidad');
  assert.ok(main.includes('removeSSAO()')&&main.includes('addSSAO()'),'SSAO debe liberarse en VR y restaurarse al salir');
