@@ -257,12 +257,12 @@ check('Instrumentación de diagnóstico',()=>{
 
 check('Panorama y atmósfera replican el motor original v19',()=>{
  assert.ok(main.includes("new BABYLON.Texture(WORLD.sky,scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE"));
- assert.ok(main.includes('BABYLON.Effect.ShadersStore.huellasPanoramaVertexShader'));
- assert.ok(main.includes('BABYLON.Effect.ShadersStore.huellasPanoramaFragmentShader'));
- assert.ok(main.includes('panoramaSampler'));
- assert.ok(main.includes("m.setTexture('panoramaSampler',pano)"));
- assert.ok(main.includes('atan(d.z,d.x)')&&main.includes('asin(clamp(d.y,-1.0,1.0))'));
- assert.ok(main.includes('WORLD.panoRot??23'));
+ assert.ok(main.includes('BABYLON.Texture.FIXED_EQUIRECTANGULAR_MODE'));
+ assert.ok(main.includes('m.emissiveTexture=pano'));
+ assert.ok(main.includes('m.disableLighting=true'));
+ assert.ok(main.includes('pano.anisotropicFilteringLevel'));
+ assert.ok(main.includes('pano.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE'));
+ assert.ok(main.includes('WORLD.panoRot??180'));
  assert.ok(main.includes("{diameter:875,segments:32}"),'La cúpula de nubes debe conservar la escala original');
  assert.ok(main.includes('if(false&&quality!==\'baja\')for(let i=0;i<7;i++)'),'Los paneles planos de rayos no deben cubrir la escena');
  assert.ok(!main.includes('original-river-gloss-'),'No debe existir una segunda cinta especular que duplique el cauce y dibuje franjas blancas');
