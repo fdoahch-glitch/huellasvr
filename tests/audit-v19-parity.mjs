@@ -189,3 +189,8 @@ check('API de prueba temporal para reproducir los cuatro clips',()=>{
  assert.ok(main.includes('window.__HUELLAS_VR_TEST__'));
  assert.ok(main.includes('d.testClip||'));
 });
+
+check('Havok Physics V2 y controlador de personaje',()=>{
+ assert.ok(html.includes('HavokPhysics_umd.js'));
+ for(const token of ['new BABYLON.HavokPlugin','scene.enablePhysics','new BABYLON.PhysicsCharacterController','new BABYLON.PhysicsAggregate','physicsController.integrate'])assert.ok(main.includes(token),'Falta '+token);
+});
