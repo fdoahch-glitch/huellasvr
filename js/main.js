@@ -190,6 +190,57 @@ async function addVegetation(){
   }
  }
 }
+function waterDistanceAt(x,z){
+ let best=1e9;
+ (WORLD.rivers||[]).forEach(r=>{for(let i=1;i<r.pts.length;i++){const a=r.pts[i-1],b=r.pts[i],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1)));best=Math.min(best,Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t)-r.w*.5);}});
+ (WORLD.lagoons||[]).forEach(l=>{const d=Math.hypot((x-l.x)/l.rx,(z-l.z)/l.rz);best=Math.min(best,(d-1)*Math.min(l.rx,l.rz));});
+ return best;
+}
+function addForest3D(){
+ const FT=WORLD.forestTex,FN=WORLD.forestN;if(!FT||!FN)return;
+ const rnd=(n)=>rand(n+FT.length*197),center=({atacamatitan:{x:4,z:-4},arackar:{x:4,z:-4},patagonia:{x:4,z:-8},stegouros:{x:3,z:4},aysen:{x:3,z:-8}}[worldKey]||{x:0,z:-10});
+ const bark=new BABYLON.StandardMaterial('forest-bark-'+FT,scene);bark.diffuseTexture=new BABYLON.Texture('img/'+FT+'_bark.jpg',scene);bark.diffuseColor=new BABYLON.Color3(.82,.78,.72);bark.specularColor=new BABYLON.Color3(.02,.02,.02);bark.roughness=1;
+ const leaf=new BABYLON.StandardMaterial('forest-leaf-'+FT,scene);leaf.diffuseTexture=new BABYLON.Texture('img/'+FT+'_leaf.jpg',scene);leaf.backFaceCulling=false;leaf.specularColor=new BABYLON.Color3(.015,.02,.015);leaf.roughness=1;
+ const frondMat=new BABYLON.StandardMaterial('forest-frond-'+FT,scene);frondMat.diffuseTexture=new BABYLON.Texture('img/'+FT+'_frond.png',scene);frondMat.useAlphaFromDiffuseTexture=true;frondMat.transparencyMode=BABYLON.Material.MATERIAL_ALPHATEST;frondMat.alphaCutOff=.4;frondMat.backFaceCulling=false;frondMat.specularColor=new BABYLON.Color3(.01,.02,.01);
+ const grassMat=new BABYLON.StandardMaterial('forest-grass-'+FT,scene);grassMat.diffuseTexture=new BABYLON.Texture('img/'+FT+'_grass.png',scene);grassMat.useAlphaFromDiffuseTexture=true;grassMat.transparencyMode=BABYLON.Material.MATERIAL_ALPHATEST;grassMat.alphaCutOff=.35;grassMat.backFaceCulling=false;
+ const merge=(meshes,name)=>{meshes.forEach(m=>m.computeWorldMatrix(true));const merged=BABYLON.Mesh.MergeMeshes(meshes,true,true,undefined,false,true);if(merged)merged.name=name;return merged;};
+ const adultTrunk=BABYLON.MeshBuilder.CreateCylinder('adult-araucaria-trunk-geo',{height:1,diameterTop:.028,diameterBottom:.052,tessellation:8},scene);
+ const adultTiers=[];for(let i=0;i<5;i++){const radius=.17-i*.022,y=.74+i*.045,c=BABYLON.MeshBuilder.CreateCylinder('adult-crown-tier-'+i,{height:.05,diameterTop:.015,diameterBottom:radius*2,tessellation:11},scene);c.position.y=y;adultTiers.push(c);}
+ const adultTop=BABYLON.MeshBuilder.CreateCylinder('adult-crown-top',{height:.14,diameterTop:0,diameterBottom:.1,tessellation:8},scene);adultTop.position.y=.95;adultTiers.push(adultTop);
+ const adultCrown=merge(adultTiers,'adult-araucaria-crown-geo');
+ const youngTrunk=BABYLON.MeshBuilder.CreateCylinder('young-araucaria-trunk-geo',{height:.5,diameterTop:.04,diameterBottom:.07,tessellation:6},scene);youngTrunk.position.y=.25;
+ const youngTiers=[];for(let i=0;i<7;i++){const radius=.30-i*.036,y=.12+i*.12,c=BABYLON.MeshBuilder.CreateCylinder('young-crown-tier-'+i,{height:.13,diameterTop:.01,diameterBottom:radius*2,tessellation:10},scene);c.position.y=y;youngTiers.push(c);}
+ const youngCrown=merge(youngTiers,'young-araucaria-crown-geo');
+ const fernStem=BABYLON.MeshBuilder.CreateCylinder('tree-fern-stem-geo',{height:1,diameterTop:.14,diameterBottom:.22,tessellation:7},scene);fernStem.position.y=.5;
+ const fernParts=[];for(let k=0;k<10;k++){const p=BABYLON.MeshBuilder.CreatePlane('tree-fern-frond-'+k,{width:.62,height:1.5,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);p.position.y=1.75;p.rotation.x=-.25-(k%3)*.16;p.rotation.y=k/10*Math.PI*2+(k%2)*.3;fernParts.push(p);}
+ const fernLeaves=merge(fernParts,'tree-fern-leaves-geo');
+ const grassParts=[];for(let k=0;k<3;k++){const p=BABYLON.MeshBuilder.CreatePlane('grass-blade-'+k,{width:1,height:.8,sideOrientation:BABYLON.Mesh.DOUBLESIDE},scene);p.position.y=.4;p.rotation.y=k*Math.PI/3;grassParts.push(p);}
+ const grassGeo=merge(grassParts,'grass-clump-geo');
+ const setThin=(mesh,instances,material,name)=>{if(!mesh||!instances.length)return;mesh.name=name;mesh.material=material;mesh.isPickable=false;mesh.thinInstanceSetBuffer('matrix',new Float32Array(instances.flatMap(m=>Array.from(m.m))),16,true);mesh.thinInstanceRefreshBoundingInfo(true);};
+ const place=(count,opt,seed)=>{
+  const out=[],tries=count*14;
+  for(let t=0;t<tries&&out.length<count;t++){
+   const a=rnd(seed+t*3+1)*Math.PI*2,r=opt.rMin+Math.sqrt(rnd(seed+t*3+2))*(opt.rMax-opt.rMin),x=Math.cos(a)*r,z=Math.sin(a)*r;
+   if(!terrainValidAt(x,z))continue;
+   const wd=waterDistanceAt(x,z);if(wd<(opt.water??3))continue;if(opt.wMax&&wd>opt.wMax&&rnd(seed+t*3+3)>.25)continue;
+   if(opt.keepHerd&&Math.hypot(x-center.x,z-center.z)<opt.keepHerd)continue;
+   out.push({x,z,y:terrainHeightAt(x,z)});
+  }
+  return out;
+ };
+ const makeMatrices=(list,scaleFn,offsetY=0)=>list.map((p,i)=>{const sc=scaleFn(i),rot=BABYLON.Quaternion.RotationYawPitchRoll(rnd(i*19+FT.length)*Math.PI*2,0,0);return BABYLON.Matrix.Compose(new BABYLON.Vector3(sc.x,sc.y,sc.z),rot,new BABYLON.Vector3(p.x,p.y+offsetY,p.z));});
+ const adult=place(Math.round(FN.adult*Q),{rMin:46,rMax:130,water:7,keepHerd:16},11),adultH=adult.map((p,i)=>16+rnd(i*5+13)*16);
+ setThin(adultTrunk,makeMatrices(adult,i=>({x:adultH[i],y:adultH[i],z:adultH[i]}),0),bark,'forest-adult-trunks-'+FT);
+ setThin(adultCrown,makeMatrices(adult,i=>({x:adultH[i],y:adultH[i],z:adultH[i]}),0),leaf,'forest-adult-crowns-'+FT);
+ const young=place(Math.round(FN.young*Q),{rMin:40,rMax:130,water:5,keepHerd:12},29),youngH=young.map((p,i)=>5+rnd(i*7+31)*8);
+ setThin(youngTrunk,makeMatrices(young,i=>({x:youngH[i],y:youngH[i],z:youngH[i]})),bark,'forest-young-trunks-'+FT);
+ setThin(youngCrown,makeMatrices(young,i=>({x:youngH[i],y:youngH[i],z:youngH[i]})),leaf,'forest-young-crowns-'+FT);
+ const ferns=place(Math.round(FN.fern*Q),{rMin:7,rMax:120,water:3.5,wMax:45,keepHerd:6},53),fernH=ferns.map((p,i)=>1.1+rnd(i*11+59)*2.4);
+ setThin(fernStem,makeMatrices(ferns,i=>({x:fernH[i],y:fernH[i],z:fernH[i]})),bark,'forest-fern-stems-'+FT);
+ setThin(fernLeaves,makeMatrices(ferns,i=>({x:fernH[i],y:fernH[i],z:fernH[i]})),frondMat,'forest-fern-leaves-'+FT);
+ const grass=place(Math.round((WORLD.walk?0:FN.grass)*Q),{rMin:2,rMax:60,water:1.2},79),grassH=grass.map((p,i)=>.35+rnd(i*13+83)*.6);
+ setThin(grassGeo,makeMatrices(grass,i=>({x:grassH[i],y:grassH[i],z:grassH[i]})),grassMat,'forest-grass-'+FT);
+}
 function makeParticleTexture(){const tex=new BABYLON.DynamicTexture('procedural-particle',64,scene,false);const c=tex.getContext(),g=c.createRadialGradient(32,32,1,32,32,31);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.25,'rgba(255,255,255,.75)');g.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=g;c.fillRect(0,0,64,64);tex.update(false);return tex;}
 function addParticles(){const p=new BABYLON.ParticleSystem('ambient-dust',700,scene);p.particleTexture=makeParticleTexture();p.emitter=new BABYLON.Vector3(0,2,-15);p.minEmitBox=new BABYLON.Vector3(-42,0,-42);p.maxEmitBox=new BABYLON.Vector3(42,15,42);p.color1=new BABYLON.Color4(.9,.78,.55,.25);p.color2=new BABYLON.Color4(.7,.85,.75,.12);p.minSize=.025;p.maxSize=.11;p.minLifeTime=5;p.maxLifeTime=12;p.emitRate=quality==='baja'?10:32;p.direction1=new BABYLON.Vector3(-.1,.1,-.1);p.direction2=new BABYLON.Vector3(.1,.3,.1);p.minEmitPower=.05;p.maxEmitPower=.3;p.updateSpeed=.01;p.start();}
 function showInfo(id){const d=DINO[id];if(!d)return;const actor=dinoRoots.find(x=>x.id===id);if(actor){actor.lookUntil=performance.now()+6500;actor.clipName='';}$('infoTitle').textContent=d.name;$('infoBody').textContent=d.text;$('info').classList.remove('hidden');}
@@ -206,7 +257,7 @@ async function init(){
  camera=new BABYLON.UniversalCamera('player-camera',new BABYLON.Vector3(0,1.65,12),scene);camera.minZ=.08;camera.maxZ=320;camera.fov=.92;camera.speed=.35;camera.inertia=.82;camera.angularSensibility=3800;camera.attachControl(canvas,true);camera.keysUp.push(87);camera.keysDown.push(83);camera.keysLeft.push(65);camera.keysRight.push(68);camera.applyGravity=false;camera.checkCollisions=true;camera.ellipsoid=new BABYLON.Vector3(.35,.85,.35);
  setProgress(.08,'Creando el paisaje…');addSky();addLighting();await addTerrain();camera.position.y=1.65+terrainHeightAt(0,12);addWater();addSandBars();setProgress(.2,'Cargando dinosaurios…');
  const ids=WORLD.dinos,baseHerd={atacamatitan:22,arackar:24,patagonia:22,stegouros:18,aysen:28,valle:5}[worldKey]||5,herdSize=Math.max(3,Math.round(baseHerd*Q)),totalDinos=ids.length*herdSize;let loadedDinos=0;for(const id of ids){for(let n=0;n<herdSize;n++){await spawnDino(id,n,herdSize,null);loadedDinos++;setProgress(.2+.53*loadedDinos/totalDinos,'Cargando '+DINO[id].name+' · '+loadedDinos+'/'+totalDinos+'…');}}
- setProgress(.76,'Poblando el paisaje…');await addVegetation();setProgress(.9,'Preparando atmósfera…');addParticles();bindControls();scene.onBeforeRenderObservable.add(()=>{const now=performance.now(),dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;movePlayer(dt);animateDinos(now);});
+ setProgress(.76,'Poblando el paisaje…');await addVegetation();addForest3D();setProgress(.9,'Preparando atmósfera…');addParticles();bindControls();scene.onBeforeRenderObservable.add(()=>{const now=performance.now(),dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;movePlayer(dt);animateDinos(now);});
  engine.runRenderLoop(()=>{if(scene&&scene.activeCamera)scene.render();});window.addEventListener('resize',()=>engine.resize());setProgress(1,'¡Mundo listo!');$('startButtons').classList.remove('hidden');
  }catch(err){console.error(err);$('loadText').textContent='No se pudo iniciar el mundo: '+err.message;$('startButtons').classList.remove('hidden');$('explore').onclick=()=>location.reload();}
 }
