@@ -67,7 +67,10 @@ try{
   if(!herdCheck||herdCheck.count!==state.diagnostics.dinosaurs||herdCheck.overlaps!==0)throw new Error(world+' presenta superposición entre dinosaurios al iniciar: '+JSON.stringify(herdCheck));
   if(!state.diagnostics.dinoStates.every(d=>d.personality&&typeof d.juvenile==='boolean'))throw new Error(world+' no asignó personalidad/edad a cada dinosaurio');
   const socialCheck=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.exerciseSocial?.());
-  console.log('HERD',world,JSON.stringify({herdCheck,socialCheck}));
+  const approachCheck=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.exercisePlayerApproach?.());
+  if(!socialCheck?.started)throw new Error(world+' no pudo iniciar una interacción entre dinosaurios: '+JSON.stringify(socialCheck));
+  if(!approachCheck?.started)throw new Error(world+' no pudo iniciar un acercamiento al jugador: '+JSON.stringify(approachCheck));
+  console.log('HERD',world,JSON.stringify({herdCheck,socialCheck,approachCheck}));
   if(state.diagnostics.meshes<10||state.diagnostics.textures<1)throw new Error(world+' no generó mallas/texturas suficientes: '+JSON.stringify(state.diagnostics));
   for(const clip of ['Idle','Walk','Run','Neck_Look']){
    const before=await page.evaluate(name=>window.__HUELLAS_VR_TEST__.setAnimation(name),clip);
