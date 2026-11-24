@@ -80,6 +80,13 @@ try{
   if(!state.diagnostics.terrain?.photo||!state.diagnostics.terrain?.normal||state.diagnostics.terrain.error)throw new Error(world+' no cargó las texturas esenciales del terreno '+JSON.stringify(state.diagnostics.terrain));
   if(!state.diagnostics.terrain.diffuseReady||state.diagnostics.terrain.uvCount<6||!state.diagnostics.terrain.photoSample)throw new Error(world+' textura del terreno no enlazada al mesh: '+JSON.stringify(state.diagnostics.terrain));
   if(!String(state.diagnostics.terrain.materialType||'').includes('PBR'))throw new Error(world+' no usa material PBR en el terreno: '+state.diagnostics.terrain.materialType);
+  if(visualMode){
+   const visual=state.diagnostics.terrain||{};
+   if(visual.riverBankMeshes!==0)throw new Error(world+' generó bancos de río que el original v19 desactiva: '+visual.riverBankMeshes);
+   if(visual.cloudDomeDiameter<490||visual.cloudDomeDiameter>505)throw new Error(world+' la cúpula de nubes quedó fuera de la esfera del cielo: '+visual.cloudDomeDiameter);
+   if(visual.proceduralForestMeshes!==0)throw new Error(world+' generó vegetación procedural sustitutiva en vez de los GLB originales: '+visual.proceduralForestMeshes);
+  }
+  if(!visualMode){
   const collision=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.collisionCheck?.());if(!collision?.havok||collision.aggregates<1||collision.environmentZones<1||!collision.probeBlocked)throw new Error(world+' no valida colisión con obstáculos: '+JSON.stringify(collision));
   console.log('GROUND',world,JSON.stringify(state.diagnostics.terrain));
   if(!state.diagnostics.physics?.enabled||!state.diagnostics.physics?.controller||state.diagnostics.physics.colliders<1)throw new Error(world+' no inicializó Havok Physics V2: '+JSON.stringify(state.diagnostics.physics));
@@ -113,6 +120,7 @@ try{
     const moved=Math.hypot(after.x-before.position.x,after.z-before.position.z);
     if(moved<.02){const debug=await page.evaluate(()=>window.__HUELLAS_VR_DIAGNOSTICS__().dinoStates[0]);throw new Error(world+' no desplazó el dinosaurio durante '+clip+' (distancia '+moved+'): '+JSON.stringify({before,after,debug}));}
    }
+  }
   }
   if(pageErrors.length)throw new Error(world+' errores de navegador: '+pageErrors.slice(0,8).join('\n'));
   console.log('PASS',world,JSON.stringify({fps:state.diagnostics.fps,meshes:state.diagnostics.meshes,textures:state.diagnostics.textures,dinosaurs:state.diagnostics.dinosaurs,clips:[...new Set(state.diagnostics.dinoStates.map(d=>d.clip))]}));
