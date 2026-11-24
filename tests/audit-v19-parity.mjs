@@ -231,7 +231,7 @@ check('Mezcla del terreno por pendiente y variación procedural estable',()=>{
 
 check('Panorama esencial se espera y registra fallos',()=>{
  assert.ok(main.includes('await addSky()'));
- assert.ok(main.includes('Panorama listo:'));
+ assert.ok(main.includes('Skybox equirectangular original listo:'));
  assert.ok(main.includes('Falló panorama:'));
  assert.ok(main.includes('sky:{ready:skyReady,error:skyError,url:WORLD.sky}'));
 });
@@ -260,7 +260,7 @@ check('Domo panorámico dentro del plano lejano y nubes visibles',()=>{
  assert.ok(main.includes("skyDome.name='sky-dome'"));
  assert.ok(main.includes('camera.maxZ=320'));
  assert.ok(main.includes("{diameter:498,segments:32}"),'La capa de nubes debe quedar dentro del domo panorámico');
- assert.ok(main.includes('new BABYLON.Texture(WORLD.sky,scene,false,true'),'El panorama debe conservar la orientación vertical del original');
+ assert.ok(main.includes('new BABYLON.EquiRectangularCubeTexture(WORLD.sky,scene,size,false,true'),'El panorama debe convertirse desde la imagen equirectangular original');
 });
 
 check('Materiales PBR para suelo, montañas y agua',()=>{
