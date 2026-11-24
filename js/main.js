@@ -880,7 +880,7 @@ function choosePlayerApproach(d,index,t){
  const active=dinoRoots.filter(a=>a!==d&&a.goal==='approach'&&a.state==='walk'&&a.target&&a.socialUntil>t).length;
  if(active>=(d.juvenile?2:1)||rand(index*233+Math.floor(t/7000))>d.curiosity)return false;
  // El destino se busca con la misma regla en todos los mundos y perfiles.
- // La densidad de Ultra no debe convertir un único punto ocupado en un fallo de IA.
+ // La densidad alta no debe convertir un único punto ocupado en un fallo de IA.
  const base=Math.atan2(dx,dz),stand=Math.max(2.8,Math.min(6.2,d.length*.22+1.55));
  const phase=rand(index*239+Math.floor(t/9000))*Math.PI*2;
  const radii=[stand,stand+1.25,Math.max(2.6,stand-0.7),stand+2.4];
