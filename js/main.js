@@ -460,9 +460,18 @@ function addForest3D(){
 }
 function makeParticleTexture(){const tex=new BABYLON.DynamicTexture('procedural-particle',64,scene,false);const c=tex.getContext(),g=c.createRadialGradient(32,32,1,32,32,31);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.25,'rgba(255,255,255,.75)');g.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=g;c.fillRect(0,0,64,64);tex.update(false);return tex;}
 function addParticles(){const p=new BABYLON.ParticleSystem('ambient-dust',700,scene);p.particleTexture=makeParticleTexture();p.emitter=new BABYLON.Vector3(0,2,-15);p.minEmitBox=new BABYLON.Vector3(-42,0,-42);p.maxEmitBox=new BABYLON.Vector3(42,15,42);p.color1=new BABYLON.Color4(.9,.78,.55,.25);p.color2=new BABYLON.Color4(.7,.85,.75,.12);p.minSize=.025;p.maxSize=.11;p.minLifeTime=5;p.maxLifeTime=12;p.emitRate=quality==='baja'?10:32;p.direction1=new BABYLON.Vector3(-.1,.1,-.1);p.direction2=new BABYLON.Vector3(.1,.3,.1);p.minEmitPower=.05;p.maxEmitPower=.3;p.updateSpeed=.01;p.start();}
-function showInfo(id){const d=DINO[id];if(!d)return;const actor=dinoRoots.find(x=>x.id===id);if(actor){actor.lookUntil=performance.now()+6500;actor.state='look';actor.target=null;actor.clipName='';}$('infoTitle').textContent=d.name;$('infoBody').textContent=d.text;$('info').classList.remove('hidden');}
+function showInfo(id,actor=null){const d=DINO[id];if(!d)return;if(actor){actor.lookUntil=performance.now()+6500;actor.state='look';actor.target=null;actor.goal=null;actor.clipName='';}$('infoTitle').textContent=d.name;$('infoBody').textContent=d.text;$('info').classList.remove('hidden');}
 function closeInfo(){$('info').classList.add('hidden');}
-function onPick(evt){if(!evt.hit||!evt.pickedMesh)return;let m=evt.pickedMesh;while(m&&!m.metadata?.dinoId&&!m.metadata?.ground)m=m.parent;if(m?.metadata?.dinoId){showInfo(m.metadata.dinoId);return;}if(m?.metadata?.ground&&evt.pickedPoint){target=evt.pickedPoint.clone();moving=true;}}
+function onPick(evt){
+ if(!evt.hit||!evt.pickedMesh)return;
+ let node=evt.pickedMesh;
+ while(node){
+  const actor=dinoRoots.find(item=>item.root===node);
+  if(actor){showInfo(actor.id,actor);return;}
+  if(node.metadata?.ground){if(evt.pickedPoint){target=evt.pickedPoint.clone();moving=true;}return;}
+  node=node.parent;
+ }
+}
 function movePlayer(dt){
  if(!moving||!target||xr?.baseExperience?.state===BABYLON.WebXRState.IN_XR)return;
  if(!terrainValidAt(target.x,target.z)){moving=false;target=null;return;}
@@ -545,13 +554,30 @@ function updateHerdMode(dt){
  herdModeTimer=({graze:28,drink:40,rest:22}[herdMode]||28)+rand(herdStamp*71)*6;
 }
 function herdDrinkTarget(d,index){
- const W=HERD_CONFIG[worldKey]?.water;if(!W)return null;
- if(W.pond){
-  const th=(index-((HERD_CONFIG[worldKey]?.sizes.length||18)/2))*.17+Math.atan2(-W.z+d.herdCenter.z,-W.x+d.herdCenter.x)+.3*(rand(index*13+herdStamp)-.5);
-  return {x:W.x+Math.cos(th)*(W.rx+1.3),z:W.z+Math.sin(th)*(W.rz+1.3)};
- }
- const lat=((index%8)-3.5)*(W.w/8)+(rand(index*17+herdStamp)-.5)*2,along=(rand(index*23+herdStamp)-.5)*5;
- return {x:W.x-W.fdz*lat+W.fdx*along,z:W.z+W.fdx*lat+W.fdz*along};
+ const from=d.root.position,candidates=[];
+ // Busca la orilla desde la posición real del animal; no usa coordenadas aproximadas
+ // que podían quedar lejos del río o dentro del agua.
+ (WORLD.rivers||[]).forEach(river=>{
+  for(let i=1;i<river.pts.length;i++){
+   const a=river.pts[i-1],b=river.pts[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz)||1;
+   const t=Math.max(0,Math.min(1,((from.x-a[0])*dx+(from.z-a[1])*dz)/(len*len)));
+   const cx=a[0]+dx*t,cz=a[1]+dz*t,nx=-dz/len,nz=dx/len,edge=river.w*.5+1.15;
+   for(const side of [-1,1]){
+    const x=cx+nx*edge*side,z=cz+nz*edge*side,waterGap=waterDistanceAt(x,z);
+    if(terrainValidAt(x,z)&&waterGap>=.25&&waterGap<=3.5)candidates.push({x,z,score:Math.hypot(x-from.x,z-from.z)+Math.abs(waterGap-1.15)*.8});
+   }
+  }
+ });
+ (WORLD.lagoons||[]).forEach(lagoon=>{
+  const dx=from.x-lagoon.x,dz=from.z-lagoon.z;
+  const theta=Math.atan2(dz/Math.max(lagoon.rz,1),dx/Math.max(lagoon.rx,1));
+  for(let offset=-2;offset<=2;offset++){
+   const a=theta+offset*.16,x=lagoon.x+Math.cos(a)*(lagoon.rx+1.4),z=lagoon.z+Math.sin(a)*(lagoon.rz+1.4),waterGap=waterDistanceAt(x,z);
+   if(terrainValidAt(x,z)&&waterGap>=.25&&waterGap<=3.5)candidates.push({x,z,score:Math.hypot(x-from.x,z-from.z)+Math.abs(waterGap-1.4)});
+  }
+ });
+ candidates.sort((a,b)=>a.score-b.score);
+ return candidates.length?{x:candidates[0].x,z:candidates[0].z}:null;
 }
 function animateDinos(t,dt){
  const step=Math.min(.05,Math.max(0,dt||0)),herd=HERD_CONFIG[worldKey];
