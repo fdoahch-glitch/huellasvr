@@ -66,6 +66,8 @@ jobs:
         run: HUELLAS_QUALITY_TEST=media node tests/browser-smoke.mjs
       - name: Validar efectos visuales del perfil ALTA en los cinco mundos
         run: HUELLAS_VISUAL_TEST=1 node tests/browser-smoke.mjs
+      - name: Comprobar memoria, navegación repetida y compatibilidad WebXR
+        run: node tests/stability-smoke.mjs
       - name: Medir rendimiento del perfil ALTA solo con GPU física verificable
         run: node tests/performance-smoke.mjs
       - name: Guardar capturas de los mundos
