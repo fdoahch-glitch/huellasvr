@@ -71,9 +71,21 @@ function addTerrain(){
    const cell=(x,z)=>[(x+shX-mnx*S)/dx-.5,(z+shZ-mnz*S)/dz-.5];
    terrainHeightAt=(x,z)=>{
     const [fi,fj]=cell(x,z),i=Math.max(0,Math.min(N-2,Math.floor(fi))),j=Math.max(0,Math.min(N-2,Math.floor(fj))),u=Math.max(0,Math.min(1,fi-i)),v=Math.max(0,Math.min(1,fj-j));
-    return H[j*N+i]*(1-u)*(1-v)+H[j*N+i+1]*u*(1-v)+H[(j+1)*N+i]*(1-u)*v+H[(j+1)*N+i+1]*u*v-shY;
+    const ia=j*N+i,ib=ia+1,ic=(j+1)*N+i,id=ic+1;
+    if(valid[ia]&&valid[ib]&&valid[ic]&&valid[id]){
+     const h=u+v<=1?H[ia]*(1-u-v)+H[ib]*u+H[ic]*v:H[ib]*(1-v)+H[ic]*(1-u)+H[id]*(u+v-1);
+     return h-shY;
+    }
+    let best=-1,bd=Infinity;
+    for(let oz=-2;oz<=2;oz++)for(let ox=-2;ox<=2;ox++){const xx=i+ox,zz=j+oz;if(xx<0||zz<0||xx>=N||zz>=N||!valid[zz*N+xx])continue;const dd=(xx-fi)*(xx-fi)+(zz-fj)*(zz-fj);if(dd<bd){bd=dd;best=zz*N+xx;}}
+    return best>=0?H[best]-shY:0;
    };
-   terrainValidAt=(x,z)=>{const [fi,fj]=cell(x,z),i=Math.round(fi),j=Math.round(fj);return i>=1&&j>=1&&i<N-1&&j<N-1&&D[j*N+i]>=8&&slope(i,j)<32;};
+   terrainValidAt=(x,z)=>{
+    const [fi,fj]=cell(x,z),i=Math.floor(fi),j=Math.floor(fj);
+    if(i<1||j<1||i>=N-2||j>=N-2)return false;
+    const k=j*N+i;if(!valid[k]||!valid[k+1]||!valid[k+N]||!valid[k+N+1])return false;
+    return D[Math.round(fj)*N+Math.round(fi)]>=8&&slope(Math.round(fi),Math.round(fj))<32;
+   };
    const positions=[],uvs=[],indices=[],id=new Int32Array(N*N).fill(-1);
    for(let j=0;j<N;j++)for(let i=0;i<N;i++)if(valid[j*N+i]){
     id[j*N+i]=positions.length/3;
@@ -82,7 +94,8 @@ function addTerrain(){
    }
    for(let j=0;j<N-1;j++)for(let i=0;i<N-1;i++){
     const a=id[j*N+i],b=id[j*N+i+1],c=id[(j+1)*N+i],d=id[(j+1)*N+i+1];
-    if(a>=0&&b>=0&&c>=0&&d>=0){indices.push(a,c,b,b,c,d);continue;}if(a>=0&&b>=0&&c>=0)indices.push(a,c,b);if(b>=0&&c>=0&&d>=0)indices.push(b,c,d);if(a>=0&&b>=0&&d>=0)indices.push(a,d,b);if(a>=0&&c>=0&&d>=0)indices.push(a,c,d);
+    if(a<0||b<0||c<0||d<0)continue;
+    indices.push(a,c,b,b,c,d);
    }
    const normals=[];BABYLON.VertexData.ComputeNormals(positions,indices,normals);
    const mesh=new BABYLON.Mesh('original-photo-terrain-'+worldKey,scene),vd=new BABYLON.VertexData();
@@ -179,10 +192,41 @@ function findFlatDinoPosition(cx,cz,index){
  }
  return best;
 }
-function fitRoot(root,targetLength){const meshes=root.getChildMeshes(false);let min=new BABYLON.Vector3(Infinity,Infinity,Infinity),max=new BABYLON.Vector3(-Infinity,-Infinity,-Infinity);meshes.forEach(m=>{m.computeWorldMatrix(true);const b=m.getBoundingInfo().boundingBox;min=BABYLON.Vector3.Minimize(min,b.minimumWorld);max=BABYLON.Vector3.Maximize(max,b.maximumWorld);});const sx=max.x-min.x,sz=max.z-min.z,span=Math.max(sx,sz)||1;const scale=targetLength/span;root.scaling.setAll(scale);const baseYaw=sx>sz?Math.PI/2:0;root.rotation.y=baseYaw;root.position.y=-min.y*scale;return baseYaw;}
-async function spawnDino(id,index,total,center){const data=DINO[id];const path=(quality==='baja'||index>=5)?data.low:data.file;let container;try{container=await loadContainer(path);}catch(e){if(path!==data.file)container=await loadContainer(data.file);else throw e;}
- const root=new BABYLON.TransformNode('dino-'+id+'-'+index,scene);const instances=container.instantiateModelsToScene(n=>n+'-'+index,false,{doNotInstantiate:true});instances.rootNodes.forEach(n=>n.parent=root);const clips=instances.animationGroups||[];const idle=clips.find(a=>a.name.toLowerCase()==='idle')||clips[0];clips.forEach(a=>{if(a!==idle)a.stop();animationGroups.push(a);});if(idle)idle.start(true);root.metadata={dinoId:id};const baseYaw=fitRoot(root,data.length*(index===0?1:0.72+rand(index+2)*.22));
- const herdCenters={atacamatitan:{x:4,z:-4},arackar:{x:4,z:-4},patagonia:{x:4,z:-8},stegouros:{x:3,z:4},aysen:{x:3,z:-8}};const preferred=center||herdCenters[id]||{x:0,z:-15};const spot=findFlatDinoPosition(preferred.x,preferred.z,index);root.position.x=spot.x;root.position.z=spot.z;root.position.y+=terrainHeightAt(spot.x,spot.z);root.rotation.y=baseYaw+(data.flip?Math.PI:0);root.getChildMeshes().forEach(m=>{m.isPickable=true;m.metadata={...(m.metadata||{}),dinoId:id};pickables.push(m);});dinoRoots.push({root,id,clips,clipName:idle?.name||'',baseYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),radius:1.5+rand(index+8)*2});return root;
+function fitRoot(root,targetLength){
+ const visual=new BABYLON.TransformNode(root.name+'-visual-pivot',scene);
+ const children=root.getChildren().slice();children.forEach(n=>n.parent=visual);
+ visual.parent=root;visual.computeWorldMatrix(true);
+ const meshes=visual.getChildMeshes(false);
+ let min=new BABYLON.Vector3(Infinity,Infinity,Infinity),max=new BABYLON.Vector3(-Infinity,-Infinity,-Infinity);
+ meshes.forEach(m=>{m.computeWorldMatrix(true);const b=m.getBoundingInfo().boundingBox;min=BABYLON.Vector3.Minimize(min,b.minimumWorld);max=BABYLON.Vector3.Maximize(max,b.maximumWorld);});
+ const sx=max.x-min.x,sz=max.z-min.z,span=Math.max(sx,sz)||1,scale=targetLength/span;
+ const cx=(min.x+max.x)*.5,cz=(min.z+max.z)*.5;
+ visual.scaling.setAll(scale);visual.position.set(-cx*scale,-min.y*scale,-cz*scale);
+ visual.computeWorldMatrix(true);
+ const baseYaw=sx>sz?Math.PI/2:0;
+ root.metadata=root.metadata||{};root.metadata.visualPivot=visual;
+ return baseYaw;
+}
+async function spawnDino(id,index,total,center){
+ const data=DINO[id],path=(quality==='baja'||index>=5)?data.low:data.file;
+ let container;try{container=await loadContainer(path);}catch(e){if(path!==data.file)container=await loadContainer(data.file);else throw e;}
+ const root=new BABYLON.TransformNode('dino-'+id+'-'+index,scene);
+ const instances=container.instantiateModelsToScene(n=>n+'-'+index,false,{doNotInstantiate:true});
+ instances.rootNodes.forEach(n=>n.parent=root);
+ const clips=instances.animationGroups||[],idle=clips.find(a=>a.name.toLowerCase()==='idle')||clips[0];
+ clips.forEach(a=>{if(a!==idle)a.stop();});
+ if(idle)idle.start(true);
+ root.metadata={dinoId:id};
+ const baseYaw=fitRoot(root,data.length*(index===0?1:0.72+rand(index+2)*.22));
+ const herdCenters={atacamatitan:{x:4,z:-4},arackar:{x:4,z:-4},patagonia:{x:4,z:-8},stegouros:{x:3,z:4},aysen:{x:3,z:-8}};
+ const preferred=center||herdCenters[id]||{x:0,z:-15};
+ const spot=findFlatDinoPosition(preferred.x,preferred.z,index);
+ if(!spot||!terrainValidAt(spot.x,spot.z))throw new Error('No se encontró suelo firme para '+data.name);
+ root.position.set(spot.x,terrainHeightAt(spot.x,spot.z),spot.z);
+ root.rotation.y=baseYaw+(data.flip?Math.PI:0);
+ root.getChildMeshes().forEach(m=>{m.isPickable=true;m.metadata={...(m.metadata||{}),dinoId:id};pickables.push(m);});
+ dinoRoots.push({root,id,clips,clipName:idle?.name||'',baseYaw,lookUntil:0,phase:rand(index+4)*6.28,origin:root.position.clone(),home:{x:spot.x,z:spot.z},heading:rand(index+71)*Math.PI*2,target:null,state:'idle',timer:2+rand(index+82)*5,radius:Math.min(4,1.5+rand(index+8)*2),running:false});
+ return root;
 }
 async function addVegetation(){
  const F=WORLD.flora||{adult:5,young:8,fern:35,fern2:55,pebble:100,rocks:30,logs:5};
@@ -318,11 +362,57 @@ function addForest3D(){
 }
 function makeParticleTexture(){const tex=new BABYLON.DynamicTexture('procedural-particle',64,scene,false);const c=tex.getContext(),g=c.createRadialGradient(32,32,1,32,32,31);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.25,'rgba(255,255,255,.75)');g.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=g;c.fillRect(0,0,64,64);tex.update(false);return tex;}
 function addParticles(){const p=new BABYLON.ParticleSystem('ambient-dust',700,scene);p.particleTexture=makeParticleTexture();p.emitter=new BABYLON.Vector3(0,2,-15);p.minEmitBox=new BABYLON.Vector3(-42,0,-42);p.maxEmitBox=new BABYLON.Vector3(42,15,42);p.color1=new BABYLON.Color4(.9,.78,.55,.25);p.color2=new BABYLON.Color4(.7,.85,.75,.12);p.minSize=.025;p.maxSize=.11;p.minLifeTime=5;p.maxLifeTime=12;p.emitRate=quality==='baja'?10:32;p.direction1=new BABYLON.Vector3(-.1,.1,-.1);p.direction2=new BABYLON.Vector3(.1,.3,.1);p.minEmitPower=.05;p.maxEmitPower=.3;p.updateSpeed=.01;p.start();}
-function showInfo(id){const d=DINO[id];if(!d)return;const actor=dinoRoots.find(x=>x.id===id);if(actor){actor.lookUntil=performance.now()+6500;actor.clipName='';}$('infoTitle').textContent=d.name;$('infoBody').textContent=d.text;$('info').classList.remove('hidden');}
+function showInfo(id){const d=DINO[id];if(!d)return;const actor=dinoRoots.find(x=>x.id===id);if(actor){actor.lookUntil=performance.now()+6500;actor.state='look';actor.target=null;actor.clipName='';}$('infoTitle').textContent=d.name;$('infoBody').textContent=d.text;$('info').classList.remove('hidden');}
 function closeInfo(){$('info').classList.add('hidden');}
 function onPick(evt){if(!evt.hit||!evt.pickedMesh)return;let m=evt.pickedMesh;while(m&&!m.metadata?.dinoId&&!m.metadata?.ground)m=m.parent;if(m?.metadata?.dinoId){showInfo(m.metadata.dinoId);return;}if(m?.metadata?.ground&&evt.pickedPoint){target=evt.pickedPoint.clone();moving=true;}}
 function movePlayer(dt){if(!moving||!target||xr?.baseExperience?.state===BABYLON.WebXRState.IN_XR)return;const dest=new BABYLON.Vector3(target.x,1.65,target.z);dest.y=1.65;const delta=dest.subtract(camera.position);delta.y=0;const len=delta.length();if(len<.45){moving=false;return;}delta.normalize();camera.position.addInPlace(delta.scale(Math.min(len,dt*4.5)));camera.position.y=terrainHeightAt(camera.position.x,camera.position.z)+1.65;}
-function animateDinos(t){dinoRoots.forEach(d=>{const s=t*.00022+d.phase,dx=Math.cos(s)*d.radius,dz=-Math.sin(s*.73)*d.radius*.7;const nx=d.origin.x+Math.sin(s)*d.radius,nz=d.origin.z+Math.cos(s*.73)*d.radius*.7;if(terrainValidAt(nx,nz)){d.root.position.x=nx;d.root.position.z=nz;d.root.position.y=terrainHeightAt(nx,nz)+Math.max(0,d.root.position.y-terrainHeightAt(d.origin.x,d.origin.z));}const looking=t<d.lookUntil,running=!looking&&Math.sin(s*.23+d.phase)>.96,desired=looking?'Neck_Look':running?'Run':Math.abs(Math.cos(s))>.18?'Walk':'Idle';if(d.clipName!==desired){const clip=d.clips.find(a=>a.name.toLowerCase()===desired.toLowerCase());if(clip){d.clips.forEach(a=>{if(a!==clip)a.stop();});clip.start(true);d.clipName=desired;}}if(Math.abs(dx)+Math.abs(dz)>.02)d.root.rotation.y=Math.atan2(dx,dz)+d.baseYaw+(DINO[d.id].flip?Math.PI:0);});}
+function animateDinos(t,dt){
+ const step=Math.min(.05,Math.max(0,dt||0));
+ const gait={atacamatitan:.72,arackar:.9,patagonia:.55,stegouros:.5,aysen:.85};
+ dinoRoots.forEach(d=>{
+  const root=d.root,groundY=terrainHeightAt(root.position.x,root.position.z);
+  if(t<d.lookUntil){d.state='look';}
+  else if(d.state==='look'){d.state='idle';d.timer=1.5;d.target=null;}
+  if(d.state==='idle'){
+   d.timer-=step;
+   if(d.timer<=0){
+    let candidate=null;
+    for(let tries=0;tries<16&&!candidate;tries++){
+     const a=rand(Math.floor(t)+tries*31+d.phase*100)*Math.PI*2,r=rand(Math.floor(t)+tries*17+d.phase*71)*d.radius;
+     const x=d.home.x+Math.cos(a)*r,z=d.home.z+Math.sin(a)*r;
+     const samples=[ [x,z],[x+Math.cos(a)*DINO[d.id].length*.3,z+Math.sin(a)*DINO[d.id].length*.3],[x-Math.cos(a)*DINO[d.id].length*.3,z-Math.sin(a)*DINO[d.id].length*.3] ];
+     if(samples.every(p=>terrainValidAt(p[0],p[1])))candidate={x,z};
+    }
+    if(candidate){d.target=candidate;d.state='walk';}
+    else d.timer=2;
+   }
+  }
+  if(d.state==='walk'&&d.target){
+   const dx=d.target.x-root.position.x,dz=d.target.z-root.position.z,dist=Math.hypot(dx,dz);
+   if(dist<.35){d.state='idle';d.target=null;d.timer=2+rand(Math.floor(t)+d.phase*19)*4;}
+   else{
+    const desired=Math.atan2(dx,dz);let delta=desired-d.heading;
+    while(delta>Math.PI)delta-=Math.PI*2;while(delta< -Math.PI)delta+=Math.PI*2;
+    d.heading+=Math.sign(delta)*Math.min(Math.abs(delta),1.4*step);
+    const speed=DINO[d.id].length*(gait[d.id]||.65)*Math.min(1,Math.max(.35,1-Math.abs(delta)*.35));
+    const nx=root.position.x+Math.sin(d.heading)*speed*step,nz=root.position.z+Math.cos(d.heading)*speed*step;
+    const r=DINO[d.id].length*.3;
+    const support=[[nx,nz],[nx+Math.sin(d.heading)*r,nz+Math.cos(d.heading)*r],[nx-Math.sin(d.heading)*r,nz-Math.cos(d.heading)*r]];
+    if(support.every(p=>terrainValidAt(p[0],p[1]))){
+     const heights=support.map(p=>terrainHeightAt(p[0],p[1]));
+     root.position.x=nx;root.position.z=nz;root.position.y=Math.min(...heights);
+    }else{d.state='idle';d.target=null;d.timer=2.5;}
+   }
+  }else root.position.y=groundY;
+  const desired=d.state==='look'?'Neck_Look':d.state==='walk'?(d.running?'Run':'Walk'):'Idle';
+  if(d.clipName!==desired){
+   const clip=d.clips.find(a=>a.name.toLowerCase()===desired.toLowerCase());
+   if(clip){d.clips.forEach(a=>{if(a!==clip)a.stop();});clip.start(true);d.clipName=desired;}
+  }
+  if(d.state==='walk')root.rotation.y=d.heading+d.baseYaw+(DINO[d.id].flip?Math.PI:0);
+  else root.rotation.y=d.heading+d.baseYaw+(DINO[d.id].flip?Math.PI:0);
+ });
+}
 async function enterXR(){try{if(!navigator.xr){$('sensorNotice').classList.remove('hidden');return;}if(!xr)xr=await scene.createDefaultXRExperienceAsync({uiOptions:{sessionMode:'immersive-vr',referenceSpaceType:'local-floor',customButtons:[]},disableTeleportation:true});await xr.baseExperience.enterXRAsync('immersive-vr','local-floor');}catch(e){console.warn('WebXR no disponible',e);$('sensorNotice').classList.remove('hidden');}}
 function bindControls(){scene.onPointerObservable.add(pi=>{if(pi.type===BABYLON.PointerEventTypes.POINTERPICK)onPick(pi.pickInfo);});canvas.addEventListener('pointerdown',()=>{if(camera.inputs.attached.pointers){}},{passive:true});$('explore').onclick=()=>startExperience(false);$('visor').onclick=()=>startExperience(true);$('vrButton').onclick=enterXR;$('closeInfo').onclick=closeInfo;$('timeButton').onclick=()=>{night=!night;scene.ambientColor=night?new BABYLON.Color3(.12,.16,.25):new BABYLON.Color3(.3,.3,.3);$('timeButton').textContent=night?'🌙':'☀️';};$('rainButton').onclick=()=>{raining=!raining;$('rainButton').textContent=raining?'🌧️':'🌧';if(raining){if(!rainSystem){rainSystem=new BABYLON.ParticleSystem('rain',1800,scene);rainSystem.particleTexture=makeParticleTexture();rainSystem.emitter=new BABYLON.Vector3(0,18,-10);rainSystem.minEmitBox=new BABYLON.Vector3(-55,0,-55);rainSystem.maxEmitBox=new BABYLON.Vector3(55,0,55);rainSystem.color1=new BABYLON.Color4(.65,.75,.9,.5);rainSystem.color2=new BABYLON.Color4(.8,.85,1,.35);rainSystem.minSize=.025;rainSystem.maxSize=.05;rainSystem.minLifeTime=1;rainSystem.maxLifeTime=2;rainSystem.emitRate=1200;rainSystem.direction1=new BABYLON.Vector3(0,-1,0);rainSystem.direction2=new BABYLON.Vector3(.2,-1,.2);rainSystem.minEmitPower=8;rainSystem.maxEmitPower=13;}rainSystem.start();}else rainSystem?.stop();};$('soundButton').onclick=()=>{soundOn=!soundOn;$('soundButton').textContent=soundOn?'🔊':'🔇';};$('qualityButton').onclick=()=>{const next=quality==='alta'?'media':quality==='media'?'baja':'alta';location.search=new URLSearchParams({...Object.fromEntries(params),q:next}).toString();};$('retrySensors').onclick=()=>enterXR();$('continueTouch').onclick=()=>{$('sensorNotice').classList.add('hidden');};}
 async function startExperience(withVR){$('loader').style.opacity='0';setTimeout(()=>$('loader').classList.add('hidden'),750);$('hud').classList.remove('hidden');$('worldLabel').textContent=WORLD.title;if(withVR)await enterXR();}
@@ -332,7 +422,7 @@ async function init(){
  camera=new BABYLON.UniversalCamera('player-camera',new BABYLON.Vector3(0,1.65,12),scene);camera.minZ=.08;camera.maxZ=320;camera.fov=.92;camera.speed=.35;camera.inertia=.82;camera.angularSensibility=3800;camera.attachControl(canvas,true);camera.keysUp.push(87);camera.keysDown.push(83);camera.keysLeft.push(65);camera.keysRight.push(68);camera.applyGravity=false;camera.checkCollisions=true;camera.ellipsoid=new BABYLON.Vector3(.35,.85,.35);
  setProgress(.08,'Creando el paisaje…');addSky();addLighting();await addTerrain();camera.position.y=1.65+terrainHeightAt(0,12);addWater();addSandBars();addMountains();setProgress(.2,'Cargando dinosaurios…');
  const ids=WORLD.dinos,baseHerd={atacamatitan:22,arackar:24,patagonia:22,stegouros:18,aysen:28,valle:5}[worldKey]||5,herdSize=Math.max(3,Math.round(baseHerd*Q)),totalDinos=ids.length*herdSize;let loadedDinos=0;for(const id of ids){for(let n=0;n<herdSize;n++){await spawnDino(id,n,herdSize,null);loadedDinos++;setProgress(.2+.53*loadedDinos/totalDinos,'Cargando '+DINO[id].name+' · '+loadedDinos+'/'+totalDinos+'…');}}
- setProgress(.76,'Poblando el paisaje…');await addVegetation();addForest3D();setProgress(.9,'Preparando atmósfera…');addParticles();bindControls();scene.onBeforeRenderObservable.add(()=>{const now=performance.now(),dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;movePlayer(dt);animateDinos(now);});
+ setProgress(.76,'Poblando el paisaje…');await addVegetation();addForest3D();setProgress(.9,'Preparando atmósfera…');addParticles();bindControls();scene.onBeforeRenderObservable.add(()=>{const now=performance.now(),dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;movePlayer(dt);animateDinos(now,dt);});
  engine.runRenderLoop(()=>{if(scene&&scene.activeCamera)scene.render();});window.addEventListener('resize',()=>engine.resize());setProgress(1,'¡Mundo listo!');$('startButtons').classList.remove('hidden');
  }catch(err){console.error(err);$('loadText').textContent='No se pudo iniciar el mundo: '+err.message;$('startButtons').classList.remove('hidden');$('explore').onclick=()=>location.reload();}
 }
