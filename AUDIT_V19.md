@@ -120,3 +120,7 @@ El ZIP contiene 20 GLB, 57 JPG, 22 PNG, 2 JS y 1 HTML. No contiene archivos de a
 **Otros:** `js/main.js`, `lib/aframe.min.js` y `index.html`. La presencia de A-Frame en el ZIP original no significa que deba volver a usarse: la migración actual mantiene Babylon.js como único motor.
 
 **Audio:** el ZIP v19 no contiene archivos de sonido separados, pero sí contiene un sistema procedural Web Audio en `js/main.js`: ruido filtrado para viento/agua/lluvia, osciladores de modulación, ambiente de insectos/grillos y llamados de dinosaurios generados con osciladores y envolventes. La paridad de audio debe compararse por parámetros y comportamiento del código, no por recuperación de MP3/OGG/WAV.
+
+### Regresión visual confirmada por capturas de Chromium
+
+Las primeras capturas de mundo mostraron que el domo del panorama no se veía: el domo tenía diámetro 900 (radio 450) y la cámara cortaba en `maxZ=320`, por lo que quedaba fuera del plano lejano. Se corrigió el domo a diámetro 500 para mantenerlo dentro del rango visible. Las capturas también muestran que el suelo sigue viéndose demasiado uniforme aunque el mapa fotográfico y el normal reportan carga; se añadió diagnóstico del material, UV, estado de textura y muestra de píxel para localizar si el problema es el enlace de textura, la geometría o la iluminación. La recuperación visual del terreno aún no se considera terminada.
