@@ -934,7 +934,7 @@ function installDiagnostics(){
  const panel=document.createElement('pre');panel.id='huellasPerfDiagnostics';
  Object.assign(panel.style,{position:'fixed',left:'8px',top:'8px',zIndex:'10000',margin:'0',padding:'8px 10px',maxWidth:'min(560px,94vw)',maxHeight:'42vh',overflow:'hidden',borderRadius:'8px',background:'rgba(0,0,0,.78)',color:'#d9ffe7',font:'11px/1.4 monospace',pointerEvents:'none',whiteSpace:'pre-wrap'});
  document.body.appendChild(panel);
- let elapsed=0;scene.onBeforeRenderObservable.add(()=>{
+ let elapsed=0;scene.onAfterRenderObservable.add(()=>{
   elapsed+=engine.getDeltaTime();if(elapsed<500)return;elapsed=0;
   const d=snapshot(),fmt=v=>v==null?'N/D':v;
   const pos=d.player?d.player.x.toFixed(1)+','+d.player.y.toFixed(1)+','+d.player.z.toFixed(1):'N/D';
@@ -942,7 +942,7 @@ function installDiagnostics(){
   panel.textContent='HUELLAS VR · DIAGNÓSTICO\n'+
    'Mundo: '+d.world+' · Calidad: '+d.quality+' · WebGL '+fmt(d.webglVersion)+' · '+d.renderSize.width+'×'+d.renderSize.height+
    '\nFPS: '+d.fps+' · CPU actualización JS: '+d.cpuUpdateMs+' ms (media '+d.cpuUpdateAvgMs+' ms) · frame: '+fmt(d.frameTimeMs)+' ms · render: '+fmt(d.renderTimeMs)+' ms · GPU: '+fmt(d.gpuFrameTimeMs)+' ms'+
-   '\nDraw calls: '+fmt(d.drawCalls)+' · Mallas activas: '+d.activeMeshes+'/'+d.meshes+' · Texturas: '+d.textures+' · Partículas: '+d.particles+
+   '\nDraw calls: '+fmt(d.drawCalls)+' · Física: '+fmt(d.physicsTimeMs)+' ms · Mallas activas: '+d.activeMeshes+'/'+d.meshes+' · Texturas: '+d.textures+' · Partículas: '+d.particles+' · VRAM: N/D'+
    '\nTerreno: foto '+(d.terrain.photo?'OK':'...')+' / normal '+(d.terrain.normal?'OK':'...')+' · Panorama: '+(d.sky.ready?'OK':'...')+
    '\nHavok: '+(d.physics.enabled?'ON':'OFF')+' · soporte: '+d.physics.support+' · colisionadores: '+d.physics.colliders+' · XR: '+d.xrState+
    '\nJugador xyz: '+pos+' · altura suelo: '+(d.player?d.player.groundY:'N/D')+' · Heap JS: '+(d.heapMB==null?'N/D':d.heapMB+' MB')+
