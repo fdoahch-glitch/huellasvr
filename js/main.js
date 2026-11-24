@@ -230,9 +230,8 @@ async function spawnDino(id,index,total,center){
 }
 const VEGETATION_QUALITY={alta:1,media:.6,baja:.3}[quality]||1;
 async function addVegetation(){
- const F=WORLD.flora||{};
- const rockTint=({atacamatitan:'#c88a6a',arackar:'#6a625c',patagonia:'#bdb6a6',stegouros:'#a8a294',aysen:'#5d5c5a'}[worldKey]||'#8c8a82');
- // Catálogo y parámetros extraídos de VEG() del mundo3d original v19.
+ const F=WORLD.flora||{},rockTint=({atacamatitan:'#c88a6a',arackar:'#6a625c',patagonia:'#bdb6a6',stegouros:'#a8a294',aysen:'#5d5c5a'}[worldKey]||'#8c8a82');
+ // Parámetros exactos del catálogo VEG() de los cinco mundos publicados en v19.
  const specs=[
   {file:'models/veg/araucaria_adulta.glb',n:F.adult||0,size:[15,23],sink:.02,water:5,keep:3,rMin:20,rMax:50},
   {file:'models/veg/araucaria_joven.glb',n:F.young||0,size:[3.5,8],sink:.07,water:3,keep:2,rMin:9,rMax:44},
@@ -249,60 +248,47 @@ async function addVegetation(){
  const seedBase=({atacamatitan:77,arackar:173,patagonia:271,stegouros:367,aysen:463}[worldKey]||77);
  for(let si=0;si<specs.length;si++){
   const a=specs[si],count=Math.max(0,Math.round(a.n*VEGETATION_QUALITY));if(!count)continue;
-  let container;
-  try{container=await loadContainer(a.file);}catch(e){throw new Error('Falta un modelo original de vegetación ('+a.file+'): '+e.message);}
-  const points=[],placed=[];
-  const rng=n=>rand(seedBase+si*7919+n*17.17);
-  const baseRadius=6;
+  let container;try{container=await loadContainer(a.file);}catch(e){throw new Error('No se pudo cargar el modelo original '+a.file+': '+e.message);}
+  const points=[],placed=[],rng=n=>rand(seedBase+si*7919+n*17.17);
   for(let i=0,attempt=0;i<count&&attempt<count*80+240;attempt++){
    let x,z;
    if(a.clump&&points.length&&rng(attempt*5+1)<a.clump){
     const q=points[Math.floor(rng(attempt*5+2)*points.length)],ang=rng(attempt*5+3)*Math.PI*2,dist=.6+rng(attempt*5+4)*1.8;
     x=q.x+Math.cos(ang)*dist;z=q.z+Math.sin(ang)*dist;
    }else{
-    const ang=rng(attempt*5+1)*Math.PI*2,rMin=a.rMin??7,rMax=a.rMax??52;
-    const radius=rMin+Math.sqrt(rng(attempt*5+2))*(rMax-rMin);
+    const ang=rng(attempt*5+1)*Math.PI*2,rMin=a.rMin??7,rMax=a.rMax??52,radius=rMin+Math.sqrt(rng(attempt*5+2))*(rMax-rMin);
     x=Math.cos(ang)*radius;z=Math.sin(ang)*radius;
    }
-   if(Math.hypot(x,z)<baseRadius)continue;
-   if(!terrainValidAt(x,z))continue;
+   if(Math.hypot(x,z)<6||!terrainValidAt(x,z))continue;
    const wd=waterDistance(x,z);
-   if(a.band){if(wd<a.band[0]||wd>a.band[1])continue;}
-   else if(hasWater&&wd<(a.water??.5))continue;
+   if(a.band){if(wd<a.band[0]||wd>a.band[1])continue;}else if(hasWater&&wd<(a.water??.5))continue;
    if(!a.free&&homes.some(h=>Math.hypot(x-h.p.x,z-h.p.z)<=h.r+(a.keep||1)))continue;
-   if(a.clump)points.push({x,z});
-   placed.push({x,z,index:i++});
+   if(a.clump)points.push({x,z});placed.push({x,z,index:i++});
   }
-  // AssetContainer conserva el GLB original y permite crear instancias Babylon compartiendo geometría.
-  const source=container.instantiateModelsToScene(n=>n+'-veg-source-'+si,false);
-  const templateRoot=new BABYLON.TransformNode('veg-template-'+worldKey+'-'+si,scene);
-  source.rootNodes.forEach(n=>n.parent=templateRoot);
-  templateRoot.setEnabled(false);
-  templateRoot.computeWorldMatrix(true);
-  let min=new BABYLON.Vector3(Infinity,Infinity,Infinity),max=new BABYLON.Vector3(-Infinity,-Infinity,-Infinity);
-  templateRoot.getChildMeshes(false).forEach(m=>{m.computeWorldMatrix(true);const bb=m.getBoundingInfo().boundingBox;min=BABYLON.Vector3.Minimize(min,bb.minimumWorld);max=BABYLON.Vector3.Maximize(max,bb.maximumWorld);});
-  const dims=max.subtract(min),base=Math.max(dims.x,dims.z)||1,height=dims.y||base*.5,cx=(min.x+max.x)*.5,cz=(min.z+max.z)*.5;
-  // Normaliza pivote una sola vez; las instancias conservan materiales y jerarquía del modelo fuente.
-  const pivot=new BABYLON.TransformNode('veg-origin-'+worldKey+'-'+si,scene);templateRoot.parent=pivot;
-  pivot.position.set(-cx,-min.y,-cz);pivot.setEnabled(false);
-  templateRoot.getChildMeshes(false).forEach(mesh=>{
-   mesh.isPickable=false;mesh.checkCollisions=false;
-   const materials=mesh.material?[mesh.material,...(mesh.material.subMaterials||[])]:[];
-   materials.forEach(m=>{if(!m)return;if(a.tint){const tint=BABYLON.Color3.FromHexString(a.tint);if(m.diffuseColor)m.diffuseColor.multiplyInPlace(tint);if(m.albedoColor)m.albedoColor.multiplyInPlace(tint);}if(a.bright){if(m.diffuseColor)m.diffuseColor.scaleInPlace(a.bright);if(m.albedoColor)m.albedoColor.scaleInPlace(a.bright);}if(m.roughness!==undefined)m.roughness=Math.max(.85,m.roughness);if(m.metallic!==undefined)m.metallic=0;});
-  });
+  let dimensions=null,materialsAdjusted=false;
   for(let i=0;i<placed.length;i++){
-   const p=placed[i],width=a.size[0]+rng(p.index*7+31)*(a.size[1]-a.size[0]),scale=width/base,squash=a.squash||1;
-   const instanceRoot=new BABYLON.TransformNode('veg-'+si+'-'+i,scene);
-   const cloneRoot=templateRoot.clone('veg-model-'+si+'-'+i,null,true);
-   if(!cloneRoot)continue;
-   cloneRoot.setEnabled(true);cloneRoot.parent=instanceRoot;
-   instanceRoot.position.set(p.x,terrainHeightAt(p.x,p.z)-(a.sink||0)*height*scale*squash,p.z);
-   instanceRoot.scaling.set(scale,scale*squash,scale);
-   instanceRoot.rotation.set((rng(p.index*7+41)-.5)*(a.tilt||0),rng(p.index*7+43)*Math.PI*2,(rng(p.index*7+47)-.5)*(a.tilt||0));
-   cloneRoot.getChildMeshes(false).forEach(m=>{m.isPickable=false;m.checkCollisions=false;});
-   instanceRoot.computeWorldMatrix(true);
+   const p=placed[i],instances=container.instantiateModelsToScene(n=>n+'-veg-'+si+'-'+i,false);
+   const root=new BABYLON.TransformNode('world-vegetation-'+si+'-'+i,scene);
+   instances.rootNodes.forEach(node=>node.parent=root);root.computeWorldMatrix(true);
+   const meshes=root.getChildMeshes(false);
+   if(!dimensions){
+    let min=new BABYLON.Vector3(Infinity,Infinity,Infinity),max=new BABYLON.Vector3(-Infinity,-Infinity,-Infinity);
+    meshes.forEach(mesh=>{mesh.computeWorldMatrix(true);const bb=mesh.getBoundingInfo().boundingBox;min=BABYLON.Vector3.Minimize(min,bb.minimumWorld);max=BABYLON.Vector3.Maximize(max,bb.maximumWorld);});
+    dimensions={base:Math.max(max.x-min.x,max.z-min.z)||1,height:max.y-min.y||1,cx:(min.x+max.x)*.5,cz:(min.z+max.z)*.5};
+   }
+   if(!materialsAdjusted){
+    meshes.forEach(mesh=>{
+     mesh.isPickable=false;mesh.checkCollisions=false;
+     const mats=mesh.material?[mesh.material,...(mesh.material.subMaterials||[])]:[];
+     mats.forEach(m=>{if(!m)return;if(a.tint){const tint=BABYLON.Color3.FromHexString(a.tint);if(m.diffuseColor)m.diffuseColor.multiplyInPlace(tint);if(m.albedoColor)m.albedoColor.multiplyInPlace(tint);}if(a.bright){if(m.diffuseColor)m.diffuseColor.scaleInPlace(a.bright);if(m.albedoColor)m.albedoColor.scaleInPlace(a.bright);}if(m.roughness!==undefined)m.roughness=Math.max(.85,m.roughness);if(m.metallic!==undefined)m.metallic=0;});
+    });materialsAdjusted=true;
+   }
+   const width=a.size[0]+rng(p.index*7+31)*(a.size[1]-a.size[0]),scale=width/dimensions.base,squash=a.squash||1;
+   root.position.set(p.x-dimensions.cx*scale,terrainHeightAt(p.x,p.z)-(a.sink||0)*dimensions.height*scale*squash,p.z-dimensions.cz*scale);
+   root.scaling.set(scale,scale*squash,scale);
+   root.rotation.set((rng(p.index*7+41)-.5)*(a.tilt||0),rng(p.index*7+43)*Math.PI*2,(rng(p.index*7+47)-.5)*(a.tilt||0));
+   meshes.forEach(mesh=>{mesh.isPickable=false;mesh.checkCollisions=false;});
   }
-  pivot.dispose(false,false);
  }
 }
 function addMountains(){
