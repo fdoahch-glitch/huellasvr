@@ -329,7 +329,7 @@ async function addVegetation(){
    if(!a.free&&homes.some(h=>Math.hypot(x-h.p.x,z-h.p.z)<=h.r+(a.keep||1)))continue;
    if(a.clump)points.push({x,z});placed.push({x,z,index:i++});
   }
-  let dimensions=null,materialsAdjusted=false;
+  let dimensions=null,materialsAdjusted=false;const batchMeshes=[],batchRoots=[];
   for(let i=0;i<placed.length;i++){
    const p=placed[i],instances=container.instantiateModelsToScene(n=>n+'-veg-'+si+'-'+i,false,{doNotInstantiate:false});
    const root=new BABYLON.TransformNode('world-vegetation-'+si+'-'+i,scene);
@@ -354,6 +354,16 @@ async function addVegetation(){
    root.scaling.set(scale,sy,scale);
    root.rotation.set((rng(p.index*7+41)-.5)*(a.tilt||0),rng(p.index*7+43)*Math.PI*2,(rng(p.index*7+47)-.5)*(a.tilt||0));
    meshes.forEach(mesh=>{mesh.isPickable=false;mesh.checkCollisions=false;});
+   batchMeshes.push(...meshes);batchRoots.push(root);
+  }
+  if(batchMeshes.length){
+   batchMeshes.forEach(mesh=>mesh.computeWorldMatrix(true));
+   const merged=batchMeshes.length>1?BABYLON.Mesh.MergeMeshes(batchMeshes,true,true,undefined,false,true):batchMeshes[0];
+   if(merged){
+    merged.name='vegetation-batch-'+worldKey+'-'+si;merged.isPickable=false;merged.checkCollisions=false;merged.receiveShadows=true;
+    shadowGenerator?.addShadowCaster(merged,true);
+    batchRoots.forEach(root=>root.dispose(false));
+   }
   }
  }
 }
