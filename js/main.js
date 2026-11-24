@@ -35,7 +35,7 @@ const HERD_CONFIG = {
 const requested = (params.get('mundo') || 'atacamatitan').toLowerCase();
 const worldKey = WORLDS[requested] ? requested : 'valle';
 const WORLD = WORLDS[worldKey];
-let havokInstance=null,physicsPlugin=null,physicsController=null,physicsAggregates=[],physicsReady=false,physicsLastSupport='not-started',skyReady=false,skyError=null;
+let havokInstance=null,physicsPlugin=null,physicsController=null,physicsAggregates=[],physicsReady=false,physicsLastSupport='not-started',skyReady=false,skyError=null,terrainPhotoReady=false,terrainNormalReady=false,terrainTextureError=null;
 let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, waterGain=null, lightingBase=null, timeMode='dia', skyLife=null, nightInsectGain=null, rainBlend=0, xrGazeActor=null, xrGazeSince=0, xrGazeFired=false;
 let orientationEnabled=false,orientationBase=null,orientationHandler=null,stereoEnabled=false,stereoWakeLock=null,stereoTapTimes=[],cpuUpdateMs=0,cpuUpdateAvgMs=0,renderLoop=null,contextLost=false,renderPausedForVisibility=false;
 const setProgress=(v,t)=>{$('progressFill').style.width=Math.round(v*100)+'%';$('loadText').textContent=t;};
@@ -191,10 +191,11 @@ function addTerrain(){
      const compositeTexture=new BABYLON.DynamicTexture('terrain-composite-'+worldKey,{width:2048,height:2048},scene,false,BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
      compositeTexture.getContext().drawImage(compositeCanvas,0,0);compositeTexture.update(false);
      compositeTexture.wrapU=compositeTexture.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;compositeTexture.anisotropicFilteringLevel=8;
-     m.diffuseTexture=compositeTexture;m.diffuseColor=new BABYLON.Color3(1,1,1);
+     m.diffuseTexture=compositeTexture;m.diffuseColor=new BABYLON.Color3(1,1,1);terrainPhotoReady=true;terrainTextureError=null;
      m.specularColor=new BABYLON.Color3(.025,.025,.025);m.roughness=.98;
-     const normal=new BABYLON.Texture(detailProfiles?.normal||'img/tx_dirt_n.jpg',scene,false,true);normal.wrapU=normal.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;normal.uScale=normal.vScale=300/(detailProfiles?.sand?.size||3);normal.anisotropicFilteringLevel=8;m.bumpTexture=normal;m.bumpTexture.level=.7;
-     mesh.material=m;mesh.refreshBoundingInfo();resolve();
+     const normalSrc=detailProfiles?.normal||'img/tx_dirt_n.jpg';
+     const normal=new BABYLON.Texture(normalSrc,scene,false,true,BABYLON.Texture.TRILINEAR_SAMPLINGMODE,()=>{terrainNormalReady=true;mesh.material=m;mesh.refreshBoundingInfo();resolve();},(message,exception)=>{terrainNormalReady=false;terrainTextureError=String(message||exception||'error desconocido');reject(new Error('No se pudo cargar el mapa normal '+normalSrc+': '+terrainTextureError));});
+     normal.wrapU=normal.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;normal.uScale=normal.vScale=300/(detailProfiles?.sand?.size||3);normal.anisotropicFilteringLevel=8;m.bumpTexture=normal;m.bumpTexture.level=.7;
     };
     if(!detailProfiles){finish();return;}
     Promise.all([loadImage(detailProfiles.sand.src),loadImage(detailProfiles.gravel.src),loadImage(detailProfiles.crack.src)]).then(images=>{
@@ -887,7 +888,7 @@ function installDiagnostics(){
   meshes:scene?.meshes?.length||0,activeMeshes:scene?.getActiveMeshes?.().length||0,
   textures:engine?.getLoadedTexturesCache?.().length||0,dinosaurs:dinoRoots.length,
   vegetationAssets:assetCache.size,particles:scene?.particleSystems?.length||0,dinoStates:dinoRoots.map(d=>({id:d.id,clip:d.clipName,active:!!d.activeClip,playing:!!d.activeClip?.isPlaying,state:d.state,heading:d.heading,speed:d.actualSpeed,target:d.target?{x:+d.target.x.toFixed(2),z:+d.target.z.toFixed(2)}:null,forwardYaw:d.baseYaw,position:{x:+d.root.position.x.toFixed(2),y:+d.root.position.y.toFixed(2),z:+d.root.position.z.toFixed(2)}})),cpuUpdateMs:Math.round(cpuUpdateMs*100)/100,cpuUpdateAvgMs:Math.round(cpuUpdateAvgMs*100)/100,heapMB:performance.memory?Math.round(performance.memory.usedJSHeapSize/1048576):null,
-  sky:{ready:skyReady,error:skyError,url:WORLD.sky},physics:{enabled:physicsReady,controller:!!physicsController,colliders:physicsAggregates.length,support:physicsLastSupport},xrState:xr?.baseExperience?.state??'desktop'
+  sky:{ready:skyReady,error:skyError,url:WORLD.sky},terrain:{photo:terrainPhotoReady,normal:terrainNormalReady,error:terrainTextureError,ground:WORLD.ground},physics:{enabled:physicsReady,controller:!!physicsController,colliders:physicsAggregates.length,support:physicsLastSupport},xrState:xr?.baseExperience?.state??'desktop'
  });
  window.__HUELLAS_VR_DIAGNOSTICS__=snapshot;
   if(params.get('test')==='1')window.__HUELLAS_VR_TEST__={
