@@ -33,7 +33,7 @@ function mat(name,color,rough=.9){const m=new BABYLON.StandardMaterial(name,scen
 function rand(seed){let x=Math.sin(seed*127.1+311.7)*43758.5453;return x-Math.floor(x);}
 function addSky(){
  const sky=BABYLON.MeshBuilder.CreateSphere('sky-dome',{diameter:900,segments:32},scene);sky.isPickable=false;sky.infiniteDistance=true;
- const m=new BABYLON.StandardMaterial('panorama-sky',scene);m.backFaceCulling=false;m.disableLighting=true;m.emissiveTexture=new BABYLON.Texture(WORLD.sky,scene,false,true);m.emissiveTexture.coordinatesMode=BABYLON.Texture.FIXED_EQUIRECTANGULAR_MODE;m.emissiveColor=new BABYLON.Color3(1,1,1);sky.material=m;sky.rotation.y=Math.PI;return sky;
+ const m=new BABYLON.StandardMaterial('panorama-sky',scene);m.backFaceCulling=false;m.disableLighting=true;m.emissiveTexture=new BABYLON.Texture(WORLD.sky,scene,false,true);m.emissiveTexture.coordinatesMode=BABYLON.Texture.FIXED_EQUIRECTANGULAR_MODE;m.emissiveColor=new BABYLON.Color3(1,1,1);sky.material=m;sky.rotation.y=(WORLD.panoRot??23)*Math.PI/180;return sky;
 }
 function addTerrain(){
  const T=WORLD,meta=T.terrainMeta||[-.5,.5,-.5,.5,-.003,.06],width=T.terrainWidth||300;
@@ -104,7 +104,7 @@ let terrainMap=null;
 let terrainHeightAt=(x,z)=>0;
 let terrainValidAt=(x,z)=>true;
 
-function addLighting(){const hemi=new BABYLON.HemisphericLight('ambient',new BABYLON.Vector3(0,1,0),scene);hemi.diffuse=BABYLON.Color3.FromHexString(WORLD.hemi);hemi.groundColor=new BABYLON.Color3(.22,.2,.17);hemi.intensity=.82;const sun=new BABYLON.DirectionalLight('sun',new BABYLON.Vector3(-.5,-1,.35),scene);sun.position=new BABYLON.Vector3(-35,55,-20);sun.diffuse=BABYLON.Color3.FromHexString(WORLD.sun);sun.intensity=.9;scene.environmentIntensity=.7;}
+function addLighting(){const L={atacamatitan:{hemi:1.05,sun:1.15,pos:[25,34,-10],ground:'#8a4e34'},arackar:{hemi:1,sun:1.1,pos:[-30,18,-20],ground:'#9a7a5a'},patagonia:{hemi:.95,sun:.8,pos:[20,30,-30],ground:'#5f6a52'},stegouros:{hemi:.95,sun:.85,pos:[15,36,-10],ground:'#4a5a34'},aysen:{hemi:.9,sun:.75,pos:[30,30,-20],ground:'#55584e'},valle:{hemi:.55,sun:.9,pos:[-12,22,10],ground:'#6b8a5a'}}[worldKey];const hemi=new BABYLON.HemisphericLight('ambient',new BABYLON.Vector3(0,1,0),scene);hemi.diffuse=BABYLON.Color3.FromHexString(WORLD.hemi);hemi.groundColor=BABYLON.Color3.FromHexString(L.ground);hemi.intensity=L.hemi;const sun=new BABYLON.DirectionalLight('sun',new BABYLON.Vector3(-L.pos[0],-L.pos[1],-L.pos[2]).normalize(),scene);sun.position=new BABYLON.Vector3(...L.pos);sun.diffuse=BABYLON.Color3.FromHexString(WORLD.sun);sun.intensity=L.sun;scene.environmentIntensity=.7;}
 function addWater(){
  const waterMat=new BABYLON.StandardMaterial('original-water-'+worldKey,scene);
  waterMat.diffuseColor=BABYLON.Color3.FromHexString(worldKey==='arackar'?'#3fa5a6':worldKey==='atacamatitan'?'#6f9fae':worldKey==='patagonia'?'#4a6f70':worldKey==='stegouros'?'#485c48':'#38535f');
@@ -202,7 +202,7 @@ function bindControls(){scene.onPointerObservable.add(pi=>{if(pi.type===BABYLON.
 async function startExperience(withVR){$('loader').style.opacity='0';setTimeout(()=>$('loader').classList.add('hidden'),750);$('hud').classList.remove('hidden');$('worldLabel').textContent=WORLD.title;if(withVR)await enterXR();}
 async function init(){
  try{engine=new BABYLON.Engine(canvas,true,{disableWebGL2Support:false,doNotHandleContextLost:false,preserveDrawingBuffer:false,stencil:true,antialias:true,adaptToDeviceRatio:true});if(!engine.webGLVersion||engine.webGLVersion<2)throw new Error('Este dispositivo no ofrece WebGL 2.');
- scene=new BABYLON.Scene(engine);scene.clearColor=new BABYLON.Color4(.65,.76,.77,1);scene.collisionsEnabled=true;scene.fogMode=BABYLON.Scene.FOGMODE_EXP2;scene.fogColor=BABYLON.Color3.FromHexString(WORLD.fog);scene.fogDensity=.0038;
+ scene=new BABYLON.Scene(engine);scene.clearColor=new BABYLON.Color4(.65,.76,.77,1);scene.collisionsEnabled=true;scene.fogMode=BABYLON.Scene.FOGMODE_EXP2;scene.fogColor=BABYLON.Color3.FromHexString(WORLD.fog);scene.fogDensity=({atacamatitan:.0038,arackar:.0042,patagonia:.0052,stegouros:.0085,aysen:.006,valle:.006}[worldKey]||.0038);
  camera=new BABYLON.UniversalCamera('player-camera',new BABYLON.Vector3(0,1.65,12),scene);camera.minZ=.08;camera.maxZ=320;camera.fov=.92;camera.speed=.35;camera.inertia=.82;camera.angularSensibility=3800;camera.attachControl(canvas,true);camera.keysUp.push(87);camera.keysDown.push(83);camera.keysLeft.push(65);camera.keysRight.push(68);camera.applyGravity=false;camera.checkCollisions=true;camera.ellipsoid=new BABYLON.Vector3(.35,.85,.35);
  setProgress(.08,'Creando el paisaje…');addSky();addLighting();await addTerrain();camera.position.y=1.65+terrainHeightAt(0,12);addWater();addSandBars();setProgress(.2,'Cargando dinosaurios…');
  const ids=WORLD.dinos,baseHerd={atacamatitan:22,arackar:24,patagonia:22,stegouros:18,aysen:28,valle:5}[worldKey]||5,herdSize=Math.max(3,Math.round(baseHerd*Q)),totalDinos=ids.length*herdSize;let loadedDinos=0;for(const id of ids){for(let n=0;n<herdSize;n++){await spawnDino(id,n,herdSize,null);loadedDinos++;setProgress(.2+.53*loadedDinos/totalDinos,'Cargando '+DINO[id].name+' · '+loadedDinos+'/'+totalDinos+'…');}}
