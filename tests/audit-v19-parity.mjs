@@ -319,3 +319,14 @@ check('Diagnóstico de rendimiento ULTRA: tiempos por sistema y percentiles de f
  for(const token of ['cpuStagesMs','frameP50Ms','frameP95Ms','frameP99Ms','fps1PercentLow','frameTimeSamples','gpuFrameTimeMs','captureGPUFrameTime'])assert.ok(main.includes(token),'Falta métrica '+token);
  for(const token of ['cpuStageMs.player','cpuStageMs.herd','cpuStageMs.dinosaurs','cpuStageMs.footFx','cpuStageMs.environment','cpuStageMs.gaze','cpuStageMs.water'])assert.ok(main.includes(token),'Falta desglose CPU '+token);
 });
+
+
+check('Matrices estáticas congeladas sin inmovilizar dinosaurios ni atmósfera móvil',()=>{
+ assert.ok(main.includes('function freezeStaticEnvironmentTransforms()'));
+ assert.ok(main.includes('mesh.freezeWorldMatrix()'));
+ assert.ok(main.includes('node.metadata?.dinoId||node===skyLife?.anchor'));
+ assert.ok(main.includes("mesh.name==='sky-dome'"));
+ assert.ok(main.includes("mesh.name.startsWith('dino-footprint-pool-')"));
+ assert.ok(main.includes('freezeStaticEnvironmentTransforms()'));
+ assert.ok(main.includes('frozenWorldMatrices:'));
+});
