@@ -439,7 +439,7 @@ async function addVegetation(){
    if(physicsReady&&physicsCandidates.length){
     const selected=physicsCandidates.sort((a,b)=>Math.hypot(a.x,a.z)-Math.hypot(b.x,b.z)).slice(0,24);
     selected.forEach((candidate,ci)=>{
-     const radius=candidate.tree?Math.max(.32,candidate.width*.035):Math.max(.24,candidate.width*.28),height=Math.max(.6,candidate.height*(candidate.tree?.62:.82));
+     const radius=candidate.tree?Math.max(.32,candidate.width*.035):Math.max(.24,candidate.width*.28),height=Math.max(.6,candidate.height*(candidate.tree ? .62 : .82));
      const colliderMesh=BABYLON.MeshBuilder.CreateCylinder('environment-physics-collider-'+worldKey+'-'+si+'-'+ci,{height,diameter:radius*2,tessellation:8},scene);
      colliderMesh.position.set(candidate.x,terrainHeightAt(candidate.x,candidate.z)+height/2,candidate.z);colliderMesh.isVisible=false;colliderMesh.isPickable=false;colliderMesh.checkCollisions=false;
      physicsAggregates.push(new BABYLON.PhysicsAggregate(colliderMesh,BABYLON.PhysicsShapeType.CYLINDER,{mass:0,friction:.9,restitution:0},scene));
