@@ -128,22 +128,25 @@ uniform float huellasWindStrength;`};
    out.idx.push(a,d,b,b,d,e);
   }
  }
+ function buildTreePart(scene,name,out){
+  const mesh=new B.Mesh(name,scene),vd=new B.VertexData();vd.positions=out.p;vd.indices=out.idx;vd.normals=[];
+  B.VertexData.ComputeNormals(vd.positions,vd.indices,vd.normals);vd.applyToMesh(mesh,true);mesh.isVisible=false;mesh.isPickable=false;return mesh;
+ }
  function treeGeometry(scene,name,detail){
-  const out={p:[],idx:[]},height=detail?5.4:4.6;
-  appendCylinder(out,new B.Vector3(0,0,0),new B.Vector3(0,height*.76,0),detail?.32:.28,.12,detail?7:5);
+  const wood={p:[],idx:[]},foliage={p:[],idx:[]},height=detail?5.4:4.6;
+  appendCylinder(wood,new B.Vector3(0,0,0),new B.Vector3(0,height*.76,0),detail?.32:.28,.12,detail?7:5);
   if(detail){
    for(let i=0;i<5;i++){
     const a=i*Math.PI*2/5+.25,y=height*(.34+i*.075),len=1.05-i*.09;
     const base=new B.Vector3(0,y,0),tip=new B.Vector3(Math.cos(a)*len,y+.7,Math.sin(a)*len);
-    appendCylinder(out,base,tip,.105,.035,5);
-    appendCrown(out,tip,new B.Vector3(.62,.48,.62),7,4);
+    appendCylinder(wood,base,tip,.105,.035,5);
+    appendCrown(foliage,tip,new B.Vector3(.62,.48,.62),7,4);
    }
-   appendCrown(out,new B.Vector3(0,height*.78,0),new B.Vector3(1.12,1.05,1.12),8,5);
+   appendCrown(foliage,new B.Vector3(0,height*.78,0),new B.Vector3(1.12,1.05,1.12),8,5);
   }else{
-   appendCrown(out,new B.Vector3(0,height*.78,0),new B.Vector3(.95,1.15,.95),6,3);
+   appendCrown(foliage,new B.Vector3(0,height*.78,0),new B.Vector3(.95,1.15,.95),6,3);
   }
-  const mesh=new B.Mesh(name,scene),vd=new B.VertexData();vd.positions=out.p;vd.indices=out.idx;vd.normals=[];
-  B.VertexData.ComputeNormals(vd.positions,vd.indices,vd.normals);vd.applyToMesh(mesh,true);mesh.isVisible=false;mesh.isPickable=false;return mesh;
+  return {wood:buildTreePart(scene,name+'-wood',wood),foliage:buildTreePart(scene,name+'-foliage',foliage)};
  }
  function create(api){
   const scene=api.scene,profile=PROFILES[api.worldKey]||PROFILES.valle;
@@ -178,7 +181,7 @@ uniform float huellasWindStrength;`};
   const treeNearMat=trunkMat;
   const treeFarMat=distantCanopyMat;
 
-  [grassGeo,fernGeo,shrubGeo,treeNearGeo,treeFarGeo].forEach(m=>m.parent=root);
+  [grassGeo,fernGeo,shrubGeo,treeNearGeo.wood,treeNearGeo.foliage,treeFarGeo.wood,treeFarGeo.foliage].forEach(m=>m.parent=root);
   const seed=({atacamatitan:711,arackar:827,patagonia:941,stegouros:1061,aysen:1181,valle:1297}[api.worldKey]||1297);
   const grass=place(profile.grass,seed,{min:7,max:49,water:1.1,keep:7},api);
   const ferns=place(profile.ferns,seed+101,{min:8,max:63,water:1.8,keep:7},api);
@@ -190,8 +193,12 @@ uniform float huellasWindStrength;`};
   total+=thin(grassGeo,grass,grassMat,'procedural-grass-thin-'+api.worldKey,i=>{const h=.35+(i%7)*.065;return{x:.7+(i%3)*.12,y:h,z:.7+(i%3)*.12};});
   total+=thin(fernGeo,ferns,fernMat,'procedural-fern-thin-'+api.worldKey,i=>{const h=.75+(i%5)*.14;return{x:h,y:h,z:h};});
   total+=thin(shrubGeo,shrubs,leafMat,'procedural-shrub-thin-'+api.worldKey,i=>{const h=.8+(i%4)*.16;return{x:h,y:h,z:h};});
-  total+=thin(treeNearGeo,nearTrees,canopyMat,'procedural-tree-near-thin-'+api.worldKey,i=>{const h=.82+(i%5)*.12;return{x:h,y:h,z:h};});
-  total+=thin(treeFarGeo,farTrees,distantCanopyMat,'procedural-tree-far-thin-'+api.worldKey,i=>{const h=.9+(i%4)*.13;return{x:h,y:h,z:h};});
+  const nearScale=i=>{const h=.82+(i%5)*.12;return{x:h,y:h,z:h};};
+  const farScale=i=>{const h=.9+(i%4)*.13;return{x:h,y:h,z:h};};
+  total+=thin(treeNearGeo.wood,nearTrees,trunkMat,'procedural-tree-near-wood-'+api.worldKey,nearScale);
+  total+=thin(treeNearGeo.foliage,nearTrees,canopyMat,'procedural-tree-near-crown-'+api.worldKey,nearScale);
+  total+=thin(treeFarGeo.wood,farTrees,trunkMat,'procedural-tree-far-wood-'+api.worldKey,farScale);
+  total+=thin(treeFarGeo.foliage,farTrees,distantCanopyMat,'procedural-tree-far-crown-'+api.worldKey,farScale);
 
   // Las copias de malla usan geometría/material compartidos; sin cuerpos Havok por hoja.
   return {created:true,total,grass:grass.length,ferns:ferns.length,shrubs:shrubs.length,trees:trees.length,treeNear:nearTrees.length,treeFar:farTrees.length,windMaterials:windReady,proceduralBump:!!surfaceTexture,root};
