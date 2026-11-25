@@ -167,7 +167,7 @@ uniform float huellasWindStrength;`};
     surfaceTexture=new B.NoiseProceduralTexture('huellas-vegetation-noise-'+api.worldKey,128,scene);
     surfaceTexture.octaves=3;surfaceTexture.persistence=2;surfaceTexture.brightness=.16;
     surfaceTexture.animationSpeedFactor=0;surfaceTexture.refreshRate=0;
-    [grassMat,fernMat,leafMat].forEach(m=>{m.bumpTexture=surfaceTexture;m.bumpTexture.level=.09;});
+    [grassMat,fernMat,leafMat,canopyMat,distantCanopyMat].forEach(m=>{m.bumpTexture=surfaceTexture;m.bumpTexture.level=.07;});
    }catch(error){surfaceTexture=null;console.warn('[Huellas VR] Textura procedural de relieve no disponible:',error);}
   }
   const windStrength=profile.wind??1;
