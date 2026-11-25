@@ -127,9 +127,9 @@ function createRockFields(scene,worldKey,heightAt,validAt,waterDistanceAt){
  // Rocas propias de la paleogeografía: malla irregular facetada, sin GLB heredados
  // ni poliedros genéricos. Cada arquetipo comparte geometría/material por Thin Instances.
  const archetypes=[
-  {name:'fractured-outcrop',count:20,scale:[2.1,1.15,1.55],rough:.22},
-  {name:'rounded-boulder',count:24,scale:[1.45,.92,1.3],rough:.12},
-  {name:'stratified-slab',count:18,scale:[1.9,.48,1.15],rough:.2},
+  {name:'fractured-outcrop',count:20,scale:[2.1,1.15,1.55],rough:.42},
+  {name:'rounded-boulder',count:24,scale:[1.45,.92,1.3],rough:.28},
+  {name:'stratified-slab',count:18,scale:[1.9,.48,1.15],rough:.38},
   {name:'talus-block',count:24,scale:[.92,.68,.82],rough:.28},
   {name:'gravel',count:54,scale:[.36,.2,.3],rough:.1}
  ];
@@ -156,8 +156,8 @@ function createRockFields(scene,worldKey,heightAt,validAt,waterDistanceAt){
   const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
   const vd=new B.VertexData();vd.positions=positions;vd.indices=indices;vd.normals=normals;vd.colors=colors;vd.applyToMesh(mesh,true);
   const mat=new B.PBRMaterial('paleogeology-rock-pbr-'+worldKey+'-'+spec.name,scene);
-  mat.albedoColor=new B.Color3(1,1,1);mat.useVertexColors=true;mat.metallic=0;mat.roughness=.97;mat.backFaceCulling=false;mesh.material=mat;
-  mesh.isPickable=false;mesh.receiveShadows=true;
+  mat.albedoColor=palette[(kind+1)%palette.length].scale(.92);mat.useVertexColors=false;mat.metallic=0;mat.roughness=.98;mat.backFaceCulling=false;mesh.material=mat;
+  mesh.isVisible=true;mesh.setEnabled(true);mesh.isPickable=false;mesh.receiveShadows=true;
   return mesh;
  };
  for(let kind=0;kind<archetypes.length;kind++){
