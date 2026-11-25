@@ -45,8 +45,9 @@ function policy(file) {
   const rock = file.includes('rock') || file.includes('pebble') || file.includes('cerro_desierto');
   const near = tree ? 58 : rock ? 22 : 34;
   const far = tree ? 112 : rock ? 42 : 68;
+  const youngAraucaria = file.includes('araucaria_joven');
   const settings = tree
-    ? [{ quality: .82, distance: near, optimizeMesh: true }, { quality: .64, distance: far, optimizeMesh: true }]
+    ? [{ quality: .82, distance: near, optimizeMesh: true }, { quality: youngAraucaria ? .76 : .64, distance: far, optimizeMesh: true }]
     : rock
       ? [{ quality: .72, distance: near, optimizeMesh: true }, { quality: .46, distance: far, optimizeMesh: true }]
       : [{ quality: .82, distance: near, optimizeMesh: true }, { quality: .62, distance: far, optimizeMesh: true }];
