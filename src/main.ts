@@ -2,6 +2,7 @@ import { ArcRotateCamera, Engine, Scene, PointerEventTypes, type Observer, type 
 import { worlds, type WorldId } from "./domain/worlds";
 import { buildWorld } from "./worlds/WorldFactory";
 import { loadDinosaur, type DinosaurAnimation, type LoadedDinosaur } from "./dinosaurs/DinosaurManager";
+import { setupWorldControls, type WorldControls } from "./controls/WorldControls";
 import "./styles.css";
 
 const home = document.querySelector<HTMLElement>("#home")!;
@@ -21,6 +22,7 @@ let engine: Engine | null = null;
 let scene: Scene | null = null;
 let activeWorld: WorldId | null = null;
 let activeDinosaur: LoadedDinosaur | null = null;
+let worldControls: WorldControls | null = null;
 let cameraHome: { alpha: number; beta: number; radius: number } | null = null;
 let pointerObserver: Observer<PointerInfo> | null = null;
 
@@ -78,12 +80,13 @@ async function enterWorld(id: WorldId): Promise<void> {
     scene = new Scene(engine!);
     const built = buildWorld(scene, id);
     activeDinosaur = await loadDinosaur(scene, id, built.root);
+    worldControls = await setupWorldControls(scene, built.camera, canvas, built.root, status);
     cameraHome = { alpha: built.camera.alpha, beta: built.camera.beta, radius: built.camera.radius };
     const definition = worlds.find((item) => item.id === id)!;
     title.textContent = definition.title;
     subtitle.textContent = `${definition.species} · ${definition.period}`;
     infoTitle.textContent = "Bienvenido a " + definition.title;
-    infoCopy.textContent = definition.summary + " Arrastra para mirar alrededor; selecciona un marcador dorado para explorar un hito.";
+    infoCopy.textContent = definition.summary + " PC: WASD o flechas; móvil: usa los controles táctiles o arrastra. Selecciona un marcador dorado para explorar un hito.";
     evidenceTag.textContent = "Paisaje reconstruido a partir de evidencia";
     home.classList.add("hidden"); explorer.classList.remove("hidden");
     engine!.resize();
@@ -111,6 +114,8 @@ async function enterWorld(id: WorldId): Promise<void> {
 }
 
 function disposeWorld(): void {
+  worldControls?.dispose();
+  worldControls = null;
   activeDinosaur?.dispose();
   activeDinosaur = null;
   if (scene) {
