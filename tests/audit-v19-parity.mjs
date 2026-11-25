@@ -153,8 +153,8 @@ check('Paisajes y vegetación reconstruidos con geometría nativa Babylon',()=>{
  assert.doesNotMatch(main,/addMountains\(\);/);
  assert.match(vegetation,/atacamatitan:\{trees:5/);
  assert.match(vegetation,/arackar:\{trees:7/);
- assert.match(vegetation,/function treeBatch[\\s\\S]*?mesh\\.setEnabled\\(points\\.length>0\\)/);
- assert.match(paleogeography,/sourceMaterial\\?\\.albedoTexture/);
+ assert.match(vegetation,/function treeBatch[\s\S]*?mesh\.setEnabled\(points\.length>0\)/);
+ assert.match(paleogeography,/sourceMaterial\?\.albedoTexture/);
 });
 check('Todos los recursos GLB referenciados existen',()=>{
  const refs=[...new Set([...main.matchAll(/['"](models\/[^'"]+\.glb)['"]/g)].map(m=>m[1]))];
