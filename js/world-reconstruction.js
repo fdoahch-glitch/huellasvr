@@ -39,7 +39,7 @@ function createSurface(scene,worldKey,heightAt,validAt,waterDistanceAt){
  }
  for(let j=0;j<N;j++)for(let i=0;i<N;i++){
   const a=grid[j*(N+1)+i],b=grid[j*(N+1)+i+1],c=grid[(j+1)*(N+1)+i],d=grid[(j+1)*(N+1)+i+1];
-  if(a<0||b<0||c<0||d<0)continue;indices.push(a,c,b,b,c,d);
+  if(a<0||b<0||c<0||d<0)continue;indices.push(a,b,c,b,d,c);
  }
  const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
  const mesh=new B.Mesh('paleogeography-ground-'+worldKey,scene),vd=new B.VertexData();
