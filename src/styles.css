@@ -19,7 +19,7 @@
   .info-panel{top:88px}
   .world-topbar{gap:7px;left:10px;right:10px}
   .world-topbar .ui-button{padding:9px 10px;font-size:11px}
-  #vr-button{max-width:138px;white-space:normal;line-height:1.15;font-size:9px;padding:7px}
+  #vr-button{max-width:112px;white-space:normal;line-height:1.15;font-size:9px;padding:7px}.world-topbar>div{min-width:0;flex:1}.world-topbar strong,.world-topbar small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .world-topbar #reset-camera{font-size:17px;padding:6px 9px}
   .world-controls span:first-child{max-width:56%;font-size:8px}
 }
