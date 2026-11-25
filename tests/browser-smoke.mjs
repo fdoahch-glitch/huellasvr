@@ -53,6 +53,16 @@ try{
   await page.locator('#explore').click();
   await page.waitForFunction(()=>!document.querySelector('#hud')?.classList.contains('hidden'),undefined,{polling:100,timeout:5000});
   await page.waitForTimeout(1200);
+  if(world==='atacamatitan'){
+   await page.waitForFunction(()=>{const lod=window.__HUELLAS_VR_DIAGNOSTICS__?.().vegetationGeometryLOD;return !lod?.apiAvailable||lod.completed>0||lod.errors>0;},undefined,{polling:250,timeout:30000});
+   const lodAudit=await page.evaluate(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().vegetationGeometryLOD);
+   if(!lodAudit?.apiAvailable)throw new Error('El bundle UMD real no expone Mesh.simplify y SimplificationType: '+JSON.stringify(lodAudit));
+   if(!lodAudit.queueAvailable)throw new Error('La escena Babylon no inicializó simplificationQueue: '+JSON.stringify(lodAudit));
+   if(lodAudit.completed<1)throw new Error('No se generó ningún lote con dos LOD geométricos: '+JSON.stringify(lodAudit));
+   if(lodAudit.invalid||lodAudit.errors)throw new Error('La comparación de geometría original/LOD detectó niveles incompletos o errores: '+JSON.stringify(lodAudit));
+   if(lodAudit.samples.some(sample=>sample.lodLevels!==2||sample.lodStats?.length!==2||sample.lodStats.some(level=>!level.triangles||level.triangles>=sample.originalTriangles)))throw new Error('Los dos LOD no reducen triángulos respecto al GLB original: '+JSON.stringify(lodAudit));
+   console.log('VEGETATION_GEOMETRY_LOD_PASS',JSON.stringify(lodAudit));
+  }
   if(visualMode)await page.waitForFunction(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().visual?.environmentReady===true,undefined,{polling:100,timeout:20000});
   const capture=await page.context().newCDPSession(page);
   const screenshot=await capture.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
