@@ -83,28 +83,19 @@ function addTree(scene: Scene, root: TransformNode, trunkMat: StandardMaterial, 
   trunk.material = trunkMat; trunk.parent = root; trunk.isPickable = false;
 
   if (type === "ferns") {
-    for (let j = 0; j < 8; j++) {
-      const angle = j / 8 * Math.PI * 2;
-      const reach = scale * (0.65 + (j % 3) * 0.08);
-      const stem = MeshBuilder.CreateCylinder(`fern-stem-${i}-${j}`, { height: reach, diameterTop: scale * 0.025, diameterBottom: scale * 0.055, tessellation: 5 }, scene);
-      stem.position.set(x + Math.cos(angle) * reach * 0.34, groundY + scale * 0.55, z + Math.sin(angle) * reach * 0.34);
-      stem.rotation.z = Math.cos(angle) * 0.72;
-      stem.rotation.x = Math.sin(angle) * 0.72;
-      stem.material = leafMat; stem.parent = root; stem.isPickable = false;
-      for (let leaflet = 1; leaflet <= 5; leaflet++) {
-        for (const side of [-1, 1]) {
-          const t = leaflet / 6;
-          const leaf = MeshBuilder.CreateSphere(`fern-leaf-${i}-${j}-${leaflet}-${side}`, { diameter: scale * 0.19, segments: 5 }, scene);
-          leaf.position.set(
-            x + Math.cos(angle) * reach * t + Math.cos(angle + Math.PI / 2) * side * scale * 0.13,
-            groundY + scale * (0.24 + t * 0.48),
-            z + Math.sin(angle) * reach * t + Math.sin(angle + Math.PI / 2) * side * scale * 0.13
-          );
-          leaf.scaling.set(1.45, 0.38, 0.72);
-          leaf.rotation.y = angle;
-          leaf.material = leafMat; leaf.parent = root; leaf.isPickable = false;
-        }
-      }
+    for (let j = 0; j < 7; j++) {
+      const angle = j / 7 * Math.PI * 2;
+      const reach = scale * (0.78 + (j % 3) * 0.08);
+      const frond = MeshBuilder.CreateCylinder(`fern-frond-${i}-${j}`, {
+        height: reach,
+        diameterTop: scale * 0.025,
+        diameterBottom: scale * 0.2,
+        tessellation: 6
+      }, scene);
+      frond.position.set(x + Math.cos(angle) * reach * 0.3, groundY + scale * 0.52, z + Math.sin(angle) * reach * 0.3);
+      frond.rotation.z = Math.cos(angle) * 0.82;
+      frond.rotation.x = Math.sin(angle) * 0.82;
+      frond.material = leafMat; frond.parent = root; frond.isPickable = false;
     }
     return;
   }
