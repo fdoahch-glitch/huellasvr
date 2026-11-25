@@ -18,6 +18,7 @@ test("WebXR comprueba immersive-vr antes de crear la experiencia y ofrece entrar
   assert.ok(source.includes('createDefaultXRExperienceAsync'));
   assert.ok(source.includes('enterXRAsync("immersive-vr", "local-floor")'));
   assert.ok(source.includes("exitXRAsync"));
+  assert.ok(source.includes("onStateChangedObservable"));
   assert.ok(source.includes("VR no disponible"));
 });
 
