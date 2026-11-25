@@ -77,7 +77,8 @@
   prepareDefines(defines){defines.HUELLAS_VEGETATION_WIND=true;}
   getUniforms(){
    return {ubo:[{name:'huellasWindTime',size:1,type:'float'},{name:'huellasWindStrength',size:1,type:'float'}],
-    vertex:'uniform float huellasWindTime;\\nuniform float huellasWindStrength;'};
+    vertex:`uniform float huellasWindTime;
+uniform float huellasWindStrength;`};
   }
   bindForSubMesh(ubo){
    ubo.updateFloat('huellasWindTime',performance.now()*.001);
