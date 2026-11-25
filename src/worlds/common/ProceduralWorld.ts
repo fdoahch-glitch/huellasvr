@@ -268,7 +268,7 @@ export function buildProceduralWorld(scene: Scene, world: WorldDefinition): Buil
   }
   world.landmarks.forEach((poi, i) => addLandmark(scene, root, world, i, poi, markerMat));
 
-  const camera = new ArcRotateCamera(`camera-${world.id}`, -Math.PI / 2, 1.08, 105, new Vector3(0, 3, 0), scene);
+  const camera = new ArcRotateCamera(`camera-${world.id}`, -Math.PI / 2, 1.08, 60, new Vector3(0, 3, 0), scene);
   camera.lowerRadiusLimit = 24; camera.upperRadiusLimit = 170;
   camera.lowerBetaLimit = 0.28; camera.upperBetaLimit = Math.PI / 2.05;
   camera.wheelDeltaPercentage = 0.012; camera.panningSensibility = 65;
