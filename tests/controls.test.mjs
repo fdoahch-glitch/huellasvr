@@ -36,3 +36,11 @@ test("los controles táctiles detienen la repetición y se liberan al salir del 
   assert.ok(main.includes("worldControls?.dispose()"));
   assert.ok(main.includes("setupWorldControls(scene, built.camera, canvas, built.root, status)"));
 });
+
+test("el terreno navegable se ofrece como superficie de teletransporte VR", async () => {
+  const world = await readFile(new URL("../src/worlds/common/ProceduralWorld.ts", import.meta.url), "utf8");
+  const controls = await readFile(new URL("../src/controls/WorldControls.ts", import.meta.url), "utf8");
+  assert.ok(world.includes("mesh.isPickable = true"));
+  assert.ok(controls.includes('mesh.name.includes("terrain")'));
+  assert.ok(controls.includes("floorMeshes, disableDefaultUI: true"));
+});
