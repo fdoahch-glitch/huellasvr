@@ -109,6 +109,16 @@
   const grassMat=material('procedural-grass-material-'+api.worldKey,profile.grassColor,scene);
   const fernMat=material('procedural-fern-material-'+api.worldKey,profile.fernColor,scene);
   const leafMat=material('procedural-shrub-leaf-material-'+api.worldKey,profile.leafColor,scene);
+  // Textura procedural de relieve generada por Babylon.js (sin imágenes externas).
+  let surfaceTexture=null;
+  if(typeof B.NoiseProceduralTexture==='function'){
+   try{
+    surfaceTexture=new B.NoiseProceduralTexture('huellas-vegetation-noise-'+api.worldKey,128,scene);
+    surfaceTexture.octaves=3;surfaceTexture.persistence=2;surfaceTexture.brightness=.16;
+    surfaceTexture.animationSpeedFactor=0;surfaceTexture.refreshRate=0;
+    [grassMat,fernMat,leafMat].forEach(m=>{m.bumpTexture=surfaceTexture;m.bumpTexture.level=.09;});
+   }catch(error){surfaceTexture=null;console.warn('[Huellas VR] Textura procedural de relieve no disponible:',error);}
+  }
   const windStrength=profile.wind??1;
   const windReady=[grassMat,fernMat,leafMat].map(m=>enableWind(m,windStrength)).filter(Boolean).length;
 
@@ -124,7 +134,7 @@
   total+=thin(fernGeo,ferns,fernMat,'procedural-fern-thin-'+api.worldKey,i=>{const h=.75+(i%5)*.14;return{x:h,y:h,z:h};});
   total+=thin(shrubGeo,shrubs,leafMat,'procedural-shrub-thin-'+api.worldKey,i=>{const h=.8+(i%4)*.16;return{x:h,y:h,z:h};});
   // Las copias de malla usan geometría/material compartidos; sin cuerpos Havok por hoja.
-  return {created:true,total,grass:grass.length,ferns:ferns.length,shrubs:shrubs.length,windMaterials:windReady,root};
+  return {created:true,total,grass:grass.length,ferns:ferns.length,shrubs:shrubs.length,windMaterials:windReady,proceduralBump:!!surfaceTexture,root};
  }
  window.HuellasProceduralVegetation={create,profiles:PROFILES};
 })();
