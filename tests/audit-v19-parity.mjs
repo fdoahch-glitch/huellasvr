@@ -410,3 +410,9 @@ check('La cuadrícula de manada se mantiene incrementalmente sin reconstrucción
  assert.ok(loop.includes('moveDinoCollisionGridActor(d,oldX,oldZ,x,z)'),'Los movimientos deben actualizar la cuadrícula incrementalmente');
  assert.ok(!/^\\s*rebuildDinoCollisionGrid\\(\\);\\s*$/m.test(loop),'No debe reconstruirse toda la cuadrícula en cada fotograma');
 });
+
+check('La consulta espacial filtra por radio real y recicla buckets vacíos',()=>{
+ assert.ok(main.includes('radiusSq=radius*radius'),'La cuadrícula debe descartar elementos fuera del radio');
+ assert.ok(main.includes('dx*dx+dz*dz<=radiusSq'),'La consulta espacial no filtra distancia');
+ assert.ok(main.includes('dinoCollisionBucketPool.push(oldBucket)'),'Los buckets vacíos deben reutilizarse');
+});
