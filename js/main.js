@@ -1183,6 +1183,8 @@ function installDiagnostics(){
  window.__HUELLAS_VR_DIAGNOSTICS__=snapshot;
  if(params.get('test')==='1')window.__HUELLAS_VR_TEST__={
   mobileModes(){return {stereoEnabled,rigMode:camera?.cameraRigMode??null,rigCameras:camera?.rigCameras?.length||0,orientationEnabled,orientationSupported:!!window.DeviceOrientationEvent,secureContext:window.isSecureContext};},
+  setCameraRotation(x,y,z){camera.rotation.set(x,y,z);return this.cameraRotation();},
+  cameraRotation(){return {x:camera.rotation.x,y:camera.rotation.y,z:camera.rotation.z};},
   async toggleStereo(){return await toggleMobileStereo();},
   async toggleOrientation(){await toggleMobileOrientation();return {enabled:orientationEnabled,supported:!!window.DeviceOrientationEvent};},
   lodCheck(){const original={x:camera.position.x,y:camera.position.y,z:camera.position.z};camera.position.set(5000,original.y,5000);const farAt=performance.now()+300;for(const d of dinoRoots){d.nextLodCheck=0;updateDinoLod(d,farAt);}const far=dinoRoots.filter(d=>d.lodLevel==='low').length;camera.position.set(original.x,original.y,original.z);const nearAt=farAt+300;for(const d of dinoRoots){d.nextLodCheck=0;updateDinoLod(d,nearAt);}const near=dinoRoots.filter(d=>d.lodLevel==='high').length;return {count:dinoRoots.length,farLow:far,nearHigh:near,available:dinoRoots.filter(d=>d.hasLow).length};},
