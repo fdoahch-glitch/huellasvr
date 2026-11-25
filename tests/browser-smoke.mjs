@@ -26,7 +26,7 @@ try{
  for(const world of ['atacamatitan','arackar','patagonia','stegouros','aysen']){
   const page=await browser.newPage({viewport:{width:1280,height:800}});
   const pageErrors=[],failedRequests=[];
-  page.on('pageerror',e=>pageErrors.push(String(e.stack||e)));
+  page.on('pageerror',e=>pageErrors.push(String(e.stack||e)));page.on('framenavigated',frame=>console.log('FRAME_NAVIGATED',world,frame.url()));page.on('crash',()=>console.error('PAGE_CRASHED',world));page.on('close',()=>console.error('PAGE_CLOSED',world));
   page.on('console',m=>{if(m.type()==='error')pageErrors.push('console: '+m.text());});
   page.on('requestfailed',r=>failedRequests.push(r.url()+': '+(r.failure()?.errorText||'request failed')));
   page.on('response',r=>{if(r.status()>=400)failedRequests.push(r.status()+' '+r.url());});
@@ -81,16 +81,16 @@ try{
   const vegetationPerformance=await page.evaluate(()=>{const d=window.__HUELLAS_VR_DIAGNOSTICS__?.()||{};return {fps:d.fps,frameP50Ms:d.frameP50Ms,frameP95Ms:d.frameP95Ms,frameP99Ms:d.frameP99Ms,drawCalls:d.drawCalls,gpuFrameTimeMs:d.gpuFrameTimeMs,heapMB:d.heapMB,activeMeshes:d.activeMeshes,totalMeshes:d.meshes};});
   console.log('VEGETATION_GEOMETRY_LOD_PASS',world,JSON.stringify({lodAudit,lodBehavior,vegetationPerformance}));
   if(visualMode)await page.waitForFunction(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().visual?.environmentReady===true,undefined,{polling:100,timeout:20000});
-  await page.screenshot({path:path.join(resultsDir,world+'-'+testQuality+'.png'),fullPage:false});
   const state=await page.evaluate(()=>{
    const d=window.__HUELLAS_VR_DIAGNOSTICS__?.();
    return {message:document.querySelector('#loadText')?.textContent||'',diagnostics:d||null};
   });
+  await page.screenshot({path:path.join(resultsDir,world+'-'+testQuality+'.png'),fullPage:false});
   if(!state.message.includes('¡Mundo listo!'))throw new Error(world+' no inició: '+state.message);
   if(!state.diagnostics)throw new Error(world+' no expuso el diagnóstico');
   if(state.diagnostics.webglVersion!==2)throw new Error(world+' no usó WebGL2: '+state.diagnostics.webglVersion);
   if(!state.diagnostics.visual?.pipeline)throw new Error(world+' no activó el pipeline visual Babylon: '+JSON.stringify(state.diagnostics.visual));
-  const paleo=state.diagnostics.paleogeography;if(!paleo||paleo.world!==world||paleo.vertices<5000||paleo.triangles<8000||paleo.rockInstances<50||!state.diagnostics.terrain?.mesh?.startsWith?.('paleogeography-ground-'))throw new Error(world+' no completó la reconstrucción geométrica paleogeográfica: '+JSON.stringify({paleo,terrain:state.diagnostics.terrain}));
+  const paleo=state.diagnostics.paleogeography;if(!paleo||paleo.world!==world||paleo.vertices<5000||paleo.triangles<8000||paleo.rockInstances<50||!state.diagnostics.terrain?.mesh?.startsWith?.('paleogeography-ground-')||!state.diagnostics.terrain?.meshVisible||!state.diagnostics.terrain?.meshEnabled||state.diagnostics.terrain?.meshTriangles<8000)throw new Error(world+' no completó la reconstrucción geométrica paleogeográfica: '+JSON.stringify({paleo,terrain:state.diagnostics.terrain}));
   if(!['gpu','cpu'].includes(state.diagnostics.visual?.particleBackend))throw new Error(world+' no informó backend de partículas válido: '+JSON.stringify(state.diagnostics.visual));
   if(state.diagnostics.quality!=='Equilibrado'||state.diagnostics.visual?.ssao||state.diagnostics.visual?.ssr)throw new Error('El perfil único equilibrado debe evitar efectos pesados: '+JSON.stringify(state.diagnostics.visual));
   if(visualMode&&!state.diagnostics.visual?.environmentReady)throw new Error(world+' no terminó de cargar IBL local: '+JSON.stringify(state.diagnostics.visual));
