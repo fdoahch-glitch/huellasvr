@@ -303,17 +303,18 @@ check('Materiales PBR para suelo, montañas y agua',()=>{
  assert.ok(main.includes("CreateRibbon('original-river-bank-left-'"),'Las orillas originales deben generarse en cada río');
  assert.ok(main.includes('m.metallic=0'));
 });
-check('Vegetación 3D utiliza los GLB originales de v19 sin bosque procedural duplicado',()=>{
- assert.ok(main.includes('await addVegetation()'));
- assert.ok(main.includes('models/veg/araucaria_adulta.glb'));
- assert.ok(main.includes('models/veg/fern_tripo.glb'));
- assert.ok(!main.includes('addForest3D();'),'No debe dibujar copas procedurales separadas de sus troncos');
- assert.ok(main.includes('WORLD.forestN?.adult'),'La densidad de araucarias adultas debe conservar la cifra v19');
- assert.ok(main.includes('WORLD.forestN?.young'),'La densidad de araucarias jóvenes debe conservar la cifra v19');
- assert.ok(main.includes("CreateSphere('butterfly-left-"),'Las alas ambientales deben usar geometría 3D, no paneles planos');
- assert.ok(main.includes("z:-18-rnd()*18"),'Las mariposas deben permanecer fuera del primer plano de cámara');
+check('Vegetación 3D usa la reconstrucción nativa Babylon y evita GLB ambientales heredados',()=>{
+ const vegetation=read('js/procedural-vegetation.js');
+ const paleo=read('js/world-reconstruction.js');
+ assert.ok(main.includes('HuellasProceduralVegetation.create'));
+ assert.ok(main.includes('__HUELLAS_PROCEDURAL_VEGETATION__'));
+ assert.ok(vegetation.includes('thinInstanceSetBuffer'));
+ assert.ok(vegetation.includes('VegetationWindPlugin'));
+ assert.ok(paleo.includes('createRockFields'));
+ assert.ok(paleo.includes('stratified-slab'));
+ assert.ok(!main.includes('await addVegetation()'),'No se deben instanciar bosques GLB heredados');
+ assert.ok(!main.includes('addMountains();'),'No se deben duplicar los antiguos anillos de montaña');
 });
-
 check('Colisión dinámica de dinosaurios con obstáculos y manada',()=>{
  assert.ok(main.includes('function isDinoPositionBlocked'));
  assert.ok(main.includes('environmentCollisionZones.push'));
