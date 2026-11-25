@@ -1473,8 +1473,10 @@ function installDiagnostics(){
  if(params.get('test')==='1')window.__HUELLAS_VR_TEST__={
   mobileModes(){return {stereoEnabled,rigMode:camera?.cameraRigMode??null,rigCameras:camera?.rigCameras?.length||0,orientationEnabled,orientationSupported:!!window.DeviceOrientationEvent,secureContext:window.isSecureContext,xrReferenceSpace};},
   sensorNotice(mode){showSensorNotice(mode);return {title:$('sensorNotice').querySelector('h2').textContent,retry:$('retrySensors').textContent,continue:$('continueTouch').textContent,mode:sensorNoticeMode};},
-  setCameraRotation(x,y,z){camera.rotation.set(x,y,z);return this.cameraRotation();},
+  setCameraRotation(x,y,z){camera.rotation.set(x,y,z);camera.computeWorldMatrix(true);return this.cameraRotation();},
   cameraRotation(){return {x:camera.rotation.x,y:camera.rotation.y,z:camera.rotation.z};},
+  setCameraPosition(x,y,z){camera.position.set(x,y,z);camera.computeWorldMatrix(true);window.__HUELLAS_PROCEDURAL_VEGETATION__?.refreshTreeLod?.(true);return {x:camera.position.x,y:camera.position.y,z:camera.position.z};},
+  cameraPosition(){return {x:camera.position.x,y:camera.position.y,z:camera.position.z};},
   async toggleStereo(){return await toggleMobileStereo();},
   async toggleOrientation(){await toggleMobileOrientation();return {enabled:orientationEnabled,supported:!!window.DeviceOrientationEvent};},
   lodCheck(){const original=camera.position.clone(),rotation=camera.rotation.clone();if(!dinoRoots.length)return {count:0,farLow:0,nearHigh:0,available:0};camera.position.set(5000,original.y,5000);camera.computeWorldMatrix(true);const farAt=performance.now()+300;for(const d of dinoRoots){d.nextLodCheck=0;updateDinoLod(d,farAt);}const far=dinoRoots.filter(d=>d.hasLow&&d.lodLevel==='low').length;const nearAt=farAt+300;for(const d of dinoRoots){camera.position.set(d.root.position.x,d.root.position.y+1.6,d.root.position.z+4);camera.computeWorldMatrix(true);d.nextLodCheck=0;updateDinoLod(d,nearAt);}const near=dinoRoots.filter(d=>d.hasLow&&d.lodLevel==='high').length;camera.position.copyFrom(original);camera.rotation.copyFrom(rotation);camera.computeWorldMatrix(true);return {count:dinoRoots.length,farLow:far,nearHigh:near,available:dinoRoots.filter(d=>d.hasLow).length,probe:'each-dinosaur',probeDistance:4};},
