@@ -2,7 +2,7 @@
 
 **Versión:** 1.0  
 **Fecha:** 25 de noviembre de 2026  
-**Estado:** Implementación de escenarios procedurales guardada en `main`; compilación automática aún sin resultado verificable. El lockfile de npm y las pruebas visuales quedan pendientes.  
+**Estado:** Etapa 5 implementada y validada en CI y navegador. Cinco mundos procedurales, terreno visible con variación cromática, cuerpos de agua ajustados al relieve, vegetación diferenciada, navegación WebGL2 y liberación de escenas. Validación final: ejecución GitHub Actions `45683579024` (SUCCESS).  
 **Motor:** Babylon.js 9.37.1  
 **Render:** WebGL2  
 **Base:** documentos de las etapas 1–4.
@@ -110,31 +110,60 @@ La escena aún no cuenta con LOD avanzado, instancing de toda la vegetación/roc
 
 ## 6. Pruebas y criterios de aceptación
 
-Se añadió una suite automatizada que comprueba:
+### 6.1 Pruebas unitarias
+
+La suite \`tests/worlds.test.mjs\` contiene nueve pruebas:
 - existencia de los cinco identificadores de mundo;
-- vinculación de las cinco especies;
-- presencia de las tres categorías de evidencia.
+- vinculación de las cinco especies chilenas;
+- presencia de las tres categorías de evidencia;
+- paleta propia, hitos únicos y coordenadas 3D por mundo;
+- conexión correcta de cada módulo con \`WorldFactory\`;
+- uso coherente de la función de altura del terreno para el suelo y objetos apoyados;
+- material de terreno visible desde arriba y uso de colores por vértice;
+- agua de lagunas y ríos conformada al relieve, con cauces continuos;
+- vegetación diferenciada entre matorrales, helechos y copas ribereñas.
 
-Se añadió workflow de GitHub Actions que ejecuta:
-- instalación de dependencias;
-- TypeScript;
-- pruebas unitarias;
-- build de producción.
+### 6.2 Pruebas reales en navegador
 
-**Estado de validación:** el código y el workflow están guardados en GitHub. Hasta que GitHub Actions reporte un resultado satisfactorio, no se debe interpretar la existencia del workflow como prueba de compilación correcta. Tampoco se ha ejecutado una prueba visual en navegador o dispositivo desde esta sesión.
+La prueba Playwright abre la aplicación en Chromium con WebGL2 y recorre los cinco mundos. Comprueba títulos y especies, estado activo, dimensiones del canvas, contexto WebGL2, retorno al selector y ausencia de errores JavaScript.
+
+También prueba la interfaz a 390 × 844 píxeles: verifica que las cinco tarjetas y los controles del explorador permanezcan dentro del viewport. Esto es emulación de pantalla móvil, no certificación en un teléfono físico.
+
+Las capturas de selector y de los cinco escenarios, además de selector y mundo móvil, se guardan como artefacto de GitHub Actions durante 14 días:
+- [Ejecución validada y capturas](https://github.com/fdoahch-glitch/huellasvr/actions/runs/45683579024)
+
+### 6.3 Integración continua
+
+El workflow \`.github/workflows/quality.yml\` ejecuta:
+- generación del lockfile reproducible y versionado automático en \`main\` cuando hace falta;
+- instalación limpia y exacta con \`npm ci\`;
+- comprobación TypeScript;
+- nueve pruebas unitarias;
+- instalación de Chromium y pruebas Playwright;
+- publicación del artefacto de capturas;
+- compilación de producción.
+
+**Resultado verificado:** ejecución \`45683579024\`, commit \`ea7be5bd4741c0d8ff61d76507dce1ce37631df9\`, conclusión SUCCESS. Los pasos de TypeScript, pruebas unitarias, navegador, artefacto y compilación de producción terminaron correctamente.
 
 ## 7. Criterios de cierre de la Etapa 5
 
-- [x] Los cinco mundos tienen módulos de construcción reales, no carpetas vacías.
-- [x] Cada mundo tiene identidad ambiental diferenciada y puntos de interés.
-- [x] Se mantiene la distinción entre evidencia, interpretación y reconstrucción.
-- [x] Selector de mundos y entrada/salida de escena implementados.
+- [x] Los cinco mundos tienen módulos de construcción reales y separados.
+- [x] Cada mundo tiene identidad ambiental, relieve, paleta y puntos de interés.
+- [x] Se distingue evidencia directa, interpretación científica y reconstrucción artística.
+- [x] Selector de mundos y navegación de entrada/salida implementados.
 - [x] La escena activa se libera al salir.
-- [x] Los dinosaurios GLB no se sustituyen por modelos inventados.
-- [x] Pruebas de integridad y workflow de compilación añadidos.
-- [ ] Confirmar resultado verde de GitHub Actions.
-- [ ] Generar y versionar `package-lock.json` para instalaciones reproducibles.
-- [ ] Ejecutar inspección visual en navegador y prueba real en Android/PC.
-- [ ] Integrar los modelos GLB originales (Etapa 6, no incluida aquí).
+- [x] Los dinosaurios GLB originales no se sustituyen por modelos inventados.
+- [x] Terreno visible desde la cámara de exploración y con variación de color por vértice.
+- [x] Lagunas y cauces ajustados al relieve; ríos continuos.
+- [x] Vegetación diferenciada por ambiente.
+- [x] Lockfile \`package-lock.json\` versionado y validado con \`npm ci\`.
+- [x] Nueve pruebas unitarias aprobadas.
+- [x] Navegación de los cinco mundos aprobada en Chromium con WebGL2.
+- [x] Interfaz de selector y HUD comprobados en viewport móvil emulado.
+- [x] Capturas de los cinco mundos y de la interfaz guardadas como artefacto de CI.
+- [x] Compilación de producción aprobada.
 
-La implementación de los escenarios está realizada y versionada. No se declara todavía la etapa como validada: falta obtener un resultado satisfactorio de compilación/CI, generar y versionar `package-lock.json`, y realizar la inspección visual en navegador. El cierre de implementación no equivale a certificación visual o de rendimiento.
+**Fuera del alcance de esta etapa:** pruebas en teléfonos/PC físicos, certificación de FPS, integración de GLB y animaciones, WebXR, controles de visor y optimización avanzada. Se abordan en las etapas 6–9. La prueba móvil de esta etapa solo verifica el layout en un viewport emulado; no afirma compatibilidad certificada con hardware real.
+
+La Etapa 5 queda cerrada en cuanto a construcción y validación automática/visual en navegador. No se afirma que el producto final esté publicado ni optimizado para hardware real.
+
