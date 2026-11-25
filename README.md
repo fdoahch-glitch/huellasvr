@@ -31,7 +31,7 @@ La compilación sirve la aplicación desde archivos estáticos. Babylon.js se re
 - Dorotea superior — Gonkoken nanoi.
 - Dorotea inferior — Stegouros elengassen.
 
-Los escenarios actuales son reconstrucciones procedurales. Los modelos GLB originales y sus animaciones se integrarán en la Etapa 6. La compatibilidad WebXR, el rendimiento en dispositivos reales y la integración en atrapacuentos.cl se validarán en sus etapas correspondientes.
+Los cinco escenarios combinan reconstrucción procedural y el modelo GLB original de su especie, con esqueleto y clips de animación integrados. Los archivos se sirven desde `public/models/` y se incluyen en el build: Atacamatitan, Arackar, Chilesaurus, Gonkoken y Stegouros. En cada mundo se puede alternar entre `Idle`, `Walk`, `Run` y `Neck_Look`; el Chilesaurus conserva además su clip original `Run_Dino`. Los modelos se normalizan de escala y se apoyan sobre el terreno propio del mundo. La compatibilidad WebXR, el rendimiento en dispositivos reales y la integración en atrapacuentos.cl se validarán en sus etapas correspondientes.
 
 ## Documentación
 
