@@ -7,7 +7,7 @@ Experiencia web 3D educativa sobre cinco dinosaurios chilenos. Motor Babylon.js,
 Requisitos: Node.js 20.19+ o 22.12+ y npm.
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -18,9 +18,10 @@ npm run typecheck
 npm test
 npm run build
 npm run preview
+npm run test:e2e
 ```
 
-La compilación sirve la aplicación desde archivos estáticos. Babylon.js se resuelve desde la dependencia npm y queda incorporado al bundle; no se usa CDN.
+La compilación sirve la aplicación desde archivos estáticos. Babylon.js se resuelve desde la dependencia npm y queda incorporado al bundle; no se usa CDN. `package-lock.json` fija las versiones para instalaciones reproducibles.
 
 ## Mundos construidos
 
