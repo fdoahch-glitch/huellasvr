@@ -7,11 +7,13 @@ const root=process.cwd();
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const exists=p=>fs.existsSync(path.join(root,p));
 const main=read('js/main.js');
+const vegetation=read('js/procedural-vegetation.js');
+const paleogeography=read('js/world-reconstruction.js');
 const home=read('js/home.js');
 const html=read('index.html');
 const check=(label,fn)=>{try{fn();console.log('PASS',label);}catch(e){console.error('FAIL',label,'-',e.message);process.exitCode=1;}};
 
-check('Sintaxis JavaScript',()=>{new vm.Script(main);new vm.Script(home);});
+check('Sintaxis JavaScript',()=>{new vm.Script(main);new vm.Script(vegetation);new vm.Script(paleogeography);new vm.Script(home);});
 check('Existe un solo perfil gráfico equilibrado sin selector de calidad',()=>{assert.match(main,/const quality='media',qualityLabel='Equilibrado'/);assert.match(main,/const VP=\{shadow:1024,blur:10,anisotropy:8,bloom:\.055,samples:2,particles:360\}/);assert.match(main,/const DYNAMIC_RESOLUTION=\{initial:1,min:\.88,max:1\.12\}/);assert.doesNotMatch(main,/qualityParam|VISUAL_PROFILE|qualityButton/);assert.match(html,/⚖ Equilibrado/);assert.doesNotMatch(html,/id="qualityButton"/);});
 check('Motor Babylon.js + WebGL2; sin Three.js/A-Frame',()=>{
  assert.match(html,/babylon\.js/);assert.match(main,/new BABYLON\.Engine/);assert.match(main,/engine\.webGLVersion<2/);
@@ -111,10 +113,6 @@ check('Sonido nocturno original y mezcla de lluvia',()=>{
  assert.ok(main.includes('nightInsectGain'));assert.ok(main.includes('insectLfo.frequency.value=13'));
  assert.ok(main.includes("timeMode==='noche'&&!raining&&soundOn"));
 });
-check('Cerros desérticos GLB originales en Atacamatitan',()=>{assert.ok(main.includes("worldKey==='atacamatitan')specs.unshift({file:'models/env/cerro_desierto.glb',n:11"));assert.ok(exists('models/env/cerro_desierto.glb'));});
-check('Catálogo ambiental v19: rocas y helechos GLB complementarios',()=>{
- for(const file of ['models/env/rock_09.glb','models/env/fern_02.glb','models/env/rock_07.glb','models/env/dead_tree_trunk_02.glb']){assert.ok(main.includes(file),'No se instancia '+file);assert.ok(exists(file),'Falta recurso '+file);}
-});
 check('Lluvia recupera densidad y tinte de niebla de v19',()=>{assert.ok(main.includes('1+1.4*rainBlend'));assert.ok(main.includes("BABYLON.Color3.FromHexString('#8d949c')"));assert.ok(main.includes("timeMode==='noche'?.2:1"));});
 check('Lluvia gradual afecta iluminación, cielo, nubes y niebla',()=>{
  for(const token of ['rainBlend+=(Number(raining)-rainBlend)','1-.3*rainBlend','1-.6*rainBlend','1-.38*rainBlend','1+1.4*rainBlend','.5+.4*rainBlend'])assert.ok(main.includes(token),'Falta '+token);
@@ -143,9 +141,18 @@ check('Dinosaurios beben usando puntos de orilla precalculados por mundo',()=>{
  assert.ok(main.includes('buildHerdDrinkPoints();'));
 });
 check('Diagnóstico mide coste CPU por actualización y carga de partículas',()=>{for(const token of ['cpuUpdateMs','cpuUpdateAvgMs','scene?.particleSystems?.length','CPU actualización JS:'])assert.ok(main.includes(token),'Falta '+token);});
-check('Optimización de vegetación y diagnóstico de rendimiento',()=>{
- assert.ok(main.includes('BABYLON.Mesh.MergeMeshes'));assert.ok(main.includes('__HUELLAS_VR_DIAGNOSTICS__'));
- assert.ok(main.includes('VEGETATION_QUALITY=.9'),'La densidad vegetal equilibrada debe conservar el 90% del catálogo sin desaparecer');assert.ok(main.includes('mobileDevice'),'La detección móvil debe seguir activa para desactivar efectos costosos');assert.ok(main.includes('d.nextLodCheck=performance.now()+30000'),'El test de clips debe congelar el LOD para evitar cambios durante la reproducción');assert.ok(main.includes('animateDinos(performance.now()+16,.016)'),'El test debe iniciar el clip por el bucle real de animación');
+check('Paisajes y vegetación reconstruidos con geometría nativa Babylon',()=>{
+ assert.match(main,/HuellasPaleogeography\.rebuild/);
+ assert.match(main,/HuellasProceduralVegetation\.create/);
+ assert.match(main,/__HUELLAS_PROCEDURAL_VEGETATION__/);
+ assert.match(vegetation,/Thin Instances/);
+ assert.match(vegetation,/class VegetationWindPlugin/);
+ assert.match(paleogeography,/function createRockFields/);
+ assert.match(paleogeography,/stratified-slab/);
+ assert.doesNotMatch(main,/await addVegetation\(\)/);
+ assert.doesNotMatch(main,/addMountains\(\);/);
+ assert.match(vegetation,/atacamatitan:\{trees:0/);
+ assert.match(vegetation,/arackar:\{trees:0/);
 });
 check('Todos los recursos GLB referenciados existen',()=>{
  const refs=[...new Set([...main.matchAll(/['"](models\/[^'"]+\.glb)['"]/g)].map(m=>m[1]))];
