@@ -88,8 +88,11 @@ try{
   if(!modeButtons.panorama.includes('360°')||!modeButtons.stereo.includes('visor'))throw new Error(world+' no presenta las dos modalidades móviles en el selector inicial: '+JSON.stringify(modeButtons));
   const stereoOn=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.toggleStereo?.());
   if(!stereoOn?.enabled||stereoOn.rigCameras!==2)throw new Error(world+' no activó el modo estereoscópico con dos cámaras: '+JSON.stringify(stereoOn));
+  await page.evaluate(()=>window.__HUELLAS_VR_TEST__.setCameraRotation(.21,.42,.63));
   const stereoOff=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.toggleStereo?.());
   if(stereoOff?.enabled||stereoOff.rigCameras!==0)throw new Error(world+' no restauró la cámara panorámica al salir del modo visor: '+JSON.stringify(stereoOff));
+  const restoredRotation=await page.evaluate(()=>window.__HUELLAS_VR_TEST__.cameraRotation());
+  if(Math.abs(restoredRotation.x-.21)>.001||Math.abs(restoredRotation.y-.42)>.001||Math.abs(restoredRotation.z-.63)>.001)throw new Error(world+' perdió la orientación al volver del visor: '+JSON.stringify(restoredRotation));
   const mobileModes=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.mobileModes?.());
   if(!mobileModes||mobileModes.stereoEnabled)throw new Error(world+' dejó el motor en estado estereoscópico inesperado: '+JSON.stringify(mobileModes));
   console.log('MOBILE_MODES_PASS',world,JSON.stringify({modeButtons,stereoOn,stereoOff,mobileModes}));
