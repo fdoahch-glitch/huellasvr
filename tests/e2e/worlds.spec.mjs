@@ -32,7 +32,10 @@ test("abre, renderiza y permite salir de los cinco mundos con WebGL2", async ({ 
       await expect(button).toHaveAttribute("aria-pressed", "true");
       await expect(page.locator("#render-status")).toContainText(`animación ${animation}`);
     }
-    await page.locator(`[data-animation="Idle"]`).click();
+    const idleButton = page.locator(`[data-animation="Idle"]`);
+    await idleButton.click();
+    await expect(idleButton).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(`[data-animation="Neck_Look"]`)).toHaveAttribute("aria-pressed", "false");
 
     const canvas = page.locator("#world-canvas");
     await expect(canvas).toBeVisible();
