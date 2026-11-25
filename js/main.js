@@ -606,8 +606,8 @@ async function addVegetation(){
     const isFern=a.file.includes('fern'),isTree=a.file.includes('araucaria')||a.file.includes('dead_tree');
     const isRock=a.file.includes('rock')||a.file.includes('pebble');
     const triangleCount=(merged.getTotalIndices?.()||0)/3;
-    // La API UMD registra Mesh.simplify de forma diferida al crear la cola de la escena.
-    // Inicializarla antes de comprobar el método evita omitir todos los LOD por orden de carga.
+    // Babylon UMD puede exponer la cola de simplificación de forma diferida por escena.
+    // Se fuerza su inicialización y se registra el estado para poder auditarlo en navegador.
     const simplificationQueue=scene.simplificationQueue;
     if(!isFern&&triangleCount>=600&&typeof merged.simplify==='function'&&BABYLON.SimplificationType){
      const nearDistance=isTree?58:(isRock?22:34),farDistance=isTree?112:(isRock?42:68);
@@ -616,6 +616,7 @@ async function addVegetation(){
       :isRock
        ?[{quality:.72,distance:nearDistance,optimizeMesh:true},{quality:.46,distance:farDistance,optimizeMesh:true}]
        :[{quality:.84,distance:nearDistance,optimizeMesh:true},{quality:.66,distance:farDistance,optimizeMesh:true}];
+     merged.metadata={...(merged.metadata||{}),nativeVegetationLOD:true,originalGLBMesh:true,vegetationLodStatus:'pending',originalTriangles:triangleCount,requestedLodDistances:settings.map(item=>item.distance)};
      try{
       merged.simplify(settings,false,BABYLON.SimplificationType.QUADRATIC,()=>{
        if(!scene||scene.isDisposed?.())return;
@@ -625,12 +626,11 @@ async function addVegetation(){
         vertices:level.mesh?.getTotalVertices?.()||0
        }));
        const generatedTriangles=lodStats.reduce((sum,lod)=>sum+lod.triangles,0);
-       merged.metadata={...(merged.metadata||{}),nativeVegetationLOD:true,originalGLBMesh:true,originalTriangles:triangleCount,lodLevels:lodStats.length,lodStats,triangleReductionPercent:triangleCount?Math.round((1-generatedTriangles/(triangleCount*2))*1000)/10:0};
-       if(lodStats.length!==2||lodStats.some(lod=>!lod.triangles||lod.triangles>=triangleCount)){
-        console.warn('[Huellas VR] Comparación LOD geométrico requiere revisión.',a.file,cellKey,{originalTriangles:triangleCount,lodStats});
-       }
+       const valid=lodStats.length===2&&lodStats.every(lod=>lod.triangles>0&&lod.triangles<triangleCount);
+       merged.metadata={...(merged.metadata||{}),nativeVegetationLOD:true,originalGLBMesh:true,vegetationLodStatus:valid?'ready':'invalid',originalTriangles:triangleCount,lodLevels:lodStats.length,lodStats,triangleReductionPercent:triangleCount?Math.round((1-generatedTriangles/(triangleCount*2))*1000)/10:0};
+       if(!valid)console.warn('[Huellas VR] Comparación LOD geométrico requiere revisión.',a.file,cellKey,{originalTriangles:triangleCount,lodStats});
       });
-     }catch(simplifyError){console.warn('[Huellas VR] LOD geométrico omitido; se conserva el GLB original.',a.file,cellKey,simplifyError);}
+     }catch(simplifyError){merged.metadata={...(merged.metadata||{}),vegetationLodStatus:'error',vegetationLodError:String(simplifyError?.message||simplifyError)};console.warn('[Huellas VR] LOD geométrico omitido; se conserva el GLB original.',a.file,cellKey,simplifyError);}
     }
     vegetationSpatialBatches.push({mesh:merged,x:cell.x,z:cell.z,maxDistance,active:true});
    }else{
@@ -1246,7 +1246,9 @@ function installDiagnostics(){
    world:worldKey,quality:qualityLabel,fps:Number.isFinite(engine?.getFps?.())?Math.round(engine.getFps()):0,
    meshes:scene?.meshes?.length||0,activeMeshes:scene?.getActiveMeshes?.().length||0,frozenWorldMatrices:scene?.meshes?.filter(m=>m.isWorldMatrixFrozen).length||0,collisionBuckets:{environment:environmentCollisionGrid.size,dinosaurs:dinoCollisionGrid.size},renderLoopStarted,
    textures:engine?.getLoadedTexturesCache?.().length||0,dinosaurs:dinoRoots.length,drinkPoints:herdDrinkPoints.length,dinoLod:{high:dinoRoots.filter(d=>d.lodLevel==='high').length,low:dinoRoots.filter(d=>d.lodLevel==='low').length,withoutLow:dinoRoots.filter(d=>!d.hasLow).length,animated:dinoRoots.filter(d=>!!d.activeClip?.isPlaying).length,paused:dinoRoots.filter(d=>d.animationPaused).length},
-   vegetationAssets:assetCache.size,vegetationInstances:vegetationInstancesPlaced,vegetationDensityFactor:VEGETATION_QUALITY,particles:scene?.particleSystems?.length||0,visual:{pipeline:!!visualPipeline,bloom:!!visualPipeline?.bloomEnabled,ssao:!!ssaoPipeline,ssr:!!ssrPipeline&&!!ssrPipeline.isEnabled,volumetric:!!volumetricLight&&!!volumetricLight.isEnabled,environment:!!environmentTexture,environmentReady,environmentError,clearCoat:scene.materials.some(m=>!!m.clearCoat?.isEnabled),foliageSheen:scene.materials.some(m=>!!m.sheen?.isEnabled),thinInstances:scene.meshes.some(m=>m.hasThinInstances),particleBackend,shadowMap:VP.shadow,anisotropy:VP.anisotropy,profile:qualityLabel},
+   vegetationAssets:assetCache.size,vegetationInstances:vegetationInstancesPlaced,vegetationDensityFactor:VEGETATION_QUALITY,
+   vegetationGeometryLOD:(()=>{const batches=vegetationSpatialBatches.filter(batch=>batch.mesh),metadata=batches.map(batch=>batch.mesh.metadata||{}),samples=metadata.filter(meta=>meta.vegetationLodStatus==='ready'||meta.vegetationLodStatus==='invalid').slice(0,8).map(meta=>({originalTriangles:meta.originalTriangles,lodLevels:meta.lodLevels,lodStats:meta.lodStats,triangleReductionPercent:meta.triangleReductionPercent,status:meta.vegetationLodStatus}));return {apiAvailable:typeof BABYLON.Mesh?.prototype?.simplify==='function'&&!!BABYLON.SimplificationType,queueAvailable:!!scene?.simplificationQueue,mergedBatches:batches.length,pending:metadata.filter(meta=>meta.vegetationLodStatus==='pending').length,completed:metadata.filter(meta=>meta.vegetationLodStatus==='ready').length,invalid:metadata.filter(meta=>meta.vegetationLodStatus==='invalid').length,errors:metadata.filter(meta=>meta.vegetationLodStatus==='error').length,samples};})(),
+   particles:scene?.particleSystems?.length||0,visual:{pipeline:!!visualPipeline,bloom:!!visualPipeline?.bloomEnabled,ssao:!!ssaoPipeline,ssr:!!ssrPipeline&&!!ssrPipeline.isEnabled,volumetric:!!volumetricLight&&!!volumetricLight.isEnabled,environment:!!environmentTexture,environmentReady,environmentError,clearCoat:scene.materials.some(m=>!!m.clearCoat?.isEnabled),foliageSheen:scene.materials.some(m=>!!m.sheen?.isEnabled),thinInstances:scene.meshes.some(m=>m.hasThinInstances),particleBackend,shadowMap:VP.shadow,anisotropy:VP.anisotropy,profile:qualityLabel},
    dinoStates:dinoRoots.map(d=>({id:d.id,clip:d.clipName,active:!!d.activeClip,playing:!!d.activeClip?.isPlaying,lod:d.lodLevel,animationPaused:d.animationPaused,state:d.state,goal:d.goal,personality:d.personality,juvenile:d.juvenile,socialPartner:d.socialPartner?.root?.name||null,heading:d.heading,speed:d.actualSpeed,target:d.target?{x:+d.target.x.toFixed(2),z:+d.target.z.toFixed(2)}:null,forwardYaw:d.baseYaw,position:{x:+d.root.position.x.toFixed(2),y:+d.root.position.y.toFixed(2),z:+d.root.position.z.toFixed(2)}})),
    cpuUpdateMs:Math.round(cpuUpdateMs*100)/100,cpuUpdateAvgMs:Math.round(cpuUpdateAvgMs*100)/100,cpuStagesMs:{...cpuStageMs},frameP50Ms:percentile(frameTimeSamples,50),frameP95Ms:percentile(frameTimeSamples,95),frameP99Ms:percentile(frameTimeSamples,99),fps1PercentLow:frameTimeSamples.length?Math.round(1000/Math.max(.01,percentile(frameTimeSamples,95))):null,frameSamples:frameTimeSamples.length,
    frameTimeMs:sceneInstrumentation?.frameTimeCounter?.current??null,renderTimeMs:sceneInstrumentation?.renderTimeCounter?.current??null,physicsTimeMs:sceneInstrumentation?.physicsTimeCounter?.current??null,drawCalls:sceneInstrumentation?.drawCallsCounter?.current??null,
