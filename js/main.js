@@ -972,7 +972,7 @@ function tryDinoFlee(d,index,t){
 }
 function animateDinos(t,dt){
  const frameStep=Math.min(.05,Math.max(0,dt||0)),herd=HERD_CONFIG[worldKey];
- rebuildDinoCollisionGrid();
+ if(!dinoCollisionGrid.size)rebuildDinoCollisionGrid();
  dinoRoots.forEach((d,index)=>{
   updateDinoLod(d,t);
   const root=d.root,L=d.length||DINO[d.id].length,profile=DINO_GAIT[d.id]||DINO_GAIT.atacamatitan;

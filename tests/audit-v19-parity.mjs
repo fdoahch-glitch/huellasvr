@@ -402,3 +402,11 @@ check('Diagnóstico Havok expone el estado de soporte y la cobertura de colisió
  assert.ok(main.includes("a.file.includes('araucaria_joven')"),'Faltan colisiones para araucarias jóvenes');
  const smoke=read('tests/browser-smoke.mjs');assert.ok(smoke.includes("physics?.support==='grounded',undefined,{polling:100,timeout:15000}"),'La prueba de suelo no usa la firma correcta de Playwright');
 });
+
+check('La cuadrícula de manada se mantiene incrementalmente sin reconstrucción por fotograma',()=>{
+ const start=main.indexOf('function animateDinos(t,dt){'),end=main.indexOf('function showSensorNotice',start),loop=main.slice(start,end);
+ assert.ok(start>=0&&end>start,'No se encuentra el bucle de manada');
+ assert.ok(loop.includes('if(!dinoCollisionGrid.size)rebuildDinoCollisionGrid()'),'La cuadrícula debe inicializarse solo cuando falta');
+ assert.ok(loop.includes('moveDinoCollisionGridActor(d,oldX,oldZ,x,z)'),'Los movimientos deben actualizar la cuadrícula incrementalmente');
+ assert.ok(!loop.includes('rebuildDinoCollisionGrid();'),'No debe reconstruirse toda la cuadrícula en cada fotograma');
+});
