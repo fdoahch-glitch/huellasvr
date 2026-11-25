@@ -48,7 +48,10 @@ function makeTerrain(scene: Scene, root: TransformNode, world: WorldDefinition):
   const normals: number[] = [];
   VertexData.ComputeNormals(positions, indices, normals);
   data.normals = normals; data.applyToMesh(mesh, true);
-  mesh.material = material(scene, `${world.id}-ground`, world.palette.ground);
+  const groundMaterial = material(scene, `${world.id}-ground`, world.palette.ground);
+  groundMaterial.backFaceCulling = false;
+  groundMaterial.twoSidedLighting = true;
+  mesh.material = groundMaterial;
   mesh.parent = root;
   mesh.isPickable = false;
 }
