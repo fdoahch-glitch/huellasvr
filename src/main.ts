@@ -1,6 +1,7 @@
 import { ArcRotateCamera, Engine, Scene, PointerEventTypes, type Observer, type PointerInfo } from "@babylonjs/core";
 import { worlds, type WorldId } from "./domain/worlds";
 import { buildWorld } from "./worlds/WorldFactory";
+import { loadDinosaur, type DinosaurAnimation, type LoadedDinosaur } from "./dinosaurs/DinosaurManager";
 import "./styles.css";
 
 const home = document.querySelector<HTMLElement>("#home")!;
@@ -19,6 +20,7 @@ const resetButton = document.querySelector<HTMLButtonElement>("#reset-camera")!;
 let engine: Engine | null = null;
 let scene: Scene | null = null;
 let activeWorld: WorldId | null = null;
+let activeDinosaur: LoadedDinosaur | null = null;
 let cameraHome: { alpha: number; beta: number; radius: number } | null = null;
 let pointerObserver: Observer<PointerInfo> | null = null;
 
@@ -75,6 +77,7 @@ async function enterWorld(id: WorldId): Promise<void> {
     activeWorld = id;
     scene = new Scene(engine!);
     const built = buildWorld(scene, id);
+    activeDinosaur = await loadDinosaur(scene, id, built.root);
     cameraHome = { alpha: built.camera.alpha, beta: built.camera.beta, radius: built.camera.radius };
     const definition = worlds.find((item) => item.id === id)!;
     title.textContent = definition.title;
@@ -84,6 +87,7 @@ async function enterWorld(id: WorldId): Promise<void> {
     evidenceTag.textContent = "Paisaje reconstruido a partir de evidencia";
     home.classList.add("hidden"); explorer.classList.remove("hidden");
     engine!.resize();
+    setActiveAnimationButton("Idle");
     if (pointerObserver !== null) scene.onPointerObservable.remove(pointerObserver);
     pointerObserver = scene.onPointerObservable.add((pointer) => {
       if (pointer.type !== PointerEventTypes.POINTERPICK || !pointer.pickInfo?.hit) return;
@@ -96,7 +100,7 @@ async function enterWorld(id: WorldId): Promise<void> {
       evidenceTag.textContent = evidenceLabels[poi.evidence];
     });
     engine!.runRenderLoop(() => scene?.render());
-    status.textContent = "Escenario activo · WebGL2";
+    status.textContent = `Dinosaurio cargado · ${activeDinosaur.definition.displayName} · animación Idle`;
   } catch (error) {
     disposeWorld();
     home.classList.remove("hidden"); explorer.classList.add("hidden");
@@ -107,6 +111,8 @@ async function enterWorld(id: WorldId): Promise<void> {
 }
 
 function disposeWorld(): void {
+  activeDinosaur?.dispose();
+  activeDinosaur = null;
   if (scene) {
     if (pointerObserver !== null) scene.onPointerObservable.remove(pointerObserver);
     pointerObserver = null;
@@ -123,6 +129,27 @@ backButton.addEventListener("click", () => {
   explorer.classList.add("hidden");
   home.classList.remove("hidden");
 });
+const animationButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-animation]")];
+function setActiveAnimationButton(animation: DinosaurAnimation): void {
+  for (const button of animationButtons) {
+    const active = button.dataset.animation === animation;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  }
+}
+animationButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const animation = button.dataset.animation as DinosaurAnimation | undefined;
+    if (!animation || !activeDinosaur) return;
+    if (!activeDinosaur.play(animation)) {
+      status.textContent = `Animación ${animation} no disponible`;
+      return;
+    }
+    setActiveAnimationButton(animation);
+    status.textContent = `Dinosaurio cargado · ${activeDinosaur.definition.displayName} · animación ${animation}`;
+  });
+});
+
 resetButton.addEventListener("click", () => {
   const camera = scene?.activeCamera as ArcRotateCamera | null;
   if (camera && cameraHome) {
