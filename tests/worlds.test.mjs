@@ -28,7 +28,7 @@ test("cada mundo tiene identidad, paleta y puntos de interés válidos", async (
   for (const id of worldIds) assert.equal(ids.filter((value) => value === id).length, 1, `ID duplicado o ausente: ${id}`);
 
   const worldSource = source.slice(source.indexOf("export const worlds"));
-  const paletteMatches = [...worldSource.matchAll(/palette: \\{[^}]+\\}/g)];
+  const paletteMatches = [...worldSource.matchAll(/palette: \{[^}]+\\}/g)];
   assert.equal(paletteMatches.length, 5, "Cada mundo debe declarar una paleta propia");
   for (const palette of paletteMatches) {
     for (const hex of palette[0].matchAll(/"?(#[0-9a-fA-F]{6})"?/g)) {
@@ -36,10 +36,10 @@ test("cada mundo tiene identidad, paleta y puntos de interés válidos", async (
     }
   }
 
-  const poiIds = [...worldSource.matchAll(/\\{ id: "([^"]+)", title:/g)].map((match) => match[1]);
+  const poiIds = [...worldSource.matchAll(/\{ id: "([^"]+)", title:/g)].map((match) => match[1]);
   assert.ok(poiIds.length >= 20, "Deben existir al menos cuatro hitos por mundo");
   assert.equal(new Set(poiIds).size, poiIds.length, "Los identificadores de hitos deben ser únicos");
-  assert.equal([...worldSource.matchAll(/position: \\[(-?[0-9.]+), (-?[0-9.]+), (-?[0-9.]+)\\]/g)].length, poiIds.length,
+  assert.equal([...worldSource.matchAll(/position: \[(-?[0-9.]+), (-?[0-9.]+), (-?[0-9.]+)\]/g)].length, poiIds.length,
     "Cada hito debe tener coordenadas 3D");
 });
 
@@ -54,16 +54,16 @@ test("cada módulo de mundo está conectado al identificador correcto en la fáb
   ];
   for (const [folder, builder, id] of modules) {
     const moduleSource = await readFile(new URL(`../src/worlds/${folder}/index.ts`, import.meta.url), "utf8");
-    assert.match(moduleSource, new RegExp(`getWorld\\("\${id}"\\)`), `${folder} debe resolver ${id}`);
+    assert.match(moduleSource, new RegExp(`getWorld\("\${id}"\)`), `${folder} debe resolver ${id}`);
     assert.ok(factory.includes(`case "${id}": return ${builder}(scene)`), `La fábrica debe despachar ${id}`);
   }
 });
 
 test("la geometría comparte la misma función de altura para terreno y elementos apoyados", async () => {
   const geometry = await readFile(new URL("../src/worlds/common/ProceduralWorld.ts", import.meta.url), "utf8");
-  assert.match(geometry, /function terrainHeight\\(/);
-  assert.match(geometry, /positions\\.push\\(px, terrainHeight\\(world, px, pz\\), pz\\)/);
-  assert.match(geometry, /terrainHeight\\(world, x, z\\), scale, world\\.vegetation/);
-  assert.match(geometry, /terrainHeight\\(world, x, z\\), z, 1\\.1/);
-  assert.match(geometry, /terrainHeight\\(world, poi\\.position\\[0\\], poi\\.position\\[2\\]\\)/);
+  assert.match(geometry, /function terrainHeight\(/);
+  assert.match(geometry, /positions\.push\(px, terrainHeight\(world, px, pz\), pz\)/);
+  assert.match(geometry, /terrainHeight\(world, x, z\), scale, world\.vegetation/);
+  assert.match(geometry, /terrainHeight\(world, x, z\), z, 1\.1/);
+  assert.match(geometry, /terrainHeight\(world, poi\.position\[0\], poi\.position\[2\]\)/);
 });
