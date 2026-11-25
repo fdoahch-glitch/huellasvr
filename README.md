@@ -31,6 +31,16 @@ La compilación sirve la aplicación desde archivos estáticos. Babylon.js se re
 - Dorotea superior — Gonkoken nanoi.
 - Dorotea inferior — Stegouros elengassen.
 
+### Controles y realidad virtual
+
+- **PC:** arrastrar con ratón para orbitar, rueda para zoom y teclas WASD o flechas para mover la cámara.
+- **Móvil/tablet:** arrastrar y pellizcar sobre el escenario, más cruceta táctil y botones de zoom con pulsación continua.
+- **VR:** entrada/salida WebXR `immersive-vr`, suelo `local-floor`, selección de hitos y soporte de mandos mediante la experiencia XR de Babylon.js.
+- **Compatibilidad:** el botón VR comprueba primero `navigator.xr.isSessionSupported("immersive-vr")`. En navegadores sin WebXR se mantiene el modo 3D y se informa que VR no está disponible. WebXR requiere contexto seguro (HTTPS o localhost), navegador compatible, permisos y visor compatible.
+- **Ciclo de vida:** al salir de un mundo se detienen entradas, intervalos táctiles, observadores y la experiencia XR, y se libera el control de cámara.
+
+La disponibilidad WebXR depende del navegador, sistema operativo y visor; la integración de software no equivale a una certificación en hardware físico.
+
 Los cinco escenarios combinan reconstrucción procedural y el modelo GLB original de su especie, con esqueleto y clips de animación integrados. Los archivos se sirven desde `public/models/` y se incluyen en el build: Atacamatitan, Arackar, Chilesaurus, Gonkoken y Stegouros. En cada mundo se puede alternar entre `Idle`, `Walk`, `Run` y `Neck_Look`; el Chilesaurus conserva además su clip original `Run_Dino`. Los modelos se normalizan de escala y se apoyan sobre el terreno propio del mundo. La compatibilidad WebXR, el rendimiento en dispositivos reales y la integración en atrapacuentos.cl se validarán en sus etapas correspondientes.
 
 ## Documentación
