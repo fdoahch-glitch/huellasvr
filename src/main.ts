@@ -1,4 +1,4 @@
-import { Engine, Scene, WebGL2, PointerEventTypes } from "@babylonjs/core";
+import { Engine, Scene, PointerEventTypes } from "@babylonjs/core";
 import { worlds, type WorldId } from "./domain/worlds";
 import { buildWorld } from "./worlds/WorldFactory";
 import "./styles.css";
