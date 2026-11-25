@@ -382,3 +382,10 @@ check('Smoke browser tolera frames lentos sin depender de requestAnimationFrame 
  assert.ok(waits.length>=5,'Las esperas del navegador deben usar polling por intervalo en vez de polling RAF');
  assert.ok(!smoke.includes('},{timeout:60000});'),'La espera de inicio no debe depender del ciclo RAF');
 });
+
+check('Correcciones integrales: mezcla visual por perfil, navegación de manada, colisiones, XR y resolución adaptativa',()=>{
+ for(const token of ['const DYNAMIC_RESOLUTION=','function updateAdaptiveResolution(now)','terrainMaskResolution=maskSize','moveDinoCollisionGridActor(d,oldX,oldZ,x,z)','function findDinoDetour(d,target)','xrReferenceSpace=\'local\'','physicsCandidates.forEach((candidate,ci)=>'])assert.ok(main.includes(token),'Falta implementación '+token);
+ assert.ok(main.includes('travelStep=Math.min(nominal*step,dist)'),'La locomoción puede sobrepasar el destino');
+ assert.ok(main.includes('engine.setHardwareScalingLevel(adaptiveScale)'),'No está conectado el escalado adaptativo al motor');
+ const smoke=read('tests/browser-smoke.mjs');assert.ok(smoke.includes('simulateHerd?.(600)'),'Falta prueba extendida de separación y navegación');
+});

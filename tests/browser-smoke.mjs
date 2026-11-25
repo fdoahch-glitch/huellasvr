@@ -79,6 +79,8 @@ try{
   if(!state.diagnostics.terrain?.photo||!state.diagnostics.terrain?.normal||state.diagnostics.terrain.error)throw new Error(world+' no cargó las texturas esenciales del terreno '+JSON.stringify(state.diagnostics.terrain));
   if(!state.diagnostics.terrain.diffuseReady||state.diagnostics.terrain.uvCount<6||!state.diagnostics.terrain.photoSample)throw new Error(world+' textura del terreno no enlazada al mesh: '+JSON.stringify(state.diagnostics.terrain));
   if(!String(state.diagnostics.terrain.materialType||'').includes('PBR'))throw new Error(world+' no usa material PBR en el terreno: '+state.diagnostics.terrain.materialType);
+  const expectedMaskResolution={baja:256,media:320,alta:384}[testQuality];if(state.diagnostics.terrain.maskResolution!==expectedMaskResolution||state.diagnostics.terrain.layerCount!==3)throw new Error(world+' no aplicó la mezcla de tres capas con resolución de perfil: '+JSON.stringify(state.diagnostics.terrain));
+  if(!Number.isFinite(state.diagnostics.renderScale)||state.diagnostics.renderScale<state.diagnostics.adaptiveResolution.min||state.diagnostics.renderScale>state.diagnostics.adaptiveResolution.max)throw new Error(world+' escala adaptativa de render fuera de límites: '+JSON.stringify(state.diagnostics.adaptiveResolution));
   if(state.diagnostics.dinosaurs!==15)throw new Error(world+' debe cargar exactamente 15 dinosaurios en '+testQuality+'; cargó '+state.diagnostics.dinosaurs);
   if(!Number.isFinite(state.diagnostics.vegetationInstances)||state.diagnostics.vegetationInstances<50)throw new Error(world+' no conserva una densidad vegetal suficiente en '+testQuality+': '+state.diagnostics.vegetationInstances);
   const expectedVegetationFactor={baja:.65,media:.82,alta:1}[testQuality];if(state.diagnostics.vegetationDensityFactor!==expectedVegetationFactor)throw new Error(world+' no aplicó el factor vegetal del perfil '+testQuality+': '+state.diagnostics.vegetationDensityFactor);
@@ -104,6 +106,7 @@ try{
   const herdCheckAll=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.dinoBehaviorCheck?.());
   if(!herdCheckAll||herdCheckAll.count!==15||herdCheckAll.overlaps!==0)throw new Error(world+' presenta manada incompleta o solapada en '+testQuality+': '+JSON.stringify(herdCheckAll));
   if(!state.diagnostics.physics?.enabled||!state.diagnostics.physics?.controller||state.diagnostics.physics.colliders<1)throw new Error(world+' no inicializó Havok en '+testQuality+': '+JSON.stringify(state.diagnostics.physics));
+  if(state.diagnostics.physics.colliders<state.diagnostics.physics.environmentZones+1)throw new Error(world+' no creó colisionadores Havok para todos los obstáculos grandes: '+JSON.stringify(state.diagnostics.physics));
   if(state.diagnostics.dinoLod?.withoutLow!==0)throw new Error(world+' no cargó los 15 modelos LOD reducidos: '+JSON.stringify(state.diagnostics.dinoLod));
   const lodCheckAll=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.lodCheck?.());
   if(!lodCheckAll||lodCheckAll.count!==15||lodCheckAll.farLow!==15||lodCheckAll.nearHigh!==15||lodCheckAll.available!==15)throw new Error(world+' no cambia los 15 modelos por distancia en '+testQuality+': '+JSON.stringify(lodCheckAll));
@@ -138,6 +141,8 @@ try{
   await page.waitForTimeout(2200);
   const movingHerdCheck=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.dinoBehaviorCheck?.());
   if(!movingHerdCheck||movingHerdCheck.overlaps!==0)throw new Error(world+' perdió la separación durante el movimiento: '+JSON.stringify(movingHerdCheck));
+  const longRunHerd=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.simulateHerd?.(600));
+  if(!longRunHerd||longRunHerd.count!==15||longRunHerd.overlaps!==0)throw new Error(world+' perdió separación o navegación en simulación extendida: '+JSON.stringify(longRunHerd));
   if(state.diagnostics.meshes<10||state.diagnostics.textures<1)throw new Error(world+' no generó mallas/texturas suficientes: '+JSON.stringify(state.diagnostics));
   // SwiftShader puede bloquear el render durante segundos en la prueba de máxima carga; la reproducción dinámica de clips se valida en la pasada funcional. La auditoría estática verifica los cuatro clips de cada GLB también en los modelos de alta calidad.
   if(!visualMode&&testQuality==='baja')for(const clip of ['Idle','Walk','Run','Neck_Look']){
