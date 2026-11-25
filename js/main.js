@@ -597,6 +597,7 @@ function mergeVegetationCellMeshes(meshes,cell,name){
 }
 async function addVegetation(){
  vegetationInstancesPlaced=0;vegetationSpatialBatches.length=0;vegetationLodMemoryBytes=0;vegetationLodLastAt=0;
+ const sourceLodOwnersToDispose=new Map();
  const F=Object.assign({},WORLD.flora||{},{adult:WORLD.forestN?.adult??WORLD.flora?.adult??0,young:WORLD.forestN?.young??WORLD.flora?.young??0,fern:WORLD.forestN?.fern??WORLD.flora?.fern??0}),rockTint=({atacamatitan:'#c88a6a',arackar:'#6a625c',patagonia:'#bdb6a6',stegouros:'#a8a294',aysen:'#5d5c5a'}[worldKey]||'#8c8a82');
  // Parámetros exactos del catálogo VEG() de los cinco mundos publicados en v19.
  const specs=[
@@ -634,6 +635,11 @@ async function addVegetation(){
   const sourceQueueCompleted=await drainVegetationSimplificationQueue(sourceLodTasks);
   if(!sourceQueueCompleted)console.warn('[Huellas VR] La simplificación de origen superó el tiempo de espera; se conserva el GLB original.',a.file);
   const sourceLodMap=new Map(sourceMeshes.map(mesh=>[mesh,(mesh.getLODLevels?.()||[]).slice().sort((left,right)=>left.distanceOrScreenCoverage-right.distanceOrScreenCoverage).slice(0,2)]));
+  sourceLodMap.forEach((levels,sourceMesh)=>levels.forEach(level=>{
+   if(!level.mesh)return;
+   // simplify() crea mallas auxiliares visibles en la escena; se ocultan hasta clonarlas por instancia.
+   level.mesh.setEnabled(false);level.mesh.isVisible=false;sourceLodOwnersToDispose.set(level.mesh,sourceMesh);
+  }));
   const assetHasLod=simplificationApi&&!!lodPolicy&&[...sourceLodMap.values()].some(levels=>levels.length===2);
   const points=[],placed=[],physicsCandidates=[],rng=n=>rand(seedBase+si*7919+n*17.17);
   for(let i=0,attempt=0;i<count&&attempt<count*80+240;attempt++){
@@ -777,6 +783,11 @@ async function addVegetation(){
     vegetationSpatialBatches.push({meshes:cell.meshes,x:cell.x,z:cell.z,maxDistance,active:true,sourceFile:a.file,cellKey,instanceCount:cell.roots.length});
    }
   } }
+ // Los LOD de origen ya fueron clonados y fusionados en las celdas: liberar las copias auxiliares.
+ for(const [lodMesh,sourceMesh] of sourceLodOwnersToDispose){
+  sourceMesh.removeLODLevel(lodMesh);
+  if(!lodMesh.isDisposed?.())lodMesh.dispose(false,false);
+ }
  if(vegetationLodObserver)scene.onBeforeRenderObservable.remove(vegetationLodObserver);
  updateVegetationSpatialLod(true);
  vegetationLodObserver=scene.onBeforeRenderObservable.add(()=>updateVegetationSpatialLod());
