@@ -93,7 +93,8 @@ check('Controles de orientación móvil y visor estereoscópico',()=>{
  for(const token of ['function toggleMobileOrientation()','Orientation.requestPermission','deviceorientation','function toggleMobileStereo()','BABYLON.StereoscopicUniversalCamera',"$('retrySensors').onclick=()=>sensorNoticeMode==='xr'?enterXR():toggleMobileOrientation();",'function showSensorNotice(mode)','showSensorNotice(\'orientation\')','showSensorNotice(\'xr\')',"$('sensorNotice').classList.add('hidden');",'stereoPosition=camera?.position?.clone?.()','stereoRotation=camera?.rotation?.clone?.()','camera.position.copyFrom(stereoPosition)','camera.rotation.copyFrom(stereoRotation)','screen.orientation?.angle??window.orientation??0'])assert.ok(main.includes(token),'Falta '+token);
  for(const id of ['sensorButton','stereoButton'])assert.ok(html.includes('id="'+id+'"'),'Falta control '+id);
 });
-check('La cámara WebXR conserva altura de cabeza sobre el suelo local',()=>{assert.ok(main.includes("headHeight=xrReferenceSpace==='local'?1.65:Math.max(1.1,Math.min(2.2,xrCamera.position.y||1.65))"),'La cámara XR no adapta la altura al reference space disponible');assert.ok(main.includes('terrainHeightAt(px,pz)+headHeight'));});
+check('La cámara WebXR conserva altura de cabeza sobre el suelo local',()=>{assert.ok(main.includes("headHeight=xrReferenceSpace==='local'?1.65:Math.max(1.1,Math.min(2.2,xrCamera.position.y||1.65))"),'La cámara XR no adapta la altura al reference space disponible')
+ assert.ok(main.includes("enterXRAsync('immersive-vr',xrReferenceSpace)"),'La sesión XR no usa el reference space negociado');;assert.ok(main.includes('terrainHeightAt(px,pz)+headHeight'));});
 check('Controles WebXR, suelo local y seguimiento',()=>{
  for(const token of ['immersive-vr','local-floor','onInitialXRPoseSetObservable','onStateChangedObservable','onControllerAddedObservable','WebXRFeatureName.MOVEMENT'])assert.ok(main.includes(token),'Falta '+token);
 });

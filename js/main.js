@@ -1091,7 +1091,7 @@ async function enterXR(){try{
   const fm=xr.baseExperience.featuresManager;
   if(BABYLON.WebXRFeatureName?.MOVEMENT){try{xrMovement=fm.enableFeature(BABYLON.WebXRFeatureName.MOVEMENT,'latest',{xrInput:xr.input,movementSpeed:1.15,rotationSpeed:1.0,movementOrientationFollowsViewerPose:true},true,false);}catch(moveError){console.warn('Movimiento por mandos no disponible; se conserva selección por puntero',moveError);}}
  }
- await xr.baseExperience.enterXRAsync('immersive-vr','local-floor');$('sensorNotice').classList.add('hidden');
+ await xr.baseExperience.enterXRAsync('immersive-vr',xrReferenceSpace);$('sensorNotice').classList.add('hidden');
  }catch(e){console.warn('WebXR no disponible',e);showSensorNotice('xr');}}
 function updateXRGaze(){
  if(!xr||xr.baseExperience.state!==BABYLON.WebXRState.IN_XR){xrGazeActor=null;xrGazeFired=false;return;}
