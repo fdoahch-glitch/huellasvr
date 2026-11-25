@@ -57,6 +57,8 @@ try{
   const lodAudit=await page.evaluate(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().vegetationGeometryLOD);
   if(!lodAudit?.apiAvailable)throw new Error(world+' el bundle UMD real no expone Mesh.simplify y SimplificationType: '+JSON.stringify(lodAudit));
   if(!lodAudit.queueAvailable)throw new Error(world+' la escena Babylon no inicializó simplificationQueue: '+JSON.stringify(lodAudit));
+  if(lodAudit.fallbackBatches!==0)throw new Error(world+' todavía tiene lotes de vegetación sin fusionar: '+JSON.stringify(lodAudit));
+  if(lodAudit.sourceLodAuxiliaryMeshes!==0)throw new Error(world+' dejó mallas Decimated auxiliares visibles o sin liberar: '+JSON.stringify(lodAudit));
   if(lodAudit.pending||lodAudit.queuePending||lodAudit.queueRunning)throw new Error(world+' la cola de simplificación no terminó: '+JSON.stringify(lodAudit));
   if(lodAudit.completed<1)throw new Error(world+' no generó dos LOD geométricos válidos: '+JSON.stringify(lodAudit));
   if(lodAudit.errors||lodAudit.rejectedQuality)throw new Error(world+' hay LOD rechazados por pérdida de geometría o errores de simplificación: '+JSON.stringify(lodAudit));
