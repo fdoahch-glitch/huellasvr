@@ -7,12 +7,15 @@
  const B=window.BABYLON;
  if(!B)return;
  const PROFILES={
-  atacamatitan:{trees:18,grass:0,ferns:28,shrubs:12,wind:.42,grassColor:'#9b8b55',leafColor:'#78834c',fernColor:'#78834c'},
-  arackar:{trees:22,grass:0,ferns:42,shrubs:20,wind:.58,grassColor:'#a49a63',leafColor:'#71814c',fernColor:'#71814c'},
-  patagonia:{trees:42,grass:90,ferns:54,shrubs:34,wind:.82,grassColor:'#81934f',leafColor:'#496e43',fernColor:'#547b48'},
-  stegouros:{trees:48,grass:110,ferns:72,shrubs:42,wind:.74,grassColor:'#819b58',leafColor:'#527647',fernColor:'#60884d'},
-  aysen:{trees:55,grass:125,ferns:80,shrubs:48,wind:.92,grassColor:'#718b50',leafColor:'#426d45',fernColor:'#527b4b'},
-  valle:{trees:30,grass:80,ferns:40,shrubs:24,wind:.68,grassColor:'#819451',leafColor:'#527548',fernColor:'#63854c'}
+  // Atacama: matorral ralo y vegetación restringida a depresiones; sin bosque genérico.
+  atacamatitan:{trees:0,grass:0,ferns:4,shrubs:5,wind:.24,grassColor:'#aa955e',leafColor:'#85804f',fernColor:'#8c8757'},
+  arackar:{trees:0,grass:8,ferns:7,shrubs:12,wind:.32,grassColor:'#b5a36c',leafColor:'#8d8958',fernColor:'#929064'},
+  // Dorotea / Gonkoken: delta abierto con bandas de ribera y claros amplios.
+  patagonia:{trees:14,grass:38,ferns:22,shrubs:26,wind:.62,grassColor:'#879653',leafColor:'#547449',fernColor:'#66824c'},
+  stegouros:{trees:10,grass:48,ferns:32,shrubs:28,wind:.58,grassColor:'#8d9b5a',leafColor:'#5c7849',fernColor:'#708a52'},
+  // Formación Toqui / Chilesaurus: abanico deltaico volcánico, ribera localizada.
+  aysen:{trees:8,grass:30,ferns:20,shrubs:18,wind:.7,grassColor:'#718d5a',leafColor:'#496f4e',fernColor:'#5f8052'},
+  valle:{trees:18,grass:52,ferns:28,shrubs:24,wind:.55,grassColor:'#819451',leafColor:'#527548',fernColor:'#63854c'}
  };
  const hex=c=>B.Color3.FromHexString(c);
  function material(name,color,scene,alpha=1){
