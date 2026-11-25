@@ -98,3 +98,19 @@ test("el selector y el HUD caben en una pantalla móvil", async ({ page }, testI
   expect(uiBounds.controls.bottom).toBeLessThanOrEqual(uiBounds.viewport.height);
   await page.screenshot({ path: testInfo.outputPath("mundo-movil.png") });
 });
+
+test("mantiene la exploración 3D cuando WebXR no está disponible", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "xr", {
+      configurable: true,
+      value: { isSessionSupported: async () => false }
+    });
+  });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  await page.locator(".world-card").filter({ hasText: "Cuenca de Tolar" }).click();
+  await expect(page.locator("#render-status")).toContainText("Dinosaurio cargado");
+  await expect(page.locator("#vr-button")).toBeDisabled();
+  await expect(page.locator("#vr-button")).toHaveText("VR no disponible en este dispositivo");
+  await expect(page.locator("#world-canvas")).toBeVisible();
+});
