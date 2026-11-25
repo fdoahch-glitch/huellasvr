@@ -71,23 +71,17 @@ try{
   if(!readySamples.length||readySamples.some(sample=>sample.lodLevels!==2||sample.lodStats?.length!==2||sample.lodStats.some(level=>!level.triangles||level.triangles>=sample.originalTriangles||level.vertices>sample.originalVertices||level.boundsDriftPercent>2.5||!level.valid)))throw new Error(world+' los dos LOD no conservan geometría, atributos o silueta dentro de tolerancia: '+JSON.stringify(lodAudit));
   const lodBehavior=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.vegetationGeometryCheck?.());
   if(!lodBehavior?.ready||!lodBehavior.nearUsesOriginal||!lodBehavior.farUsesLod||!lodBehavior.cullingNearVisible||!lodBehavior.cullingFarHidden||lodBehavior.shadowCaster===false||!lodBehavior.distributionMatches)throw new Error(world+' falló LOD por distancia, culling, sombras o distribución: '+JSON.stringify(lodBehavior));
-  const lodCapture=await page.context().newCDPSession(page);
   for(const mode of ['near','far']){
    const view=await page.evaluate(mode=>window.__HUELLAS_VR_TEST__?.prepareVegetationLodCapture?.(mode),mode);
    if(!view?.ready||!view.visible||view.usingLOD!==(mode==='far'))throw new Error(world+' no seleccionó la geometría esperada para captura '+mode+': '+JSON.stringify(view));
    await page.waitForTimeout(250);
-   const shot=await lodCapture.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
-   writeFileSync(path.join(resultsDir,world+'-vegetation-'+mode+'.png'),Buffer.from(shot.data,'base64'));
+   await page.screenshot({path:path.join(resultsDir,world+'-vegetation-'+mode+'.png'),fullPage:false});
   }
   await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.restoreVegetationLodCapture?.());
-  await lodCapture.detach();
   const vegetationPerformance=await page.evaluate(()=>{const d=window.__HUELLAS_VR_DIAGNOSTICS__?.()||{};return {fps:d.fps,frameP50Ms:d.frameP50Ms,frameP95Ms:d.frameP95Ms,frameP99Ms:d.frameP99Ms,drawCalls:d.drawCalls,gpuFrameTimeMs:d.gpuFrameTimeMs,heapMB:d.heapMB,activeMeshes:d.activeMeshes,totalMeshes:d.meshes};});
   console.log('VEGETATION_GEOMETRY_LOD_PASS',world,JSON.stringify({lodAudit,lodBehavior,vegetationPerformance}));
   if(visualMode)await page.waitForFunction(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().visual?.environmentReady===true,undefined,{polling:100,timeout:20000});
-  const capture=await page.context().newCDPSession(page);
-  const screenshot=await capture.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
-  writeFileSync(path.join(resultsDir,world+'-'+testQuality+'.png'),Buffer.from(screenshot.data,'base64'));
-  await capture.detach();
+  await page.screenshot({path:path.join(resultsDir,world+'-'+testQuality+'.png'),fullPage:false});
   const state=await page.evaluate(()=>{
    const d=window.__HUELLAS_VR_DIAGNOSTICS__?.();
    return {message:document.querySelector('#loadText')?.textContent||'',diagnostics:d||null};
