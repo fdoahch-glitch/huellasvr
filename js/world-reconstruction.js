@@ -45,7 +45,14 @@ function createSurface(scene,worldKey,heightAt,validAt,waterDistanceAt){
  const mesh=new B.Mesh('paleogeography-ground-'+worldKey,scene),vd=new B.VertexData();
  vd.positions=positions;vd.indices=indices;vd.normals=normals;vd.colors=colors;vd.uvs=uvs;vd.applyToMesh(mesh,true);
  const mat=new B.PBRMaterial('paleogeography-ground-pbr-'+worldKey,scene);
- mat.albedoColor=new B.Color3(1,1,1);mat.useVertexColors=true;mat.metallic=0;mat.roughness=.94;mat.backFaceCulling=true;mat.environmentIntensity=.42;
+ const detail=new B.DynamicTexture('paleogeography-ground-detail-'+worldKey,{width:512,height:512},scene,false,B.Texture.TRILINEAR_SAMPLINGMODE);
+ const ctx=detail.getContext(),image=ctx.createImageData(512,512);
+ for(let py=0;py<512;py++)for(let px=0;px<512;px++){
+  const q=(py*512+px)*4,n=noise(px*.055,py*.055,P.seed),f=noise(px*.23,py*.23,P.seed+37),grain=clamp(.58+n*.28+f*.14);
+  image.data[q]=Math.round(176+grain*62);image.data[q+1]=Math.round(166+grain*70);image.data[q+2]=Math.round(145+grain*78);image.data[q+3]=255;
+ }
+ ctx.putImageData(image,0,0);detail.update(false);detail.wrapU=detail.wrapV=B.Texture.WRAP_ADDRESSMODE;detail.uScale=detail.vScale=9;detail.anisotropicFilteringLevel=8;
+ mat.albedoTexture=detail;mat.albedoColor=new B.Color3(1,1,1);mat.useVertexColors=true;mat.metallic=0;mat.roughness=.94;mat.backFaceCulling=true;mat.environmentIntensity=.42;
  mesh.material=mat;mesh.isPickable=true;mesh.checkCollisions=true;mesh.receiveShadows=true;mesh.metadata={ground:true,paleogeography:true,world:worldKey};
  return mesh;
 }
