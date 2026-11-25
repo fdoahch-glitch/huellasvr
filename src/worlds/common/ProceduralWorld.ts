@@ -18,7 +18,7 @@ function material(scene: Scene, name: string, hex: string, roughness = 1): Stand
   return mat;
 }
 
-function terrainHeight(world: WorldDefinition, x: number, z: number): number {
+export function terrainHeight(world: WorldDefinition, x: number, z: number): number {
   const basin = Math.sin(x * 0.035) * 2.4 + Math.cos(z * 0.028) * 2.1;
   const ridges = Math.sin((x + z) * 0.022) * Math.cos(z * 0.04) * 3.2;
   const channel = world.terrain === "channel" || world.terrain === "riverplain"
