@@ -66,25 +66,60 @@ function addRock(scene: Scene, root: TransformNode, mat: StandardMaterial, x: nu
 }
 
 function addTree(scene: Scene, root: TransformNode, trunkMat: StandardMaterial, leafMat: StandardMaterial, x: number, z: number, groundY: number, scale: number, type: string, i: number): void {
-  const trunk = MeshBuilder.CreateCylinder(`trunk-${i}`, { height: scale * 2.1, diameterTop: scale * 0.12, diameterBottom: scale * 0.28, tessellation: 7 }, scene);
-  trunk.position.set(x, groundY + scale * 1.05, z); trunk.material = trunkMat; trunk.parent = root; trunk.isPickable = false;
-  if (type === "sparse" || type === "mixed") {
-    for (let tier = 0; tier < 3; tier++) {
-      const crown = MeshBuilder.CreateCylinder(`crown-${i}-${tier}`, { height: scale * 1.0, diameterTop: 0, diameterBottom: scale * (1.5 - tier * 0.28), tessellation: 7 }, scene);
-      crown.position.set(x, groundY + scale * (1.1 + tier * 0.52), z);
-      crown.material = leafMat; crown.parent = root; crown.isPickable = false;
+  if (type === "sparse" || type === "low") {
+    const clusters = type === "sparse" ? 3 : 5;
+    for (let j = 0; j < clusters; j++) {
+      const angle = j / clusters * Math.PI * 2;
+      const shrub = MeshBuilder.CreateSphere(`shrub-${i}-${j}`, { diameter: scale * (type === "sparse" ? 0.52 : 0.42), segments: 6 }, scene);
+      shrub.position.set(x + Math.cos(angle) * scale * 0.22, groundY + scale * 0.28, z + Math.sin(angle) * scale * 0.22);
+      shrub.scaling.y = 0.58;
+      shrub.material = leafMat; shrub.parent = root; shrub.isPickable = false;
     }
-  } else if (type === "ferns") {
-    for (let j = 0; j < 5; j++) {
-      const frond = MeshBuilder.CreateCylinder(`frond-${i}-${j}`, { height: scale * 0.95, diameterTop: scale * 0.025, diameterBottom: scale * 0.12, tessellation: 5 }, scene);
-      frond.position.set(x + Math.cos(j * 1.256) * scale * 0.25, groundY + scale * 0.5, z + Math.sin(j * 1.256) * scale * 0.25);
-      frond.rotation.z = Math.PI / 3; frond.rotation.y = j * 1.256;
-      frond.material = leafMat; frond.parent = root; frond.isPickable = false;
+    return;
+  }
+
+  const trunk = MeshBuilder.CreateCylinder(`trunk-${i}`, { height: scale * (type === "ferns" ? 0.32 : 2.1), diameterTop: scale * 0.12, diameterBottom: scale * 0.28, tessellation: 7 }, scene);
+  trunk.position.set(x, groundY + scale * (type === "ferns" ? 0.16 : 1.05), z);
+  trunk.material = trunkMat; trunk.parent = root; trunk.isPickable = false;
+
+  if (type === "ferns") {
+    for (let j = 0; j < 8; j++) {
+      const angle = j / 8 * Math.PI * 2;
+      const reach = scale * (0.65 + (j % 3) * 0.08);
+      const stem = MeshBuilder.CreateCylinder(`fern-stem-${i}-${j}`, { height: reach, diameterTop: scale * 0.025, diameterBottom: scale * 0.055, tessellation: 5 }, scene);
+      stem.position.set(x + Math.cos(angle) * reach * 0.34, groundY + scale * 0.55, z + Math.sin(angle) * reach * 0.34);
+      stem.rotation.z = Math.cos(angle) * 0.72;
+      stem.rotation.x = Math.sin(angle) * 0.72;
+      stem.material = leafMat; stem.parent = root; stem.isPickable = false;
+      for (let leaflet = 1; leaflet <= 5; leaflet++) {
+        for (const side of [-1, 1]) {
+          const t = leaflet / 6;
+          const leaf = MeshBuilder.CreateSphere(`fern-leaf-${i}-${j}-${leaflet}-${side}`, { diameter: scale * 0.19, segments: 5 }, scene);
+          leaf.position.set(
+            x + Math.cos(angle) * reach * t + Math.cos(angle + Math.PI / 2) * side * scale * 0.13,
+            groundY + scale * (0.24 + t * 0.48),
+            z + Math.sin(angle) * reach * t + Math.sin(angle + Math.PI / 2) * side * scale * 0.13
+          );
+          leaf.scaling.set(1.45, 0.38, 0.72);
+          leaf.rotation.y = angle;
+          leaf.material = leafMat; leaf.parent = root; leaf.isPickable = false;
+        }
+      }
     }
-  } else {
-    const crown = MeshBuilder.CreateSphere(`crown-${i}`, { diameter: scale * 1.55, segments: 6 }, scene);
-    crown.position.set(x, groundY + scale * 1.8, z); crown.scaling.y = 0.75;
-    crown.material = leafMat; crown.parent = root; crown.isPickable = false;
+    return;
+  }
+
+  const canopyCount = type === "riparian" ? 5 : 4;
+  for (let j = 0; j < canopyCount; j++) {
+    const angle = j / canopyCount * Math.PI * 2;
+    const canopy = MeshBuilder.CreateSphere(`canopy-${i}-${j}`, { diameter: scale * (j === 0 ? 1.12 : 0.92), segments: 7 }, scene);
+    canopy.position.set(
+      x + Math.cos(angle) * scale * 0.36,
+      groundY + scale * (1.55 + (j % 2) * 0.18),
+      z + Math.sin(angle) * scale * 0.36
+    );
+    canopy.scaling.y = 0.82;
+    canopy.material = leafMat; canopy.parent = root; canopy.isPickable = false;
   }
 }
 
