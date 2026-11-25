@@ -171,7 +171,7 @@ uniform float huellasWindStrength;`};
    }catch(error){surfaceTexture=null;console.warn('[Huellas VR] Textura procedural de relieve no disponible:',error);}
   }
   const windStrength=profile.wind??1;
-  const windReady=[grassMat,fernMat,leafMat].map(m=>enableWind(m,windStrength)).filter(Boolean).length;
+  const windReady=[grassMat,fernMat,leafMat,canopyMat,distantCanopyMat].map(m=>enableWind(m,windStrength*.62)).filter(Boolean).length;
 
   const grassGeo=bladeGeometry(scene,'procedural-grass-blade-geo',.105,.72);
   const fernGeo=fernGeometry(scene);
