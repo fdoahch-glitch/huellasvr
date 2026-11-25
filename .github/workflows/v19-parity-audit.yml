@@ -10,10 +10,6 @@ on:
       - '*.txt'
       - 'package.json'
       - 'package-lock.json'
-      - '*.md'
-      - '*.txt'
-      - 'package.json'
-      - 'package-lock.json'
       - 'models/**'
       - 'img/**'
       - '.github/workflows/v19-parity-audit.yml'
@@ -38,17 +34,15 @@ permissions:
 jobs:
   parity-audit:
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
       - name: Registrar revisión exacta del motor original
         run: |
           echo "Commit bajo prueba: $(git rev-parse HEAD)"
-          echo "Prueba de panorama y alfa de nubes restaurados desde el original."
-          echo "Auditoría de orillas de ríos y escala atmosférica original."
-          echo "Verificación de paneles planos y brillo de agua corregidos."
-          echo "Verificación del cauce sin cinta especular duplicada."
-          echo "Se validan panorama, ríos, vegetación, cinco mundos y rendimiento por separado."
+          echo "Paridad de panorama, ríos, vegetación y cinco mundos."
+          echo "Validación automática en Chromium/WebGL2; no requiere hardware del usuario."
           git status --short
       - name: Preparar Node.js
         uses: actions/setup-node@v4
@@ -74,17 +68,18 @@ jobs:
           fi
       - name: Probar los cinco mundos en Chromium con WebGL2
         run: node tests/browser-smoke.mjs
+        timeout-minutes: 20
       - name: Validar efectos visuales del perfil equilibrado en los cinco mundos
         run: HUELLAS_VISUAL_TEST=1 node tests/browser-smoke.mjs
-      - name: Comprobar memoria, navegación repetida y compatibilidad WebXR
+        timeout-minutes: 20
+      - name: Comprobar memoria, navegación repetida y lógica WebXR
         run: node tests/stability-smoke.mjs
-      - name: Medir rendimiento del perfil equilibrado solo con GPU física verificable
-        run: node tests/performance-smoke.mjs
-      - name: Guardar capturas de los mundos
+        timeout-minutes: 15
+      - name: Guardar capturas de los cinco mundos
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: huellasvr-browser-world-screenshots
           path: test-results/*.png
-          if-no-files-found: ignore
-          retention-days: 7
+          if-no-files-found: warn
+          retention-days: 14
