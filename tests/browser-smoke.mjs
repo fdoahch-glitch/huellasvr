@@ -152,6 +152,7 @@ try{
    if(!visual.skyDomeVisible)throw new Error(world+' no muestra la esfera del panorama original');
   }
   if(!visualMode){
+  await page.waitForFunction(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().physics?.controller===true,undefined,{polling:100,timeout:15000});
   const collision=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.collisionCheck?.());if(!collision?.havok||collision.aggregates<1||collision.environmentZones<1||collision.obstacleColliders<1||!collision.probeBlocked||!collision.playerProbeBlocked)throw new Error(world+' no valida colisión de jugador y dinosaurios con obstáculos: '+JSON.stringify(collision));
   console.log('GROUND',world,JSON.stringify(state.diagnostics.terrain));
   if(!state.diagnostics.physics?.enabled||!state.diagnostics.physics?.controller||state.diagnostics.physics.colliders<1)throw new Error(world+' no inicializó Havok Physics V2: '+JSON.stringify(state.diagnostics.physics));
