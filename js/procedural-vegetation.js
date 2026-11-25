@@ -7,12 +7,12 @@
  const B=window.BABYLON;
  if(!B)return;
  const PROFILES={
-  atacamatitan:{grass:0,ferns:28,shrubs:12,wind:.42,grassColor:'#9b8b55',leafColor:'#78834c',fernColor:'#78834c'},
-  arackar:{grass:0,ferns:42,shrubs:20,wind:.58,grassColor:'#a49a63',leafColor:'#71814c',fernColor:'#71814c'},
-  patagonia:{grass:90,ferns:54,shrubs:34,wind:.82,grassColor:'#81934f',leafColor:'#496e43',fernColor:'#547b48'},
-  stegouros:{grass:110,ferns:72,shrubs:42,wind:.74,grassColor:'#819b58',leafColor:'#527647',fernColor:'#60884d'},
-  aysen:{grass:125,ferns:80,shrubs:48,wind:.92,grassColor:'#718b50',leafColor:'#426d45',fernColor:'#527b4b'},
-  valle:{grass:80,ferns:40,shrubs:24,wind:.68,grassColor:'#819451',leafColor:'#527548',fernColor:'#63854c'}
+  atacamatitan:{trees:18,grass:0,ferns:28,shrubs:12,wind:.42,grassColor:'#9b8b55',leafColor:'#78834c',fernColor:'#78834c'},
+  arackar:{trees:22,grass:0,ferns:42,shrubs:20,wind:.58,grassColor:'#a49a63',leafColor:'#71814c',fernColor:'#71814c'},
+  patagonia:{trees:42,grass:90,ferns:54,shrubs:34,wind:.82,grassColor:'#81934f',leafColor:'#496e43',fernColor:'#547b48'},
+  stegouros:{trees:48,grass:110,ferns:72,shrubs:42,wind:.74,grassColor:'#819b58',leafColor:'#527647',fernColor:'#60884d'},
+  aysen:{trees:55,grass:125,ferns:80,shrubs:48,wind:.92,grassColor:'#718b50',leafColor:'#426d45',fernColor:'#527b4b'},
+  valle:{trees:30,grass:80,ferns:40,shrubs:24,wind:.68,grassColor:'#819451',leafColor:'#527548',fernColor:'#63854c'}
  };
  const hex=c=>B.Color3.FromHexString(c);
  function material(name,color,scene,alpha=1){
@@ -101,6 +101,50 @@ uniform float huellasWindStrength;`};
   try{new VegetationWindPlugin(mat,strength);return true;}
   catch(error){console.warn('[Huellas VR] Viento GPU no disponible para este material:',error);return false;}
  }
+
+ // Árboles low-poly nativos: tronco, ramas y copas compuestos en una sola geometría.
+ function appendCylinder(out,base,tip,r0,r1,segments=6){
+  const axis=tip.subtract(base),len=axis.length();if(len<.001)return;
+  const dir=axis.scale(1/len),u=B.Vector3.Cross(dir,Math.abs(dir.y)<.9?B.Axis.Y:B.Axis.X).normalize(),v=B.Vector3.Cross(dir,u).normalize();
+  const start=out.p.length/3;
+  for(let j=0;j<2;j++)for(let i=0;i<segments;i++){
+   const a=i/segments*Math.PI*2,rad=j?r1:r0,center=j?tip:base;
+   const pt=center.add(u.scale(Math.cos(a)*rad)).add(v.scale(Math.sin(a)*rad));
+   out.p.push(pt.x,pt.y,pt.z);
+  }
+  for(let i=0;i<segments;i++){const n=(i+1)%segments;out.idx.push(start+i,start+n,start+segments+i,start+n,start+segments+n,start+segments+i);}
+ }
+ function appendCrown(out,center,radii,segments=7,rings=4){
+  const start=out.p.length/3;
+  for(let y=0;y<=rings;y++){
+   const phi=Math.PI*y/rings;
+   for(let x=0;x<segments;x++){
+    const theta=2*Math.PI*x/segments;
+    out.p.push(center.x+radii.x*Math.sin(phi)*Math.cos(theta),center.y+radii.y*Math.cos(phi),center.z+radii.z*Math.sin(phi)*Math.sin(theta));
+   }
+  }
+  for(let y=0;y<rings;y++)for(let x=0;x<segments;x++){
+   const a=start+y*segments+x,b=start+y*segments+(x+1)%segments,d=start+(y+1)*segments+x,e=start+(y+1)*segments+(x+1)%segments;
+   out.idx.push(a,d,b,b,d,e);
+  }
+ }
+ function treeGeometry(scene,name,detail){
+  const out={p:[],idx:[]},height=detail?5.4:4.6;
+  appendCylinder(out,new B.Vector3(0,0,0),new B.Vector3(0,height*.76,0),detail?.32:.28,.12,detail?7:5);
+  if(detail){
+   for(let i=0;i<5;i++){
+    const a=i*Math.PI*2/5+.25,y=height*(.34+i*.075),len=1.05-i*.09;
+    const base=new B.Vector3(0,y,0),tip=new B.Vector3(Math.cos(a)*len,y+.7,Math.sin(a)*len);
+    appendCylinder(out,base,tip,.105,.035,5);
+    appendCrown(out,tip,new B.Vector3(.62,.48,.62),7,4);
+   }
+   appendCrown(out,new B.Vector3(0,height*.78,0),new B.Vector3(1.12,1.05,1.12),8,5);
+  }else{
+   appendCrown(out,new B.Vector3(0,height*.78,0),new B.Vector3(.95,1.15,.95),6,3);
+  }
+  const mesh=new B.Mesh(name,scene),vd=new B.VertexData();vd.positions=out.p;vd.indices=out.idx;vd.normals=[];
+  B.VertexData.ComputeNormals(vd.positions,vd.indices,vd.normals);vd.applyToMesh(mesh,true);mesh.isVisible=false;mesh.isPickable=false;return mesh;
+ }
  function create(api){
   const scene=api.scene,profile=PROFILES[api.worldKey]||PROFILES.valle;
   if(!scene||!api.terrainHeightAt||!api.terrainValidAt)return {created:false,reason:'scene-or-terrain-api-missing'};
@@ -109,6 +153,10 @@ uniform float huellasWindStrength;`};
   const grassMat=material('procedural-grass-material-'+api.worldKey,profile.grassColor,scene);
   const fernMat=material('procedural-fern-material-'+api.worldKey,profile.fernColor,scene);
   const leafMat=material('procedural-shrub-leaf-material-'+api.worldKey,profile.leafColor,scene);
+  const trunkMat=material('procedural-tree-trunk-material-'+api.worldKey,'#72543a',scene);
+  const canopyMat=material('procedural-tree-canopy-material-'+api.worldKey,profile.leafColor,scene);
+  const distantCanopyMat=material('procedural-tree-distant-material-'+api.worldKey,profile.fernColor,scene);
+
   // Textura procedural de relieve generada por Babylon.js (sin imágenes externas).
   let surfaceTexture=null;
   if(typeof B.NoiseProceduralTexture==='function'){
@@ -125,16 +173,28 @@ uniform float huellasWindStrength;`};
   const grassGeo=bladeGeometry(scene,'procedural-grass-blade-geo',.105,.72);
   const fernGeo=fernGeometry(scene);
   const shrubGeo=bladeGeometry(scene,'procedural-shrub-leaf-geo',.34,.92);
-  [grassGeo,fernGeo,shrubGeo].forEach(m=>m.parent=root);
+  const treeNearGeo=treeGeometry(scene,'procedural-tree-near-geo',true);
+  const treeFarGeo=treeGeometry(scene,'procedural-tree-far-geo',false);
+  const treeNearMat=trunkMat;
+  const treeFarMat=distantCanopyMat;
+
+  [grassGeo,fernGeo,shrubGeo,treeNearGeo,treeFarGeo].forEach(m=>m.parent=root);
   const seed=({atacamatitan:711,arackar:827,patagonia:941,stegouros:1061,aysen:1181,valle:1297}[api.worldKey]||1297);
   const grass=place(profile.grass,seed,{min:7,max:49,water:1.1,keep:7},api);
   const ferns=place(profile.ferns,seed+101,{min:8,max:63,water:1.8,keep:7},api);
   const shrubs=place(profile.shrubs,seed+211,{min:14,max:75,water:2.2,keep:10},api);
+  const trees=place(profile.trees||0,seed+307,{min:16,max:92,water:3.2,keep:13},api);
+  const nearTrees=trees.filter(p=>Math.hypot(p.x-api.home.x,p.z-api.home.z)<39);
+  const farTrees=trees.filter(p=>Math.hypot(p.x-api.home.x,p.z-api.home.z)>=39);
+
   total+=thin(grassGeo,grass,grassMat,'procedural-grass-thin-'+api.worldKey,i=>{const h=.35+(i%7)*.065;return{x:.7+(i%3)*.12,y:h,z:.7+(i%3)*.12};});
   total+=thin(fernGeo,ferns,fernMat,'procedural-fern-thin-'+api.worldKey,i=>{const h=.75+(i%5)*.14;return{x:h,y:h,z:h};});
   total+=thin(shrubGeo,shrubs,leafMat,'procedural-shrub-thin-'+api.worldKey,i=>{const h=.8+(i%4)*.16;return{x:h,y:h,z:h};});
+  total+=thin(treeNearGeo,nearTrees,canopyMat,'procedural-tree-near-thin-'+api.worldKey,i=>{const h=.82+(i%5)*.12;return{x:h,y:h,z:h};});
+  total+=thin(treeFarGeo,farTrees,distantCanopyMat,'procedural-tree-far-thin-'+api.worldKey,i=>{const h=.9+(i%4)*.13;return{x:h,y:h,z:h};});
+
   // Las copias de malla usan geometría/material compartidos; sin cuerpos Havok por hoja.
-  return {created:true,total,grass:grass.length,ferns:ferns.length,shrubs:shrubs.length,windMaterials:windReady,proceduralBump:!!surfaceTexture,root};
+  return {created:true,total,grass:grass.length,ferns:ferns.length,shrubs:shrubs.length,trees:trees.length,treeNear:nearTrees.length,treeFar:farTrees.length,windMaterials:windReady,proceduralBump:!!surfaceTexture,root};
  }
  window.HuellasProceduralVegetation={create,profiles:PROFILES};
 })();
