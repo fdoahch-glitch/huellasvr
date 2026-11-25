@@ -1,0 +1,114 @@
+/* Huellas VR · reconstrucción paleogeográfica Babylon.js
+ * Superficie PBR propia y cordones geológicos 3D por mundo.
+ * No sustituye la evidencia del mapa de altura: la usa como base topográfica.
+ */
+(() => {
+'use strict';
+const B=window.BABYLON;
+const PALEO={
+ atacamatitan:{seed:11,soil:['#a9573f','#c77b51','#d49a68','#8e4b42'],rock:['#8f4b43','#b76b50','#d49a70'],ridge:['#8b4d45','#b66d52','#d19a70'],wet:0,relief:1.0},
+ arackar:{seed:23,soil:['#c5a77d','#dfc79e','#a98262','#81776b'],rock:['#82776a','#b59b79','#d9c5a2'],ridge:['#8c8275','#c2ad8e','#e1d0ae'],wet:.08,relief:.82},
+ patagonia:{seed:37,soil:['#6c7866','#a59a79','#c5b58e','#657b79'],rock:['#66736c','#8e9481','#c0b69a'],ridge:['#68756d','#879185','#b1b39d'],wet:.72,relief:.52},
+ stegouros:{seed:53,soil:['#626d50','#9b906e','#b9a27a','#5b7567'],rock:['#68705f','#99927a','#b6aa8c'],ridge:['#5e6d5d','#82907a','#a7a58b'],wet:.82,relief:.62},
+ aysen:{seed:41,soil:['#5b696a','#8c8c7b','#b0a28a','#586d70'],rock:['#50585b','#7b8581','#a1a397'],ridge:['#454e50','#697577','#8e9993'],wet:.55,relief:1.12}
+};
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a));return t*t*(3-2*t);};
+function hash(x,z,seed){const n=Math.sin(x*127.1+z*311.7+seed*74.7)*43758.5453;return n-Math.floor(n);}
+function noise(x,z,seed){const ix=Math.floor(x),iz=Math.floor(z),fx=x-ix,fz=z-iz,u=fx*fx*(3-2*fx),v=fz*fz*(3-2*fz);return (hash(ix,iz,seed)*(1-u)+hash(ix+1,iz,seed)*u)*(1-v)+(hash(ix,iz+1,seed)*(1-u)+hash(ix+1,iz+1,seed)*u)*v;}
+function fbm(x,z,seed){let a=.5,f=1,s=0;for(let i=0;i<5;i++){s+=noise(x*f,z*f,seed+i*13)*a;f*=2.03;a*=.5;}return s;}
+function color(hex){return B.Color3.FromHexString(hex);}
+function mix(a,b,t){return B.Color3.Lerp(a,b,clamp(t));}
+function createSurface(scene,worldKey,heightAt,validAt,waterDistanceAt){
+ const P=PALEO[worldKey];if(!P)return null;
+ const N=220,extent=150,step=extent*2/N,positions=[],colors=[],indices=[],uvs=[];
+ const palette=P.soil.map(color);
+ const grid=new Int32Array((N+1)*(N+1));grid.fill(-1);
+ for(let j=0;j<=N;j++)for(let i=0;i<=N;i++){
+  const x=-extent+i*step,z=-extent+j*step;if(!validAt(x,z))continue;
+  const y=heightAt(x,z)+.035,idx=positions.length/3;grid[j*(N+1)+i]=idx;
+  positions.push(x,y,z);uvs.push(i/N*18,j/N*18);
+  const n=fbm(x*.055,z*.055,P.seed),fine=noise(x*.24,z*.24,P.seed+9),slope=clamp(Math.abs(heightAt(x+1,z)-heightAt(x-1,z))+Math.abs(heightAt(x,z+1)-heightAt(x,z-1))*.45);
+  const wet=clamp((1-waterDistanceAt(x,z)/15))*P.wet;
+  const layer=clamp((n*.62+fine*.22+wet*.16));
+  let c=mix(palette[0],palette[1],smooth(.18,.52,layer));
+  c=mix(c,palette[2],smooth(.48,.82,layer)*.65);
+  c=mix(c,palette[3],smooth(.28,.72,slope)*.34);
+  const fleck=.91+fine*.17;c.scaleInPlace(fleck);
+  colors.push(c.r,c.g,c.b,1);
+ }
+ for(let j=0;j<N;j++)for(let i=0;i<N;i++){
+  const a=grid[j*(N+1)+i],b=grid[j*(N+1)+i+1],c=grid[(j+1)*(N+1)+i],d=grid[(j+1)*(N+1)+i+1];
+  if(a<0||b<0||c<0||d<0)continue;indices.push(a,c,b,b,c,d);
+ }
+ const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
+ const mesh=new B.Mesh('paleogeography-ground-'+worldKey,scene),vd=new B.VertexData();
+ vd.positions=positions;vd.indices=indices;vd.normals=normals;vd.colors=colors;vd.uvs=uvs;vd.applyToMesh(mesh,true);
+ const mat=new B.PBRMaterial('paleogeography-ground-pbr-'+worldKey,scene);
+ mat.albedoColor=new B.Color3(1,1,1);mat.useVertexColors=true;mat.metallic=0;mat.roughness=.94;mat.backFaceCulling=true;mat.environmentIntensity=.42;
+ mesh.material=mat;mesh.isPickable=true;mesh.checkCollisions=true;mesh.receiveShadows=true;mesh.metadata={ground:true,paleogeography:true,world:worldKey};
+ return mesh;
+}
+function createRidges(scene,worldKey,heightAt){
+ const P=PALEO[worldKey],N=480,R=42,inner=137,outer=322;
+ const positions=new Float32Array((N+1)*R*3),colors=new Float32Array((N+1)*R*4),indices=[];
+ const bands=P.ridge.map(color),seed=P.seed;
+ const peakProfile={
+  atacamatitan:[.18,.32,.48,.27,.62,.36,.22,.53,.3,.68,.2,.42],
+  arackar:[.22,.38,.3,.52,.27,.45,.32,.56,.24,.4,.3,.48],
+  patagonia:[.18,.28,.34,.2,.38,.25,.3,.18,.36,.23,.28,.2],
+  stegouros:[.2,.27,.24,.34,.22,.3,.18,.32,.24,.28,.2,.3],
+  aysen:[.3,.46,.62,.35,.72,.4,.58,.31,.66,.42,.55,.3]
+ }[worldKey];
+ for(let j=0;j<R;j++){
+  const t=j/(R-1),radius=inner+(outer-inner)*t;
+  for(let i=0;i<=N;i++){
+   const a=i/N*Math.PI*2,sector=a/(Math.PI*2)*peakProfile.length,k=j*(N+1)+i;
+   const idx=Math.floor(sector),blend=sector-idx,peak=peakProfile[idx]*(1-blend)+peakProfile[(idx+1)%peakProfile.length]*blend;
+   const ridgeNoise=fbm(Math.cos(a)*radius*.022,Math.sin(a)*radius*.022,seed+31);
+   const spur=noise(Math.cos(a)*radius*.075,Math.sin(a)*radius*.075,seed+71);
+   const crest=Math.pow(Math.max(0,Math.sin(a*3+seed*.13)*.5+.5),2);
+   let h=(peak*.62+ridgeNoise*.28+crest*.1)*P.relief*(.52+.48*smooth(inner,outer,radius));
+   h*=1.0+spur*.24;h=Math.max(.8,h*74*(1-smooth(outer-28,outer,radius)));
+   const base=radius<160?heightAt(Math.cos(a)*Math.min(radius,149),Math.sin(a)*Math.min(radius,149)):-1.5;
+   positions[k*3]=Math.cos(a)*radius;positions[k*3+1]=base+h;positions[k*3+2]=Math.sin(a)*radius;
+   const rockBand=clamp((h/80)*.72+ridgeNoise*.28),c=mix(bands[0],bands[1],smooth(.15,.58,rockBand));
+   const c2=mix(c,bands[2],smooth(.48,.9,rockBand)*.8),shade=.87+spur*.25;
+   colors[k*4]=c2.r*shade;colors[k*4+1]=c2.g*shade;colors[k*4+2]=c2.b*shade;colors[k*4+3]=1;
+  }
+ }
+ for(let j=0;j<R-1;j++)for(let i=0;i<N;i++){const a=j*(N+1)+i,b=a+1,c=a+N+1,d=c+1;indices.push(a,b,c,b,d,c);}
+ const normals=[];B.VertexData.ComputeNormals(positions,indices,normals);
+ const mesh=new B.Mesh('paleogeography-ridges-'+worldKey,scene),vd=new B.VertexData();vd.positions=Array.from(positions);vd.indices=indices;vd.normals=normals;vd.colors=Array.from(colors);vd.applyToMesh(mesh,true);
+ const mat=new B.PBRMaterial('paleogeography-ridges-pbr-'+worldKey,scene);mat.albedoColor=new B.Color3(1,1,1);mat.useVertexColors=true;mat.metallic=0;mat.roughness=.98;mat.backFaceCulling=false;
+ mesh.material=mat;mesh.isPickable=false;mesh.receiveShadows=true;mesh.metadata={paleogeography:true,world:worldKey,geology:'eroded-ridge-system'};
+ return mesh;
+}
+function addStrata(scene,worldKey,heightAt,validAt){
+ const P=PALEO[worldKey],out=[];
+ const colors=P.rock.map(color);
+ // Afloramientos bajos y terrazas laterales: geometría real, nunca sobre el corredor central.
+ for(let i=0;i<72;i++){
+  const angle=(i*2.399963229728653)+P.seed,radius=42+(hash(i,P.seed,P.seed)*64),x=Math.cos(angle)*radius,z=Math.sin(angle)*radius;
+  if(Math.hypot(x,z)<25||!validAt(x,z))continue;
+  const h=heightAt(x,z),scale=.7+hash(i+3,P.seed,P.seed+5)*1.8;
+  const rock=B.MeshBuilder.CreatePolyhedron('paleo-outcrop-'+worldKey+'-'+i,{type:1,size:1, sizeX:2.8*scale,sizeY:.65*scale,sizeZ:1.9*scale},scene);
+  rock.position.set(x,h+.12*scale,z);rock.rotation.set(hash(i,4,P.seed)*.3,angle,hash(i,8,P.seed)*.22);rock.scaling.y=.55+hash(i,11,P.seed)*.8;
+  const m=new B.PBRMaterial('paleo-outcrop-mat-'+worldKey+'-'+i,scene);m.albedoColor=colors[i%colors.length];m.metallic=0;m.roughness=.96;rock.material=m;rock.isPickable=false;rock.receiveShadows=true;out.push(rock);
+ }
+ return out;
+}
+function rebuild(options){
+ const {scene,worldKey,heightAt,validAt,waterDistanceAt}=options;
+ if(!scene||!PALEO[worldKey])throw new Error('Reconstrucción paleogeográfica: faltan escena o mundo válido.');
+ const oldGround=options.oldGround;
+ const ground=createSurface(scene,worldKey,heightAt,validAt,waterDistanceAt);
+ if(!ground||ground.getTotalVertices()<5000)throw new Error('La nueva superficie paleogeográfica quedó incompleta para '+worldKey);
+ if(oldGround){oldGround.isVisible=false;oldGround.isPickable=false;oldGround.checkCollisions=false;oldGround.metadata={...(oldGround.metadata||{}),supersededBy:ground.name};}
+ const oldMountains=scene.getMeshByName('original-mountain-ring-'+(worldKey==='patagonia'?'gonkoken':worldKey));
+ if(oldMountains){oldMountains.isVisible=false;oldMountains.setEnabled(false);}
+ const ridges=createRidges(scene,worldKey,heightAt),outcrops=addStrata(scene,worldKey,heightAt,validAt);
+ return {ground,ridges,outcrops:outcrops.length,vertices:ground.getTotalVertices(),triangles:Math.floor(ground.getTotalIndices()/3),world:worldKey};
+}
+window.HuellasPaleogeography={rebuild,worlds:Object.keys(PALEO)};
+})();
