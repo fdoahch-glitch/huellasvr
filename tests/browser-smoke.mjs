@@ -53,9 +53,9 @@ try{
   await page.locator('#explore').click();
   await page.waitForFunction(()=>!document.querySelector('#hud')?.classList.contains('hidden'),undefined,{polling:100,timeout:5000});
   await page.waitForTimeout(1200);
-  const nativeVegetation=await page.evaluate(()=>{const v=window.__HUELLAS_PROCEDURAL_VEGETATION__;return v?{created:v.created,backend:v.backend,total:v.total,trees:v.trees,grass:v.grass,ferns:v.ferns,shrubs:v.shrubs,treeLod:v.treeLod,treeCullDistance:v.treeCullDistance,windMaterials:v.windMaterials,proceduralBump:v.proceduralBump}:null;});
+  const nativeVegetation=await page.evaluate(()=>{const v=window.__HUELLAS_PROCEDURAL_VEGETATION__;return v?{created:v.created,backend:v.backend,total:v.total,trees:v.trees,grass:v.grass,ferns:v.ferns,shrubs:v.shrubs,treeLod:v.treeLod,treeCullDistance:v.treeCullDistance,treeMeshes:(v.treeMeshes||[]).map(m=>({name:m.name,visible:m.isVisible,enabled:m.isEnabled(),instances:m.thinInstanceCount||0})),windMaterials:v.windMaterials,proceduralBump:v.proceduralBump}:null;});
   if(!nativeVegetation?.created||nativeVegetation.backend!=='babylon-native-thin-instances'||nativeVegetation.total<1)throw new Error(world+' no generó vegetación nativa Babylon suficiente: '+JSON.stringify(nativeVegetation));
-  if(nativeVegetation.trees<0||nativeVegetation.grass<0||nativeVegetation.ferns<0||nativeVegetation.shrubs<0)throw new Error(world+' diagnóstico de vegetación inválido: '+JSON.stringify(nativeVegetation));
+  if(nativeVegetation.trees<1||nativeVegetation.grass<0||nativeVegetation.ferns<0||nativeVegetation.shrubs<0||nativeVegetation.treeMeshes?.length!==4||nativeVegetation.treeMeshes.some(m=>!m.visible||!m.enabled||m.instances<1))throw new Error(world+' árboles nativos no visibles/habilitados o instancias incompletas: '+JSON.stringify(nativeVegetation));
   const nearCamera=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.cameraPosition?.());
   await page.screenshot({path:path.join(resultsDir,world+'-vegetation-near.png'),fullPage:false,timeout:120000,waitForFonts:false,animations:'disabled'});
   await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.moveCameraAlongView?.(55));
@@ -70,6 +70,13 @@ try{
    return {message:document.querySelector('#loadText')?.textContent||'',diagnostics:d||null};
   });
   await page.screenshot({path:path.join(resultsDir,world+'-'+testQuality+'.png'),fullPage:false,timeout:120000,waitForFonts:false,animations:'disabled'});
+  if(world==='atacamatitan'){
+   const inventory=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.visualMeshInventory?.()||[]);
+   console.log('VISUAL_MESH_INVENTORY',world,JSON.stringify(inventory));
+   await page.evaluate(()=>{window.__HUELLAS_VR_TEST__?.setSkyLayer?.('pterosaurs',false);window.__HUELLAS_VR_TEST__?.setSkyLayer?.('clouds',false);});
+   await page.screenshot({path:path.join(resultsDir,world+'-sky-layers-off.png'),fullPage:false,timeout:120000,waitForFonts:false,animations:'disabled'});
+   await page.evaluate(()=>{window.__HUELLAS_VR_TEST__?.setSkyLayer?.('pterosaurs',true);window.__HUELLAS_VR_TEST__?.setSkyLayer?.('clouds',true);});
+  }
   if(!state.message.includes('¡Mundo listo!'))throw new Error(world+' no inició: '+state.message);
   if(!state.diagnostics)throw new Error(world+' no expuso el diagnóstico');
   if(state.diagnostics.webglVersion!==2)throw new Error(world+' no usó WebGL2: '+state.diagnostics.webglVersion);
