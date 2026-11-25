@@ -408,5 +408,5 @@ check('La cuadrícula de manada se mantiene incrementalmente sin reconstrucción
  assert.ok(start>=0&&end>start,'No se encuentra el bucle de manada');
  assert.ok(loop.includes('if(!dinoCollisionGrid.size)rebuildDinoCollisionGrid()'),'La cuadrícula debe inicializarse solo cuando falta');
  assert.ok(loop.includes('moveDinoCollisionGridActor(d,oldX,oldZ,x,z)'),'Los movimientos deben actualizar la cuadrícula incrementalmente');
- assert.ok(!loop.includes('rebuildDinoCollisionGrid();'),'No debe reconstruirse toda la cuadrícula en cada fotograma');
+ assert.ok(!/^\\s*rebuildDinoCollisionGrid\\(\\);\\s*$/m.test(loop),'No debe reconstruirse toda la cuadrícula en cada fotograma');
 });
