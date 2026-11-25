@@ -1,12 +1,12 @@
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
-import { createReadStream, existsSync, statSync, mkdirSync } from 'node:fs';
+import { createReadStream, existsSync, statSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const resultsDir=path.join(root,'test-results');mkdirSync(resultsDir,{recursive:true});
-const visualMode=process.env.HUELLAS_VISUAL_TEST==='1',testQuality=visualMode?'alta':(process.env.HUELLAS_QUALITY_TEST||'baja');
+const visualMode=process.env.HUELLAS_VISUAL_TEST==='1',testQuality='media';
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.glb':'model/gltf-binary','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.webp':'image/webp','.mp3':'audio/mpeg','.ogg':'audio/ogg','.wav':'audio/wav','.wasm':'application/wasm'};
 const server=createServer((req,res)=>{
  let pathname;
@@ -30,7 +30,7 @@ try{
   page.on('console',m=>{if(m.type()==='error')pageErrors.push('console: '+m.text());});
   page.on('requestfailed',r=>failedRequests.push(r.url()+': '+(r.failure()?.errorText||'request failed')));
   page.on('response',r=>{if(r.status()>=400)failedRequests.push(r.status()+' '+r.url());});
-  const url='http://127.0.0.1:4173/?mundo='+world+'&q='+testQuality+'&test=1&debug=1';
+  const url='http://127.0.0.1:4173/?mundo='+world+'&test=1&debug=1';
   console.log('LOAD',world,url);
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
   try{
@@ -54,7 +54,10 @@ try{
   await page.waitForFunction(()=>!document.querySelector('#hud')?.classList.contains('hidden'),undefined,{polling:100,timeout:5000});
   await page.waitForTimeout(1200);
   if(visualMode)await page.waitForFunction(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().visual?.environmentReady===true,undefined,{polling:100,timeout:20000});
-  await page.screenshot({path:path.join(resultsDir,world+'-'+testQuality+'.png'),fullPage:false,timeout:120000,animations:'disabled'});
+  const capture=await page.context().newCDPSession(page);
+  const screenshot=await capture.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
+  writeFileSync(path.join(resultsDir,world+'-'+testQuality+'.png'),Buffer.from(screenshot.data,'base64'));
+  await capture.detach();
   const state=await page.evaluate(()=>{
    const d=window.__HUELLAS_VR_DIAGNOSTICS__?.();
    return {message:document.querySelector('#loadText')?.textContent||'',diagnostics:d||null};
@@ -64,7 +67,7 @@ try{
   if(state.diagnostics.webglVersion!==2)throw new Error(world+' no usó WebGL2: '+state.diagnostics.webglVersion);
   if(!state.diagnostics.visual?.pipeline)throw new Error(world+' no activó el pipeline visual Babylon: '+JSON.stringify(state.diagnostics.visual));
   if(!['gpu','cpu'].includes(state.diagnostics.visual?.particleBackend))throw new Error(world+' no informó backend de partículas válido: '+JSON.stringify(state.diagnostics.visual));
-  if(!visualMode&&world==='atacamatitan'&&state.diagnostics.visual?.ssao)throw new Error('SSAO no debe activarse en el perfil bajo de la prueba');
+  if(state.diagnostics.quality!=='Equilibrado'||state.diagnostics.visual?.ssao||state.diagnostics.visual?.ssr)throw new Error('El perfil único equilibrado debe evitar efectos pesados: '+JSON.stringify(state.diagnostics.visual));
   if(visualMode&&!state.diagnostics.visual?.environmentReady)throw new Error(world+' no terminó de cargar IBL local: '+JSON.stringify(state.diagnostics.visual));
   if(visualMode&&state.diagnostics.visual?.environmentError)throw new Error(world+' falló la iluminación IBL: '+state.diagnostics.visual.environmentError);
   if(visualMode&&state.diagnostics.terrain?.skyFogEnabled!==false)throw new Error(world+' el panorama sigue afectado por la niebla: '+state.diagnostics.skyFogEnabled);
@@ -79,11 +82,11 @@ try{
   if(!state.diagnostics.terrain?.photo||!state.diagnostics.terrain?.normal||state.diagnostics.terrain.error)throw new Error(world+' no cargó las texturas esenciales del terreno '+JSON.stringify(state.diagnostics.terrain));
   if(!state.diagnostics.terrain.diffuseReady||state.diagnostics.terrain.uvCount<6||!state.diagnostics.terrain.photoSample)throw new Error(world+' textura del terreno no enlazada al mesh: '+JSON.stringify(state.diagnostics.terrain));
   if(!String(state.diagnostics.terrain.materialType||'').includes('PBR'))throw new Error(world+' no usa material PBR en el terreno: '+state.diagnostics.terrain.materialType);
-  const expectedMaskResolution={baja:256,media:320,alta:384}[testQuality];if(state.diagnostics.terrain.maskResolution!==expectedMaskResolution||state.diagnostics.terrain.layerCount!==3)throw new Error(world+' no aplicó la mezcla de tres capas con resolución de perfil: '+JSON.stringify(state.diagnostics.terrain));
+  const expectedMaskResolution=320;if(state.diagnostics.terrain.maskResolution!==expectedMaskResolution||state.diagnostics.terrain.layerCount!==3)throw new Error(world+' no aplicó la mezcla de tres capas con resolución de perfil: '+JSON.stringify(state.diagnostics.terrain));
   if(!Number.isFinite(state.diagnostics.renderScale)||state.diagnostics.renderScale<state.diagnostics.adaptiveResolution.min||state.diagnostics.renderScale>state.diagnostics.adaptiveResolution.max)throw new Error(world+' escala adaptativa de render fuera de límites: '+JSON.stringify(state.diagnostics.adaptiveResolution));
   if(state.diagnostics.dinosaurs!==15)throw new Error(world+' debe cargar exactamente 15 dinosaurios en '+testQuality+'; cargó '+state.diagnostics.dinosaurs);
   if(!Number.isFinite(state.diagnostics.vegetationInstances)||state.diagnostics.vegetationInstances<50)throw new Error(world+' no conserva una densidad vegetal suficiente en '+testQuality+': '+state.diagnostics.vegetationInstances);
-  const expectedVegetationFactor={baja:.65,media:.82,alta:1}[testQuality];if(state.diagnostics.vegetationDensityFactor!==expectedVegetationFactor)throw new Error(world+' no aplicó el factor vegetal del perfil '+testQuality+': '+state.diagnostics.vegetationDensityFactor);
+  const expectedVegetationFactor=.9;if(state.diagnostics.vegetationDensityFactor!==expectedVegetationFactor)throw new Error(world+' no aplicó el factor vegetal del perfil '+testQuality+': '+state.diagnostics.vegetationDensityFactor);
   if(state.diagnostics.drinkPoints<1)throw new Error(world+' no precalculó puntos válidos para beber: '+state.diagnostics.drinkPoints);
   if(state.diagnostics.dinoStates?.length!==15||state.diagnostics.dinoStates.some(d=>!d.active||!d.clip))throw new Error(world+' tiene uno o más dinosaurios sin animación activa en '+testQuality);
   const modeButtons=await page.evaluate(()=>({panorama:document.querySelector('#explore')?.textContent||'',stereo:document.querySelector('#visor')?.textContent||''}));
@@ -145,7 +148,7 @@ try{
   if(!longRunHerd||longRunHerd.count!==15||longRunHerd.overlaps!==0)throw new Error(world+' perdió separación o navegación en simulación extendida: '+JSON.stringify(longRunHerd));
   if(state.diagnostics.meshes<10||state.diagnostics.textures<1)throw new Error(world+' no generó mallas/texturas suficientes: '+JSON.stringify(state.diagnostics));
   // SwiftShader puede bloquear el render durante segundos en la prueba de máxima carga; la reproducción dinámica de clips se valida en la pasada funcional. La auditoría estática verifica los cuatro clips de cada GLB también en los modelos de alta calidad.
-  if(!visualMode&&testQuality==='baja')for(const clip of ['Idle','Walk','Run','Neck_Look']){
+  if(!visualMode)for(const clip of ['Idle','Walk','Run','Neck_Look']){
    const before=await page.evaluate(name=>window.__HUELLAS_VR_TEST__.setAnimation(name),clip);
    if(!before.active||!before.playing)throw new Error(world+' no inició inmediatamente el clip '+clip+': '+JSON.stringify(before));
    try{

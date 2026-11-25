@@ -26,7 +26,7 @@ try{
  const worlds=['atacamatitan','arackar','patagonia','stegouros','aysen'],samples=new Map();
  for(let cycle=0;cycle<2;cycle++){
   for(const world of worlds){
-   const url='http://127.0.0.1:4175/?mundo='+world+'&q=baja&test=1&debug=1';
+   const url='http://127.0.0.1:4175/?mundo='+world+'&test=1&debug=1';
    await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
    await page.waitForFunction(()=>window.__HUELLAS_VR_READY__===true||!!window.__HUELLAS_VR_INIT_ERROR__,undefined,{polling:100,timeout:90000});
    const startup=await page.evaluate(()=>({ready:window.__HUELLAS_VR_READY__,error:window.__HUELLAS_VR_INIT_ERROR__}));
@@ -39,7 +39,7 @@ try{
    const heapMetric=metrics.metrics?.find(x=>x.name==='JSHeapUsedSize')?.value;
    const heapMB=Number.isFinite(heapMetric)?Math.round(heapMetric/1048576*100)/100:state?.heapMB??null;
    if(!state||state.dinosaurs!==15||state.webglVersion!==2||!state.physics?.enabled||!state.physics?.controller||state.drinkPoints<1)throw new Error(world+' ciclo '+cycle+' estado de escena incompleto: '+JSON.stringify(state));
-   const row={cycle,world,quality:'baja',heapMB,meshes:state.meshes,textures:state.textures,physics:state.physics.enabled,dinosaurs:state.dinosaurs};
+   const row={cycle,world,quality:'equilibrado',heapMB,meshes:state.meshes,textures:state.textures,physics:state.physics.enabled,dinosaurs:state.dinosaurs};
    console.log('STABILITY_SAMPLE',JSON.stringify(row));
    const key=world;if(!samples.has(key))samples.set(key,[]);samples.get(key).push(row);
    if(pageErrors.length)throw new Error('Errores de navegador tras navegar repetidamente: '+pageErrors.slice(-8).join(' | '));

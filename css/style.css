@@ -18,3 +18,6 @@
 #visor{background:linear-gradient(135deg,#285b78,#183b55);border-color:#9edcff80}
 #sensorNotice{z-index:40}
 @media(max-width:600px){#startButtons{display:grid;grid-template-columns:1fr;gap:10px}#startButtons button{width:100%;min-height:52px}.actions{gap:5px;max-width:96vw;flex-wrap:wrap;justify-content:center}.actions button{padding:9px 10px;font-size:12px}}
+
+/* Perfil gráfico único: indicador informativo, no selector de calidad. */
+.quality-badge{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:8px 11px;border:1px solid #ffffff55;border-radius:10px;background:#102b25d9;color:#fff;font:700 12px/1 system-ui,sans-serif;white-space:nowrap;}
