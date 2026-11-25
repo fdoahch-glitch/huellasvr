@@ -74,7 +74,7 @@ try{
   const lodCapture=await page.context().newCDPSession(page);
   for(const mode of ['near','far']){
    const view=await page.evaluate(mode=>window.__HUELLAS_VR_TEST__?.prepareVegetationLodCapture?.(mode),mode);
-   if(!view?.ready||view.usingLOD!==(mode==='far'))throw new Error(world+' no seleccionó la geometría esperada para captura '+mode+': '+JSON.stringify(view));
+   if(!view?.ready||!view.visible||view.usingLOD!==(mode==='far'))throw new Error(world+' no seleccionó la geometría esperada para captura '+mode+': '+JSON.stringify(view));
    await page.waitForTimeout(250);
    const shot=await lodCapture.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
    writeFileSync(path.join(resultsDir,world+'-vegetation-'+mode+'.png'),Buffer.from(shot.data,'base64'));
