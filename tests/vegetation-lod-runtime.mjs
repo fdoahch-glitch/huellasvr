@@ -293,7 +293,9 @@ async function testAsset(file) {
     const near = mergeSpatialMeshes(lodMeshes[0]);
     const far = mergeSpatialMeshes(lodMeshes[1]);
     assert.ok(base && near && far, `${file}: no se pudieron fusionar base/near/far en lotes espaciales`);
-    assert.equal(scene.meshes.filter(mesh => mesh.name.includes('Decimated') && mesh.getTotalVertices?.() > 0 && !mesh.isDisposed?.()).length, 0, `${file}: quedaron LOD fuente auxiliares sin liberar`);
+    const leakedSourceLods = [...sourceLods.values()].flat().map(level => level.mesh)
+      .filter(mesh => !mesh.isDisposed?.() && scene.meshes.includes(mesh));
+    assert.equal(leakedSourceLods.length, 0, `${file}: quedaron LOD fuente auxiliares sin liberar: ${leakedSourceLods.map(mesh => mesh.name).join(', ')}`);
     for (const mesh of [base, near, far]) {
       mesh.position.set(0, 0, 0);
       mesh.computeWorldMatrix(true);
