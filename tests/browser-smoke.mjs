@@ -56,15 +56,20 @@ try{
   const nativeVegetation=await page.evaluate(()=>{const v=window.__HUELLAS_PROCEDURAL_VEGETATION__;return v?{created:v.created,backend:v.backend,total:v.total,trees:v.trees,grass:v.grass,ferns:v.ferns,shrubs:v.shrubs,treeLod:v.treeLod,treeCullDistance:v.treeCullDistance,windMaterials:v.windMaterials,proceduralBump:v.proceduralBump}:null;});
   if(!nativeVegetation?.created||nativeVegetation.backend!=='babylon-native-thin-instances'||nativeVegetation.total<1)throw new Error(world+' no generó vegetación nativa Babylon suficiente: '+JSON.stringify(nativeVegetation));
   if(nativeVegetation.trees<0||nativeVegetation.grass<0||nativeVegetation.ferns<0||nativeVegetation.shrubs<0)throw new Error(world+' diagnóstico de vegetación inválido: '+JSON.stringify(nativeVegetation));
-  await page.screenshot({path:path.join(resultsDir,world+'-vegetation-near.png'),fullPage:false});
-  await page.screenshot({path:path.join(resultsDir,world+'-vegetation-far.png'),fullPage:false});
+  const nearCamera=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.cameraPosition?.());
+  await page.screenshot({path:path.join(resultsDir,world+'-vegetation-near.png'),fullPage:false,timeout:120000,waitForFonts:false,animations:'disabled'});
+  await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.moveCameraAlongView?.(55));
+  await page.waitForTimeout(550);
+  await page.screenshot({path:path.join(resultsDir,world+'-vegetation-far.png'),fullPage:false,timeout:120000,waitForFonts:false,animations:'disabled'});
+  if(nearCamera)await page.evaluate(p=>window.__HUELLAS_VR_TEST__?.setCameraPosition?.(p.x,p.y,p.z),nearCamera);
+  await page.waitForTimeout(450);
   console.log('NATIVE_VEGETATION_PASS',world,JSON.stringify(nativeVegetation));
   if(visualMode)await page.waitForFunction(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().visual?.environmentReady===true,undefined,{polling:100,timeout:20000});
   const state=await page.evaluate(()=>{
    const d=window.__HUELLAS_VR_DIAGNOSTICS__?.();
    return {message:document.querySelector('#loadText')?.textContent||'',diagnostics:d||null};
   });
-  await page.screenshot({path:path.join(resultsDir,world+'-'+testQuality+'.png'),fullPage:false});
+  await page.screenshot({path:path.join(resultsDir,world+'-'+testQuality+'.png'),fullPage:false,timeout:120000,waitForFonts:false,animations:'disabled'});
   if(!state.message.includes('¡Mundo listo!'))throw new Error(world+' no inició: '+state.message);
   if(!state.diagnostics)throw new Error(world+' no expuso el diagnóstico');
   if(state.diagnostics.webglVersion!==2)throw new Error(world+' no usó WebGL2: '+state.diagnostics.webglVersion);
