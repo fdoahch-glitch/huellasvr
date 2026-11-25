@@ -92,7 +92,8 @@ function addStrata(scene: Scene, root: TransformNode, rockMat: StandardMaterial,
     const x = side * (57 + rand() * 30), z = -82 + rand() * 155;
     const h = 9 + rand() * 24, w = 13 + rand() * 18, d = 12 + rand() * 25;
     const mesa = MeshBuilder.CreateBox(`outcrop-${world.id}-${i}`, { width: w, height: h, depth: d }, scene);
-    const groundY = terrainHeight(world, x, z);\n    mesa.position.set(x, groundY + h / 2, z); mesa.rotation.y = (rand() - 0.5) * 0.22;
+    const groundY = terrainHeight(world, x, z);
+    mesa.position.set(x, groundY + h / 2, z); mesa.rotation.y = (rand() - 0.5) * 0.22;
     mesa.material = i % 4 === 0 ? accentMat : rockMat; mesa.parent = root; mesa.isPickable = false;
     for (let band = 0; band < 2; band++) {
       const ledge = MeshBuilder.CreateBox(`stratum-${world.id}-${i}-${band}`, { width: w * 1.04, height: 0.7, depth: d * 1.04 }, scene);
@@ -119,7 +120,8 @@ function addWater(scene: Scene, root: TransformNode, world: WorldDefinition, wat
 
 function addLandmark(scene: Scene, root: TransformNode, world: WorldDefinition, index: number, poi: WorldDefinition["landmarks"][number], markerMat: StandardMaterial): Mesh {
   const marker = MeshBuilder.CreateCylinder(`poi-${poi.id}`, { height: 2.2, diameterTop: 0.2, diameterBottom: 0.9, tessellation: 12 }, scene);
-  const groundY = terrainHeight(world, poi.position[0], poi.position[2]);\n  marker.position.set(poi.position[0], groundY + poi.position[1] + 1.1, poi.position[2]);
+  const groundY = terrainHeight(world, poi.position[0], poi.position[2]);
+  marker.position.set(poi.position[0], groundY + poi.position[1] + 1.1, poi.position[2]);
   marker.material = markerMat; marker.parent = root; marker.metadata = { poiId: poi.id, worldId: world.id, poiIndex: index };
   const orb = MeshBuilder.CreateSphere(`poi-orb-${poi.id}`, { diameter: 1.05, segments: 12 }, scene);
   orb.position.set(poi.position[0], groundY + poi.position[1] + 2.6, poi.position[2]); orb.material = markerMat; orb.parent = root;
