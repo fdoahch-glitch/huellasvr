@@ -106,21 +106,84 @@ function addStrata(scene: Scene, root: TransformNode, rockMat: StandardMaterial,
   }
 }
 
+function createWaterSurface(scene: Scene, root: TransformNode, name: string, positions: number[], indices: number[], waterMat: StandardMaterial): void {
+  const mesh = new Mesh(name, scene);
+  const data = new VertexData();
+  data.positions = positions;
+  data.indices = indices;
+  const normals: number[] = [];
+  VertexData.ComputeNormals(positions, indices, normals);
+  data.normals = normals;
+  data.applyToMesh(mesh, true);
+  waterMat.backFaceCulling = false;
+  waterMat.twoSidedLighting = true;
+  mesh.material = waterMat;
+  mesh.parent = root;
+  mesh.isPickable = false;
+}
+
+function addPond(scene: Scene, root: TransformNode, world: WorldDefinition, waterMat: StandardMaterial, centerX: number, centerZ: number, radiusX: number, radiusZ: number): void {
+  const positions: number[] = [], indices: number[] = [];
+  const segments = 48, rings = 7;
+  positions.push(centerX, terrainHeight(world, centerX, centerZ) + 0.28, centerZ);
+  for (let ring = 1; ring <= rings; ring++) {
+    const radius = ring / rings;
+    for (let segment = 0; segment < segments; segment++) {
+      const angle = segment / segments * Math.PI * 2;
+      const x = centerX + Math.cos(angle) * radiusX * radius;
+      const z = centerZ + Math.sin(angle) * radiusZ * radius;
+      positions.push(x, terrainHeight(world, x, z) + 0.28, z);
+    }
+  }
+  for (let segment = 0; segment < segments; segment++) {
+    indices.push(0, 1 + segment, 1 + (segment + 1) % segments);
+  }
+  for (let ring = 0; ring < rings - 1; ring++) {
+    const inner = 1 + ring * segments, outer = inner + segments;
+    for (let segment = 0; segment < segments; segment++) {
+      const next = (segment + 1) % segments;
+      indices.push(inner + segment, outer + segment, inner + next);
+      indices.push(inner + next, outer + segment, outer + next);
+    }
+  }
+  createWaterSurface(scene, root, `water-pond-${world.id}`, positions, indices, waterMat);
+}
+
+function addRiver(scene: Scene, root: TransformNode, world: WorldDefinition, waterMat: StandardMaterial): void {
+  const left: Vector3[] = [], right: Vector3[] = [];
+  const steps = 96;
+  for (let i = 0; i <= steps; i++) {
+    const z = -112 + i * 2.35;
+    const centerX = Math.sin(z * 0.025) * 25 + Math.sin(z * 0.061) * 4;
+    const halfWidth = 6.5 + (Math.sin(i * 0.17) + 1) * 1.6;
+    const leftX = centerX - halfWidth, rightX = centerX + halfWidth;
+    left.push(new Vector3(leftX, terrainHeight(world, leftX, z) + 0.3, z));
+    right.push(new Vector3(rightX, terrainHeight(world, rightX, z) + 0.3, z));
+  }
+  const river = MeshBuilder.CreateRibbon(`water-river-${world.id}`, {
+    pathArray: [left, right],
+    closeArray: false,
+    closePath: false,
+    sideOrientation: Mesh.DOUBLESIDE
+  }, scene);
+  waterMat.backFaceCulling = false;
+  waterMat.twoSidedLighting = true;
+  river.material = waterMat;
+  river.parent = root;
+  river.isPickable = false;
+}
+
 function addWater(scene: Scene, root: TransformNode, world: WorldDefinition, waterMat: StandardMaterial): void {
   if (world.water === "none") return;
   if (world.water === "meandering") {
-    for (let i = 0; i < 5; i++) {
-      const segment = MeshBuilder.CreateGround(`water-${world.id}-${i}`, { width: 15 + i * 1.5, height: 42, subdivisions: 2 }, scene);
-      const waterX = Math.sin(i * 0.8) * 18, waterZ = -72 + i * 34;
-      segment.position.set(waterX, terrainHeight(world, waterX, waterZ) + 0.2, waterZ);
-      segment.rotation.y = Math.cos(i * 0.8) * 0.16;
-      segment.material = waterMat; segment.parent = root; segment.isPickable = false;
-    }
-  } else {
-    const water = MeshBuilder.CreateGround(`water-${world.id}`, { width: world.water === "seasonal" ? 27 : 38, height: world.water === "seasonal" ? 18 : 28, subdivisions: 2 }, scene);
-    const waterX = world.id === "tolar" ? 0 : 16, waterZ = 42;
-    water.position.set(waterX, terrainHeight(world, waterX, waterZ) + 0.2, waterZ); water.material = waterMat; water.parent = root; water.isPickable = false;
+    addRiver(scene, root, world, waterMat);
+    return;
   }
+  const centerX = world.id === "tolar" ? 0 : 16;
+  const centerZ = 42;
+  const radiusX = world.water === "seasonal" ? 13.5 : 19;
+  const radiusZ = world.water === "seasonal" ? 9 : 14;
+  addPond(scene, root, world, waterMat, centerX, centerZ, radiusX, radiusZ);
 }
 
 function addLandmark(scene: Scene, root: TransformNode, world: WorldDefinition, index: number, poi: WorldDefinition["landmarks"][number], markerMat: StandardMaterial): Mesh {
