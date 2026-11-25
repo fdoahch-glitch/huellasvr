@@ -45,22 +45,28 @@ function createSurface(scene,worldKey,heightAt,validAt,waterDistanceAt,sourceMat
  const mesh=new B.Mesh('paleogeography-ground-'+worldKey,scene),vd=new B.VertexData();
  vd.positions=positions;vd.indices=indices;vd.normals=normals;vd.colors=colors;vd.uvs=uvs;vd.applyToMesh(mesh,true);
  const mat=new B.PBRMaterial('paleogeography-ground-pbr-'+worldKey,scene);
- const sourceAlbedo=sourceMaterial?.albedoTexture||sourceMaterial?.diffuseTexture||null,sourceNormal=sourceMaterial?.bumpTexture||null;
- let detail=sourceAlbedo;
- if(!detail){
-  detail=new B.DynamicTexture('paleogeography-ground-detail-'+worldKey,{width:512,height:512},scene,false,B.Texture.TRILINEAR_SAMPLINGMODE);
-  const ctx=detail.getContext(),image=ctx.createImageData(512,512);
-  for(let py=0;py<512;py++)for(let px=0;px<512;px++){const q=(py*512+px)*4,n=noise(px*.055,py*.055,P.seed),f=noise(px*.23,py*.23,P.seed+37),grain=clamp(.58+n*.28+f*.14);image.data[q]=Math.round(176+grain*62);image.data[q+1]=Math.round(166+grain*70);image.data[q+2]=Math.round(145+grain*78);image.data[q+3]=255;}
-  ctx.putImageData(image,0,0);detail.update(false);detail.wrapU=detail.wrapV=B.Texture.WRAP_ADDRESSMODE;detail.uScale=detail.vScale=18;detail.anisotropicFilteringLevel=8;
+ // Textura PBR nueva y propia por mundo: no reutilizar mapas antiguos que
+ // provocaban colores lavados, repetición de mosaico o incompatibilidad de UV.
+ const detail=new B.DynamicTexture('paleogeography-ground-detail-'+worldKey,{width:1024,height:1024},scene,false,B.Texture.TRILINEAR_SAMPLINGMODE);
+ const ctx=detail.getContext(),image=ctx.createImageData(1024,1024);
+ for(let py=0;py<1024;py++)for(let px=0;px<1024;px++){
+  const q=(py*1024+px)*4,n=fbm(px*.009,py*.009,P.seed),fine=noise(px*.055,py*.055,P.seed+37),grain=noise(px*.24,py*.24,P.seed+83);
+  const layer=clamp(n*.56+fine*.3+grain*.14);
+  let c=mix(palette[0],palette[1],smooth(.18,.52,layer));
+  c=mix(c,palette[2],smooth(.48,.84,layer)*.72);
+  c=mix(c,palette[3],smooth(.68,.94,grain)*.28);
+  const shade=.84+fine*.2+grain*.08;
+  image.data[q]=Math.round(clamp(c.r*shade)*255);image.data[q+1]=Math.round(clamp(c.g*shade)*255);image.data[q+2]=Math.round(clamp(c.b*shade)*255);image.data[q+3]=255;
  }
- let normalTexture=sourceNormal;
- if(!normalTexture){
-  normalTexture=new B.DynamicTexture('paleogeography-ground-normal-'+worldKey,{width:512,height:512},scene,false,B.Texture.TRILINEAR_SAMPLINGMODE);
-  const normalContext=normalTexture.getContext(),normalImage=normalContext.createImageData(512,512);
-  for(let py=0;py<512;py++)for(let px=0;px<512;px++){const q=(py*512+px)*4,n=noise(px*.075,py*.075,P.seed+83),f=noise(px*.31,py*.31,P.seed+101);normalImage.data[q]=Math.round(112+n*28);normalImage.data[q+1]=Math.round(112+f*30);normalImage.data[q+2]=245;normalImage.data[q+3]=255;}
-  normalContext.putImageData(normalImage,0,0);normalTexture.update(false);normalTexture.wrapU=normalTexture.wrapV=B.Texture.WRAP_ADDRESSMODE;normalTexture.uScale=normalTexture.vScale=18;normalTexture.anisotropicFilteringLevel=8;
+ ctx.putImageData(image,0,0);detail.update(false);detail.wrapU=detail.wrapV=B.Texture.WRAP_ADDRESSMODE;detail.uScale=detail.vScale=3.2;detail.anisotropicFilteringLevel=8;
+ const normalTexture=new B.DynamicTexture('paleogeography-ground-normal-'+worldKey,{width:1024,height:1024},scene,false,B.Texture.TRILINEAR_SAMPLINGMODE);
+ const normalContext=normalTexture.getContext(),normalImage=normalContext.createImageData(1024,1024);
+ for(let py=0;py<1024;py++)for(let px=0;px<1024;px++){
+  const q=(py*1024+px)*4,n=noise(px*.035,py*.035,P.seed+83),f=noise(px*.14,py*.14,P.seed+101);
+  normalImage.data[q]=Math.round(116+n*34);normalImage.data[q+1]=Math.round(116+f*34);normalImage.data[q+2]=245;normalImage.data[q+3]=255;
  }
- mat.albedoTexture=detail;mat.bumpTexture=normalTexture;mat.bumpTexture.level=sourceNormal?.level??.42;mat.albedoColor=new B.Color3(1,1,1);mat.useVertexColors=true;mat.metallic=0;mat.roughness=.94;mat.backFaceCulling=true;mat.environmentIntensity=.42;
+ normalContext.putImageData(normalImage,0,0);normalTexture.update(false);normalTexture.wrapU=normalTexture.wrapV=B.Texture.WRAP_ADDRESSMODE;normalTexture.uScale=normalTexture.vScale=3.2;normalTexture.anisotropicFilteringLevel=8;
+ mat.albedoTexture=detail;mat.bumpTexture=normalTexture;mat.bumpTexture.level=.32;mat.albedoColor=new B.Color3(1,1,1);mat.useVertexColors=true;mat.metallic=0;mat.roughness=.94;mat.backFaceCulling=true;mat.environmentIntensity=.42;
  // La ortofoto y las tres capas ya contienen el color y el detalle geológico.
  // Multiplicarlas otra vez por la paleta vertex-color oscurecía el suelo hasta gris/negro.
  mat.useVertexColors=false;
