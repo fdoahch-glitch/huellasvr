@@ -610,7 +610,7 @@ function updateVegetationSpatialLod(force=false){
  const cx=camera.position.x,cz=camera.position.z;
  for(const batch of vegetationSpatialBatches){
   const dx=batch.x-cx,dz=batch.z-cz,d2=dx*dx+dz*dz;
-  const show=d2<batch.maxDistance*batch.maxDistance;
+  const effectiveDistance=batch.maxDistance+30;const show=d2<effectiveDistance*effectiveDistance;
   if(show===batch.active)continue;batch.active=show;
   if(batch.mesh)batch.mesh.setEnabled(show);
   if(batch.meshes)batch.meshes.forEach(mesh=>mesh.setEnabled(show));
