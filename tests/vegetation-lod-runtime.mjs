@@ -107,6 +107,12 @@ function snapshot(mesh) {
   };
 }
 
+function mergeSpatialMeshes(meshes) {
+  const materials = new Set(meshes.map(mesh => mesh.material).filter(Boolean));
+  const preserveMaterialGroups = materials.size > 1 || meshes.some(mesh => mesh.material?.getClassName?.() === 'MultiMaterial');
+  return B.Mesh.MergeMeshes(meshes, true, true, undefined, preserveMaterialGroups, preserveMaterialGroups);
+}
+
 function compare(original, lod) {
   let boundsDrift = 0;
   for (let axis = 0; axis < 3; axis++) {
@@ -247,9 +253,9 @@ async function testAsset(file) {
       roots.push(rootNode);
     }
 
-    const base = B.Mesh.MergeMeshes(baseMeshes, true, true, undefined, false, false);
-    const near = B.Mesh.MergeMeshes(lodMeshes[0], true, true, undefined, false, false);
-    const far = B.Mesh.MergeMeshes(lodMeshes[1], true, true, undefined, false, false);
+    const base = mergeSpatialMeshes(baseMeshes);
+    const near = mergeSpatialMeshes(lodMeshes[0]);
+    const far = mergeSpatialMeshes(lodMeshes[1]);
     assert.ok(base && near && far, `${file}: no se pudieron fusionar base/near/far en lotes espaciales`);
     for (const mesh of [base, near, far]) {
       mesh.position.set(0, 0, 0);
