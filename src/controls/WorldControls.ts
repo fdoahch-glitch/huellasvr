@@ -1,5 +1,6 @@
 import { ArcRotateCamera, Scene, TransformNode } from "@babylonjs/core";
 import { WebXRDefaultExperience } from "@babylonjs/core/XR/webXRDefaultExperience";
+import { WebXRState } from "@babylonjs/core/XR/webXRTypes";
 import "@babylonjs/core/Materials/Node/Blocks";
 
 export interface WorldControls { dispose: () => void; }
@@ -28,6 +29,7 @@ export async function setupWorldControls(
   scene: Scene, camera: ArcRotateCamera, canvas: HTMLCanvasElement,
   worldRoot: TransformNode, status: HTMLElement
 ): Promise<WorldControls> {
+  camera.inputs.removeByType("ArcRotateCameraKeyboardMoveInput");
   camera.attachControl(canvas, true);
   const activeKeys = new Set<string>();
   const onKeyDown = (event: KeyboardEvent) => {
@@ -81,8 +83,8 @@ export async function setupWorldControls(
         xrExperience = await WebXRDefaultExperience.CreateAsync(scene, { floorMeshes, disableDefaultUI: true });
         xrExperience.baseExperience.onStateChangedObservable.add((state) => {
           if (!vrButton) return;
-          if (state === 2) vrButton.textContent = "Salir de VR";
-          else if (state === 0) vrButton.textContent = "Entrar en VR";
+          if (state === WebXRState.IN_XR) vrButton.textContent = "Salir de VR";
+          else if (state === WebXRState.NOT_IN_XR) vrButton.textContent = "Entrar en VR";
         });
         if (!disposed) {
           vrButton.disabled = false;
@@ -105,7 +107,7 @@ export async function setupWorldControls(
   async function enterOrExitVR(): Promise<void> {
     if (!xrExperience || !vrButton) return;
     try {
-      if (xrExperience.baseExperience.state === 2) {
+      if (xrExperience.baseExperience.state === WebXRState.IN_XR) {
         await xrExperience.baseExperience.exitXRAsync();
         vrButton.textContent = "Entrar en VR";
       } else {
