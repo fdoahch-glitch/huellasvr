@@ -583,7 +583,9 @@ function mergeVegetationCellMeshes(meshes,cell,name){
  if(!meshes?.length)return null;
  meshes.forEach(mesh=>mesh.computeWorldMatrix(true));
  let merged=null;
- try{merged=BABYLON.Mesh.MergeMeshes(meshes,true,true,undefined,false,false);}
+ const materialSet=new Set(meshes.map(mesh=>mesh.material).filter(Boolean));
+ const preserveMaterialGroups=materialSet.size>1||meshes.some(mesh=>mesh.material?.getClassName?.()==='MultiMaterial');
+ try{merged=BABYLON.Mesh.MergeMeshes(meshes,true,true,undefined,preserveMaterialGroups,preserveMaterialGroups);}
  catch(error){console.warn('[Huellas VR] Falló la fusión espacial de geometría GLB.',name,error);return null;}
  if(!merged)return null;
  merged.name=name;merged.isPickable=false;merged.checkCollisions=false;merged.receiveShadows=true;
@@ -827,7 +829,9 @@ function getVegetationGeometryLODDiagnostics(){
  }
  const queue=scene?._simplificationQueue;
  const memoryBudgetMB=VEGETATION_LOD_MEMORY_BUDGET_BYTES/1048576;
- return {world:worldKey,apiAvailable:typeof BABYLON.Mesh?.prototype?.simplify==='function'&&!!BABYLON.SimplificationType,queueAvailable:!!queue,queueRunning:!!queue?.running,queuePending:queue?._simplificationArray?.length||0,batchCount:vegetationSpatialBatches.length,eligible,completed:ready,pending,rejectedQuality,rejectedMemoryBudget,errors,skipped,placedInstances,distributionMatches:placedInstances===vegetationInstancesPlaced,vegetationInstancesPlaced,originalTriangles,originalVertices,originalGeometryMB:Math.round(originalBytes/1048576*100)/100,lodTriangles,lodVertices,lodGeometryMB:Math.round(lodBytes/1048576*100)/100,lodMemoryBudgetMB:memoryBudgetMB,lodMemoryBudgetUsedPercent:Math.round(vegetationLodMemoryBytes/VEGETATION_LOD_MEMORY_BUDGET_BYTES*1000)/10,visibleBatches,culledBatches:vegetationSpatialBatches.length-visibleBatches,visibleOriginalTriangles,visibleTriangles,visibleTriangleReductionPercent:visibleOriginalTriangles?Math.round((1-visibleTriangles/visibleOriginalTriangles)*1000)/10:0,perSpecies,samples};
+ const mergedBatches=vegetationSpatialBatches.filter(batch=>!!batch.mesh).length,fallbackBatches=vegetationSpatialBatches.length-mergedBatches;
+ const sourceLodAuxiliaryMeshes=scene?.meshes?.filter(mesh=>mesh.name.includes('Decimated')&&mesh.getTotalVertices?.()>0&&!mesh.isDisposed?.()).length||0;
+ return {world:worldKey,mergedBatches,fallbackBatches,sourceLodAuxiliaryMeshes,apiAvailable:typeof BABYLON.Mesh?.prototype?.simplify==='function'&&!!BABYLON.SimplificationType,queueAvailable:!!queue,queueRunning:!!queue?.running,queuePending:queue?._simplificationArray?.length||0,batchCount:vegetationSpatialBatches.length,eligible,completed:ready,pending,rejectedQuality,rejectedMemoryBudget,errors,skipped,placedInstances,distributionMatches:placedInstances===vegetationInstancesPlaced,vegetationInstancesPlaced,originalTriangles,originalVertices,originalGeometryMB:Math.round(originalBytes/1048576*100)/100,lodTriangles,lodVertices,lodGeometryMB:Math.round(lodBytes/1048576*100)/100,lodMemoryBudgetMB:memoryBudgetMB,lodMemoryBudgetUsedPercent:Math.round(vegetationLodMemoryBytes/VEGETATION_LOD_MEMORY_BUDGET_BYTES*1000)/10,visibleBatches,culledBatches:vegetationSpatialBatches.length-visibleBatches,visibleOriginalTriangles,visibleTriangles,visibleTriangleReductionPercent:visibleOriginalTriangles?Math.round((1-visibleTriangles/visibleOriginalTriangles)*1000)/10:0,perSpecies,samples};
 }
 function addMountains(){
  const key=worldKey==='patagonia'?'gonkoken':worldKey;
