@@ -20,7 +20,14 @@ test("abre, renderiza y permite salir de los cinco mundos con WebGL2", async ({ 
     await page.locator(".world-card").filter({ hasText: title }).click();
     await expect(page.locator("#world-title")).toHaveText(title);
     await expect(page.locator("#world-subtitle")).toContainText(species);
-    await expect(page.locator("#render-status")).toHaveText("Escenario activo · WebGL2");
+    await expect(page.locator("#render-status")).toContainText("Dinosaurio cargado");
+    for (const [animation, label] of [["Idle", "Reposo"], ["Walk", "Caminar"], ["Run", "Correr"], ["Neck_Look", "Mirar"]]) {
+      const button = page.locator(`[data-animation="${animation}"]`);
+      await button.click();
+      await expect(button).toHaveAttribute("aria-pressed", "true");
+      await expect(page.locator("#render-status")).toContainText(`animación ${animation}`);
+    }
+    await page.locator(`[data-animation="Idle"]`).click();
 
     const canvas = page.locator("#world-canvas");
     await expect(canvas).toBeVisible();
@@ -58,7 +65,7 @@ test("el selector y el HUD caben en una pantalla móvil", async ({ page }, testI
   await page.screenshot({ path: testInfo.outputPath("selector-mobile.png"), fullPage: true });
 
   await cards.filter({ hasText: "Cuenca de Tolar" }).click();
-  await expect(page.locator("#render-status")).toHaveText("Escenario activo · WebGL2");
+  await expect(page.locator("#render-status")).toContainText("Dinosaurio cargado");
   const uiBounds = await page.evaluate(() => {
     const rect = (selector) => {
       const box = document.querySelector(selector).getBoundingClientRect();
