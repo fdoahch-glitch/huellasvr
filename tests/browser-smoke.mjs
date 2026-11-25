@@ -36,7 +36,7 @@ try{
   try{
    await page.waitForFunction(()=>{
     return window.__HUELLAS_VR_READY__===true||!!window.__HUELLAS_VR_INIT_ERROR__;
-   },{polling:100,timeout:90000});
+   },undefined,{polling:100,timeout:90000});
   }catch(error){
    const startup=await page.evaluate(()=>({url:location.href,readyState:document.readyState,ready:window.__HUELLAS_VR_READY__,initError:window.__HUELLAS_VR_INIT_ERROR__,diagnostics:window.__HUELLAS_VR_DIAGNOSTICS__?.(),loadText:document.querySelector('#loadText')?.textContent,startButtons:document.querySelector('#startButtons')?.className})).catch(e=>({evaluateError:String(e)}));
    const shot=path.join(resultsDir,world+'-startup-failure.png');
@@ -51,9 +51,9 @@ try{
   }
   if(startup.ready!==true)throw new Error(world+' no confirmó el estado de arranque completo: '+JSON.stringify(startup));
   await page.locator('#explore').click();
-  await page.waitForFunction(()=>!document.querySelector('#hud')?.classList.contains('hidden'),{polling:100,timeout:5000});
+  await page.waitForFunction(()=>!document.querySelector('#hud')?.classList.contains('hidden'),undefined,{polling:100,timeout:5000});
   await page.waitForTimeout(1200);
-  if(visualMode)await page.waitForFunction(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().visual?.environmentReady===true,{polling:100,timeout:20000});
+  if(visualMode)await page.waitForFunction(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().visual?.environmentReady===true,undefined,{polling:100,timeout:20000});
   await page.screenshot({path:path.join(resultsDir,world+'-'+testQuality+'.png'),fullPage:false,timeout:120000,animations:'disabled'});
   const state=await page.evaluate(()=>{
    const d=window.__HUELLAS_VR_DIAGNOSTICS__?.();
@@ -122,7 +122,7 @@ try{
   const collision=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.collisionCheck?.());if(!collision?.havok||collision.aggregates<1||collision.environmentZones<1||collision.obstacleColliders<1||!collision.probeBlocked||!collision.playerProbeBlocked)throw new Error(world+' no valida colisión de jugador y dinosaurios con obstáculos: '+JSON.stringify(collision));
   console.log('GROUND',world,JSON.stringify(state.diagnostics.terrain));
   if(!state.diagnostics.physics?.enabled||!state.diagnostics.physics?.controller||state.diagnostics.physics.colliders<1)throw new Error(world+' no inicializó Havok Physics V2: '+JSON.stringify(state.diagnostics.physics));
-  await page.waitForFunction(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().physics?.support==='grounded',{polling:100,timeout:15000});
+  await page.waitForFunction(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().physics?.support==='grounded',undefined,{polling:100,timeout:15000});
   if(state.diagnostics.dinosaurs!==15)throw new Error(world+' debe cargar exactamente 15 dinosaurios; cargó '+state.diagnostics.dinosaurs);
   if(state.diagnostics.dinoLod?.withoutLow!==0)throw new Error(world+' no cargó los 15 modelos LOD reducidos: '+JSON.stringify(state.diagnostics.dinoLod));
   const lodCheck=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.lodCheck?.());

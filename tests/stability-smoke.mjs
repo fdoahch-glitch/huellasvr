@@ -28,7 +28,7 @@ try{
   for(const world of worlds){
    const url='http://127.0.0.1:4175/?mundo='+world+'&q=baja&test=1&debug=1';
    await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
-   await page.waitForFunction(()=>window.__HUELLAS_VR_READY__===true||!!window.__HUELLAS_VR_INIT_ERROR__,{polling:100,timeout:90000});
+   await page.waitForFunction(()=>window.__HUELLAS_VR_READY__===true||!!window.__HUELLAS_VR_INIT_ERROR__,undefined,{polling:100,timeout:90000});
    const startup=await page.evaluate(()=>({ready:window.__HUELLAS_VR_READY__,error:window.__HUELLAS_VR_INIT_ERROR__}));
    if(!startup.ready)throw new Error(world+' ciclo '+cycle+' no inició: '+JSON.stringify(startup.error));
    await page.locator('#explore').click();

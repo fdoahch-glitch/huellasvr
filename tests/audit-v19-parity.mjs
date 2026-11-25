@@ -396,3 +396,9 @@ check('Colisión de jugador con todos los obstáculos del índice espacial y des
  const movement=main.slice(main.indexOf('function movePlayer(dt){'),main.indexOf('const dinoFootFX='));assert.ok(movement.includes('resolvePlayerObstacleVelocity(current,desiredX,desiredZ,dt)'),'El controlador de personaje no consulta la colisión ambiental');
  const smoke=read('tests/browser-smoke.mjs');assert.ok(smoke.includes('playerProbeBlocked'),'Falta prueba de colisión del jugador');
 });
+
+check('Diagnóstico Havok expone el estado de soporte y la cobertura de colisión arbórea',()=>{
+ assert.ok(main.includes('support:physicsLastSupport'),'El estado de soporte del jugador no está expuesto');
+ assert.ok(main.includes("a.file.includes('araucaria_joven')"),'Faltan colisiones para araucarias jóvenes');
+ const smoke=read('tests/browser-smoke.mjs');assert.ok(smoke.includes("physics?.support==='grounded',undefined,{polling:100,timeout:15000}"),'La prueba de suelo no usa la firma correcta de Playwright');
+});
