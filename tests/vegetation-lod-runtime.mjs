@@ -181,6 +181,15 @@ async function testAsset(file) {
       mesh,
       (mesh.getLODLevels?.() || []).slice().sort((a, b) => a.distanceOrScreenCoverage - b.distanceOrScreenCoverage).slice(0, 2),
     ]));
+    for (const [sourceMesh, levels] of sourceLods) {
+      if (Math.floor((sourceMesh.getTotalIndices?.() || 0) / 3) >= 600) {
+        assert.equal(levels.length, 2, `${file}: cada malla fuente compatible debe generar dos LOD`);
+      }
+      for (const level of levels) {
+        level.mesh.setEnabled(false);
+        level.mesh.isVisible = false;
+      }
+    }
     const hasLod = [...sourceLods.values()].some(levels => levels.length === 2);
     if (!hasLod) {
       const triangleCount = sourceMeshes.reduce((sum, mesh) => sum + (mesh.getTotalIndices?.() || 0) / 3, 0);
