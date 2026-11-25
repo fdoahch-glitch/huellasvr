@@ -4,7 +4,7 @@
 
 ## Referencias y alcance comprobado
 
-- Repositorio: `fdoahch-glitch/huellasvr`, rama `main`.
+- Repositorio: `fdoahch-glitch/huellasvr`, rama de trabajo `perf/ultra-60fps` (PR #1 hacia `main`).
 - Referencia original localizada en la biblioteca de trabajo: `huellas-vr_v19(1).zip` (40.616.794 bytes).
 - Motor actual: Babylon.js, WebGL2 y WebXR `immersive-vr`.
 - Archivos principales revisados: `index.html`, `js/main.js`, `tests/audit-v19-parity.mjs`.
@@ -69,10 +69,10 @@ Los GLB originales incluyen los clips `Idle`, `Walk`, `Run` y `Neck_Look` en las
 - Abrir los cinco mundos, comprobar panorama, heightmap, textura, vegetación, montañas, agua y luces.
 - Probar colisiones/gravedad con Havok y movimiento en pendiente.
 - Ejecutar Playwright/WebGL en navegador compatible, capturar errores de consola y screenshots.
-- Medir perfiles alta/media/baja y probar Android/PC.
+- Medir el único perfil Equilibrado y probar Android/PC físicos.
 - Entrar y salir de una sesión WebXR real.
 
-**Conclusión:** el repositorio conserva una parte importante del inventario original, pero la presencia de recursos o funciones no acredita paridad funcional. Los subsistemas anteriores siguen abiertos hasta superar sus pruebas de ejecución.
+**Conclusión:** el repositorio conserva una parte importante del inventario original, pero la presencia de recursos o funciones no acredita paridad funcional. El perfil vigente es uno solo: Equilibrado. Las menciones a perfiles alta/media/baja en inventarios históricos describen configuraciones anteriores y no opciones del producto actual. Los subsistemas anteriores siguen abiertos hasta superar sus pruebas de ejecución.
 
 
 ## Inventario completo del ZIP v19 (105 archivos)
