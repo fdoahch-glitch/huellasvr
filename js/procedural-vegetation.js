@@ -64,6 +64,43 @@
   mesh.thinInstanceSetBuffer('matrix',new Float32Array(matrices(points,scaleFn).flatMap(m=>Array.from(m.m))),16,true);
   mesh.thinInstanceRefreshBoundingInfo(true);return points.length;
  }
+
+ // Viento por vértices en GPU: modifica únicamente las hojas y frondas.
+ // Funciona sobre StandardMaterial mediante el sistema oficial MaterialPluginBase.
+ class VegetationWindPlugin extends B.MaterialPluginBase{
+  constructor(mat,strength){
+   super(mat,'HuellasVegetationWind',180,{HUELLAS_VEGETATION_WIND:false});
+   this.strength=strength;this._enable(true);
+  }
+  getClassName(){return 'HuellasVegetationWindPlugin';}
+  isCompatible(language){return language===B.ShaderLanguage.GLSL;}
+  prepareDefines(defines){defines.HUELLAS_VEGETATION_WIND=true;}
+  getUniforms(){
+   return {ubo:[{name:'huellasWindTime',size:1,type:'float'},{name:'huellasWindStrength',size:1,type:'float'}],
+    vertex:'uniform float huellasWindTime;\\nuniform float huellasWindStrength;'};
+  }
+  bindForSubMesh(ubo){
+   ubo.updateFloat('huellasWindTime',performance.now()*.001);
+   ubo.updateFloat('huellasWindStrength',this.strength);
+  }
+  getCustomCode(type,language){
+   if(type!=='vertex'||language!==B.ShaderLanguage.GLSL)return null;
+   return {
+    CUSTOM_VERTEX_DEFINITIONS:'uniform float huellasWindTime;\\nuniform float huellasWindStrength;',
+    CUSTOM_VERTEX_UPDATE_POSITION:`
+     float huellasWindPhase = huellasWindTime + positionUpdated.y * 2.7 + positionUpdated.x * 1.3;
+     float huellasWindMask = clamp(positionUpdated.y / 1.2, 0.0, 1.0);
+     positionUpdated.x += sin(huellasWindPhase) * 0.075 * huellasWindStrength * huellasWindMask;
+     positionUpdated.z += cos(huellasWindPhase * 0.73) * 0.035 * huellasWindStrength * huellasWindMask;
+    `
+   };
+  }
+ }
+ function enableWind(mat,strength){
+  if(!B.MaterialPluginBase||!B.ShaderLanguage)return false;
+  try{new VegetationWindPlugin(mat,strength);return true;}
+  catch(error){console.warn('[Huellas VR] Viento GPU no disponible para este material:',error);return false;}
+ }
  function create(api){
   const scene=api.scene,profile=PROFILES[api.worldKey]||PROFILES.valle;
   if(!scene||!api.terrainHeightAt||!api.terrainValidAt)return {created:false,reason:'scene-or-terrain-api-missing'};
@@ -72,6 +109,9 @@
   const grassMat=material('procedural-grass-material-'+api.worldKey,profile.grassColor,scene);
   const fernMat=material('procedural-fern-material-'+api.worldKey,profile.fernColor,scene);
   const leafMat=material('procedural-shrub-leaf-material-'+api.worldKey,profile.leafColor,scene);
+  const windStrength=profile.wind??1;
+  const windReady=[grassMat,fernMat,leafMat].map(m=>enableWind(m,windStrength)).filter(Boolean).length;
+
   const grassGeo=bladeGeometry(scene,'procedural-grass-blade-geo',.105,.72);
   const fernGeo=fernGeometry(scene);
   const shrubGeo=bladeGeometry(scene,'procedural-shrub-leaf-geo',.34,.92);
@@ -84,7 +124,7 @@
   total+=thin(fernGeo,ferns,fernMat,'procedural-fern-thin-'+api.worldKey,i=>{const h=.75+(i%5)*.14;return{x:h,y:h,z:h};});
   total+=thin(shrubGeo,shrubs,leafMat,'procedural-shrub-thin-'+api.worldKey,i=>{const h=.8+(i%4)*.16;return{x:h,y:h,z:h};});
   // Las copias de malla usan geometría/material compartidos; sin cuerpos Havok por hoja.
-  return {created:true,total,grass:grass.length,ferns:ferns.length,shrubs:shrubs.length,root};
+  return {created:true,total,grass:grass.length,ferns:ferns.length,shrubs:shrubs.length,windMaterials:windReady,root};
  }
  window.HuellasProceduralVegetation={create,profiles:PROFILES};
 })();
