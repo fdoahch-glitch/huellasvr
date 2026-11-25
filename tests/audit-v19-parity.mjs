@@ -400,7 +400,7 @@ check('Colisión de jugador con todos los obstáculos del índice espacial y des
 check('Diagnóstico Havok expone el estado de soporte y la cobertura de colisión arbórea',()=>{
  assert.ok(main.includes('support:physicsLastSupport'),'El estado de soporte del jugador no está expuesto');
  assert.ok(main.includes("a.file.includes('araucaria_joven')"),'Faltan colisiones para araucarias jóvenes');
- const smoke=read('tests/browser-smoke.mjs');assert.ok(smoke.includes('advancePhysics?.(120)')&&smoke.includes("physicsProbe.support!=='grounded'"),'La prueba de suelo debe ejecutar pasos Havok deterministas y verificar el apoyo real del controlador');
+ const smoke=read('tests/browser-smoke.mjs');assert.ok(smoke.includes('probeGroundSupport?.()')&&smoke.includes("physicsProbe.support!=='grounded'"),'La prueba de suelo debe consultar el apoyo Havok sobre una posición de terreno conocida');
 });
 
 check('La cuadrícula de manada se mantiene incrementalmente sin reconstrucción por fotograma',()=>{
