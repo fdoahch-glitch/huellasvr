@@ -29,13 +29,19 @@ function terrainHeight(world: WorldDefinition, x: number, z: number): number {
 }
 
 function makeTerrain(scene: Scene, root: TransformNode, world: WorldDefinition): void {
-  const positions: number[] = [], indices: number[] = [], uvs: number[] = [];
+  const positions: number[] = [], indices: number[] = [], uvs: number[] = [], colors: number[] = [];
+  const baseColor = color(world.palette.ground), rockColor = color(world.palette.rock);
   const segments = 100, size = 240;
   for (let z = 0; z <= segments; z++) {
     for (let x = 0; x <= segments; x++) {
       const px = (x / segments - 0.5) * size, pz = (z / segments - 0.5) * size;
-      positions.push(px, terrainHeight(world, px, pz), pz);
+      const elevation = terrainHeight(world, px, pz);
+      positions.push(px, elevation, pz);
       uvs.push(x / segments * 12, z / segments * 12);
+      const noise = (Math.sin(px * 0.11) + Math.cos(pz * 0.13) + Math.sin((px + pz) * 0.07)) / 3;
+      const rockBlend = Math.min(0.45, Math.max(0, (elevation + 4) * 0.012 + (noise + 1) * 0.08));
+      const shade = Color3.Lerp(baseColor, rockColor, rockBlend).scale(0.92 + noise * 0.12);
+      colors.push(Math.min(1, shade.r), Math.min(1, shade.g), Math.min(1, shade.b), 1);
       if (x < segments && z < segments) {
         const a = z * (segments + 1) + x, b = a + segments + 1;
         indices.push(a, b, a + 1, b, b + 1, a + 1);
@@ -44,11 +50,13 @@ function makeTerrain(scene: Scene, root: TransformNode, world: WorldDefinition):
   }
   const mesh = new Mesh(`${world.id}-terrain`, scene);
   const data = new VertexData();
-  data.positions = positions; data.indices = indices; data.uvs = uvs;
+  data.positions = positions; data.indices = indices; data.uvs = uvs; data.colors = colors;
   const normals: number[] = [];
   VertexData.ComputeNormals(positions, indices, normals);
   data.normals = normals; data.applyToMesh(mesh, true);
   const groundMaterial = material(scene, `${world.id}-ground`, world.palette.ground);
+  groundMaterial.diffuseColor = Color3.White();
+  groundMaterial.useVertexColor = true;
   groundMaterial.backFaceCulling = false;
   groundMaterial.twoSidedLighting = true;
   mesh.material = groundMaterial;
