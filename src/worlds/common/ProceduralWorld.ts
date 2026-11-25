@@ -56,10 +56,10 @@ function makeTerrain(scene: Scene, root: TransformNode, world: WorldDefinition):
   data.normals = normals; data.applyToMesh(mesh, true);
   const groundMaterial = material(scene, `${world.id}-ground`, world.palette.ground);
   groundMaterial.diffuseColor = Color3.White();
-  groundMaterial.useVertexColor = true;
   groundMaterial.backFaceCulling = false;
   groundMaterial.twoSidedLighting = true;
   mesh.material = groundMaterial;
+  mesh.useVertexColors = true;
   mesh.parent = root;
   mesh.isPickable = false;
 }
