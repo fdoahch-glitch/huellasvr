@@ -489,9 +489,71 @@ function updateDinoLod(d,t){
  d.animationPaused=false;
 }
 const VEGETATION_QUALITY=.9;
+const VEGETATION_LOD_MEMORY_BUDGET_BYTES=(mobileDevice?24:48)*1024*1024;
+let vegetationLodMemoryBytes=0;
 let vegetationInstancesPlaced=0;const vegetationSpatialBatches=[];let vegetationLodObserver=null,vegetationLodLastAt=0;
+function vegetationProjectedHullArea(positions,axisA,axisB){
+ const count=Math.floor(positions.length/3);if(count<3)return 0;
+ const step=Math.max(1,Math.ceil(count/384)),points=[];
+ for(let i=0;i<count;i+=step)points.push([positions[i*3+axisA],positions[i*3+axisB]]);
+ points.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+ const unique=[];for(const p of points){const last=unique[unique.length-1];if(!last||Math.abs(p[0]-last[0])>1e-6||Math.abs(p[1]-last[1])>1e-6)unique.push(p);}
+ if(unique.length<3)return 0;
+ const cross=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+ const lower=[];for(const p of unique){while(lower.length>=2&&cross(lower[lower.length-2],lower[lower.length-1],p)<=0)lower.pop();lower.push(p);}
+ const upper=[];for(let i=unique.length-1;i>=0;i--){const p=unique[i];while(upper.length>=2&&cross(upper[upper.length-2],upper[upper.length-1],p)<=0)upper.pop();upper.push(p);}
+ const hull=lower.slice(0,-1).concat(upper.slice(0,-1));let area=0;
+ for(let i=0;i<hull.length;i++){const a=hull[i],b=hull[(i+1)%hull.length];area+=a[0]*b[1]-b[0]*a[1];}
+ return Math.abs(area)*.5;
+}
+function vegetationGeometrySnapshot(mesh){
+ if(!mesh)return null;
+ const positions=mesh.getVerticesData?.(BABYLON.VertexBuffer.PositionKind),indices=mesh.getIndices?.();
+ if(!positions||!indices)return null;
+ const min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
+ for(let i=0;i<positions.length;i+=3)for(let axis=0;axis<3;axis++){const v=positions[i+axis];if(v<min[axis])min[axis]=v;if(v>max[axis])max[axis]=v;}
+ const kinds=mesh.getVerticesDataKinds?.()||[];let gpuBytes=0;
+ for(const kind of kinds){try{const data=mesh.getVerticesData(kind);if(data)gpuBytes+=data.byteLength??data.length*4;}catch{}}
+ gpuBytes+=indices.byteLength??indices.length*4;
+ const material=mesh.material;
+ return {
+  triangles:Math.floor(indices.length/3),vertices:Math.floor(positions.length/3),
+  bounds:{min,max,size:max.map((v,i)=>v-min[i])},
+  silhouetteAreas:{xy:vegetationProjectedHullArea(positions,0,1),xz:vegetationProjectedHullArea(positions,0,2),yz:vegetationProjectedHullArea(positions,1,2)},
+  streams:{normals:!!mesh.getVerticesData?.(BABYLON.VertexBuffer.NormalKind),uvs:!!mesh.getVerticesData?.(BABYLON.VertexBuffer.UVKind),colors:!!mesh.getVerticesData?.(BABYLON.VertexBuffer.ColorKind)},
+  subMeshes:mesh.subMeshes?.length||0,materialClass:material?.getClassName?.()||material?.constructor?.name||null,
+  materialName:material?.name||null,gpuBytes
+ };
+}
+function vegetationCompareGeometry(original,lod){
+ if(!original||!lod)return {valid:false,reasons:['missing-geometry-snapshot']};
+ let boundsDrift=0;
+ for(let axis=0;axis<3;axis++){
+  const size=original.bounds.size[axis];
+  if(size<.01)continue;
+  const drift=Math.max(Math.abs(original.bounds.min[axis]-lod.bounds.min[axis]),Math.abs(original.bounds.max[axis]-lod.bounds.max[axis]))/size;
+  boundsDrift=Math.max(boundsDrift,drift);
+ }
+ const silhouetteRatios={};const ratios=[];
+ for(const key of ['xy','xz','yz']){
+  const base=original.silhouetteAreas[key],next=lod.silhouetteAreas[key];
+  if(base>1e-5&&next>1e-5){const ratio=next/base;silhouetteRatios[key]=Math.round(ratio*1000)/1000;ratios.push(ratio);}
+ }
+ const trianglesReduced=lod.triangles>0&&lod.triangles<original.triangles;
+ const boundsPass=boundsDrift<=.025;
+ const silhouettePass=ratios.every(ratio=>ratio>=.78&&ratio<=1.22);
+ const streamsPass=(!original.streams.normals||lod.streams.normals)&&(!original.streams.uvs||lod.streams.uvs)&&(!original.streams.colors||lod.streams.colors);
+ const materialPass=original.materialClass===lod.materialClass;
+ const reasons=[];
+ if(!trianglesReduced)reasons.push('triangles-not-reduced');
+ if(!boundsPass)reasons.push('bounds-drift');
+ if(!silhouettePass)reasons.push('silhouette-drift');
+ if(!streamsPass)reasons.push('vertex-stream-lost');
+ if(!materialPass)reasons.push('material-class-changed');
+ return {valid:trianglesReduced&&boundsPass&&silhouettePass&&streamsPass&&materialPass,boundsDriftPercent:Math.round(boundsDrift*10000)/100,silhouetteRatios,trianglesReduced,streamsPass,materialPass,reasons};
+}
 async function addVegetation(){
- vegetationInstancesPlaced=0;vegetationSpatialBatches.length=0;
+ vegetationInstancesPlaced=0;vegetationSpatialBatches.length=0;vegetationLodMemoryBytes=0;vegetationLodLastAt=0;
  const F=Object.assign({},WORLD.flora||{},{adult:WORLD.forestN?.adult??WORLD.flora?.adult??0,young:WORLD.forestN?.young??WORLD.flora?.young??0,fern:WORLD.forestN?.fern??WORLD.flora?.fern??0}),rockTint=({atacamatitan:'#c88a6a',arackar:'#6a625c',patagonia:'#bdb6a6',stegouros:'#a8a294',aysen:'#5d5c5a'}[worldKey]||'#8c8a82');
  // Parámetros exactos del catálogo VEG() de los cinco mundos publicados en v19.
  const specs=[
@@ -580,19 +642,18 @@ async function addVegetation(){
   for(const [cellKey,cell] of spatialBatches){
    if(!cell.meshes.length)continue;
    cell.meshes.forEach(mesh=>mesh.computeWorldMatrix(true));
-   let merged=cell.meshes.length===1?cell.meshes[0]:null;
-   if(cell.meshes.length>1){
-    try{
-     merged=BABYLON.Mesh.MergeMeshes(cell.meshes,true,true,undefined,false,false);
-    }catch(mergeError){
-     console.warn('[Huellas VR] No se pudieron fusionar las mallas GLB de la celda; se conservan las mallas originales.',a.file,cellKey,mergeError);
-     merged=null;
-    }
+   let merged=null;
+   try{
+    // Fusionar también celdas con una sola instancia: así se hornean los transforms
+    // del árbol raíz y el LOD/culling queda anclado al centro de celda sin doble transformación.
+    merged=BABYLON.Mesh.MergeMeshes(cell.meshes,true,true,undefined,false,false);
+   }catch(mergeError){
+    console.warn('[Huellas VR] No se pudieron fusionar las mallas GLB de la celda; se conservan las mallas originales.',a.file,cellKey,mergeError);
+    merged=null;
    }
    if(merged){
     merged.name='vegetation-batch-'+worldKey+'-'+si+'-'+cellKey;merged.isPickable=false;merged.checkCollisions=false;merged.receiveShadows=true;
-    // MergeMeshes bakea las transformaciones de las plantas en coordenadas de mundo.
-    // Recentramos el lote en su celda para que el LOD nativo mida distancia desde el grupo correcto.
+    // MergeMeshes hornea las transformaciones originales; recentramos el lote en su celda.
     const positionData=merged.getVerticesData(BABYLON.VertexBuffer.PositionKind);
     if(positionData&&positionData.length){
      for(let vi=0;vi<positionData.length;vi+=3){positionData[vi]-=cell.x;positionData[vi+2]-=cell.z;}
@@ -601,39 +662,55 @@ async function addVegetation(){
     }
     shadowGenerator?.addShadowCaster(merged,true);
     cell.roots.forEach(root=>root.dispose(false));
-    // Babylon.js genera LOD geométricos asíncronos; la malla GLB original permanece como nivel 0.
-    // Helechos/planchas de frondas se excluyen para no destruir siluetas ni transparencias.
     const isFern=a.file.includes('fern'),isTree=a.file.includes('araucaria')||a.file.includes('dead_tree');
-    const isRock=a.file.includes('rock')||a.file.includes('pebble');
-    const triangleCount=(merged.getTotalIndices?.()||0)/3;
-    // El bundle UMD distribuido registra Mesh.simplify y SimplificationType al cargarse.
-    if(!isFern&&triangleCount>=600&&typeof merged.simplify==='function'&&BABYLON.SimplificationType){
-     const nearDistance=isTree?58:(isRock?22:34),farDistance=isTree?112:(isRock?42:68);
-     const settings=isTree
-      ?[{quality:.78,distance:nearDistance,optimizeMesh:true},{quality:.52,distance:farDistance,optimizeMesh:true}]
-      :isRock
-       ?[{quality:.72,distance:nearDistance,optimizeMesh:true},{quality:.46,distance:farDistance,optimizeMesh:true}]
-       :[{quality:.84,distance:nearDistance,optimizeMesh:true},{quality:.66,distance:farDistance,optimizeMesh:true}];
-     merged.metadata={...(merged.metadata||{}),nativeVegetationLOD:true,originalGLBMesh:true,vegetationLodStatus:'pending',originalTriangles:triangleCount,requestedLodDistances:settings.map(item=>item.distance)};
+    const isRock=a.file.includes('rock')||a.file.includes('pebble')||a.file.includes('cerro_desierto');
+    const triangleCount=Math.floor((merged.getTotalIndices?.()||0)/3);
+    const originalGeometry=vegetationGeometrySnapshot(merged);
+    const apiAvailable=typeof BABYLON.Mesh?.prototype?.simplify==='function'&&!!BABYLON.SimplificationType;
+    const eligible=!isFern&&triangleCount>=600&&apiAvailable;
+    const skipReason=!apiAvailable?'unsupported-api':(isFern?'silhouette-sensitive-fern':(triangleCount<600?'low-poly-no-lod':null));
+    const nearDistance=isTree?58:(isRock?22:34),farDistance=isTree?112:(isRock?42:68);
+    const settings=isTree
+     ?[{quality:.82,distance:nearDistance,optimizeMesh:true},{quality:.64,distance:farDistance,optimizeMesh:true}]
+     :isRock
+      ?[{quality:.72,distance:nearDistance,optimizeMesh:true},{quality:.46,distance:farDistance,optimizeMesh:true}]
+      :[{quality:.82,distance:nearDistance,optimizeMesh:true},{quality:.62,distance:farDistance,optimizeMesh:true}];
+    merged.metadata={...(merged.metadata||{}),nativeVegetationLOD:true,originalGLBMesh:true,vegetationWorld:worldKey,vegetationSource:a.file,vegetationCell:cellKey,vegetationInstances:cell.roots.length,vegetationLodStatus:eligible?'pending':'skipped',vegetationLodSkipReason:skipReason,originalTriangles:triangleCount,originalVertices:originalGeometry?.vertices||merged.getTotalVertices?.()||0,originalGeometry,requestedLodDistances:eligible?settings.map(item=>item.distance):[]};
+    if(eligible){
      try{
       merged.simplify(settings,false,BABYLON.SimplificationType.QUADRATIC,()=>{
        if(!scene||scene.isDisposed?.())return;
-       const lodStats=(merged.getLODLevels?.()||[]).map(level=>({
-        distance:level.distanceOrScreenCoverage,
-        triangles:level.mesh?Math.floor((level.mesh.getTotalIndices?.()||0)/3):0,
-        vertices:level.mesh?.getTotalVertices?.()||0
-       }));
-       const generatedTriangles=lodStats.reduce((sum,lod)=>sum+lod.triangles,0);
-       const valid=lodStats.length===2&&lodStats.every(lod=>lod.triangles>0&&lod.triangles<triangleCount);
-       merged.metadata={...(merged.metadata||{}),nativeVegetationLOD:true,originalGLBMesh:true,vegetationLodStatus:valid?'ready':'invalid',originalTriangles:triangleCount,lodLevels:lodStats.length,lodStats,triangleReductionPercent:triangleCount?Math.round((1-generatedTriangles/(triangleCount*2))*1000)/10:0};
-       if(!valid)console.warn('[Huellas VR] Comparación LOD geométrico requiere revisión.',a.file,cellKey,{originalTriangles:triangleCount,lodStats});
+       const lodLevels=(merged.getLODLevels?.()||[]).slice();
+       const lodStats=lodLevels.map(level=>{
+        const geometry=vegetationGeometrySnapshot(level.mesh),comparison=vegetationCompareGeometry(originalGeometry,geometry);
+        return {distance:level.distanceOrScreenCoverage,...geometry,...comparison};
+       });
+       const baseAfter=vegetationGeometrySnapshot(merged);
+       const basePreserved=!!baseAfter&&baseAfter.triangles===triangleCount&&baseAfter.vertices===(originalGeometry?.vertices||baseAfter.vertices);
+       const valid=lodStats.length===2&&basePreserved&&lodStats.every(lod=>lod.valid);
+       const lodBytes=lodStats.reduce((sum,lod)=>sum+(lod.gpuBytes||0),0);
+       let status='ready';
+       if(!valid){
+        status='rejected-quality';
+        lodLevels.forEach(level=>{merged.removeLODLevel(level.mesh);level.mesh?.dispose(false,false);});
+       }else if(vegetationLodMemoryBytes+lodBytes>VEGETATION_LOD_MEMORY_BUDGET_BYTES){
+        status='rejected-memory-budget';
+        lodLevels.forEach(level=>{merged.removeLODLevel(level.mesh);level.mesh?.dispose(false,false);});
+       }else vegetationLodMemoryBytes+=lodBytes;
+       const totalLodTriangles=lodStats.reduce((sum,lod)=>sum+lod.triangles,0),totalLodVertices=lodStats.reduce((sum,lod)=>sum+lod.vertices,0);
+       merged.metadata={...(merged.metadata||{}),vegetationLodStatus:status,basePreserved,lodLevels:status==='ready'?lodStats.length:0,lodStats,estimatedLodBytes:lodBytes,triangleReductionPercent:triangleCount?Math.round((1-totalLodTriangles/(triangleCount*2))*1000)/10:0,vertexReductionPercent:originalGeometry?.vertices?Math.round((1-totalLodVertices/(originalGeometry.vertices*2))*1000)/10:0,lodRejectionReasons:lodStats.flatMap(lod=>lod.reasons||[])};
+       if(status==='rejected-quality')console.warn('[Huellas VR] LOD descartado por pérdida geométrica; se conserva el GLB original.',a.file,cellKey,{originalGeometry,lodStats,basePreserved});
+       if(status==='rejected-memory-budget')console.info('[Huellas VR] LOD descartado para respetar el presupuesto de memoria.',a.file,cellKey,{lodBytes,budgetBytes:VEGETATION_LOD_MEMORY_BUDGET_BYTES});
       });
-     }catch(simplifyError){merged.metadata={...(merged.metadata||{}),vegetationLodStatus:'error',vegetationLodError:String(simplifyError?.message||simplifyError)};console.warn('[Huellas VR] LOD geométrico omitido; se conserva el GLB original.',a.file,cellKey,simplifyError);}
+     }catch(simplifyError){
+      merged.metadata={...(merged.metadata||{}),vegetationLodStatus:'error',vegetationLodError:String(simplifyError?.message||simplifyError)};
+      console.warn('[Huellas VR] LOD geométrico omitido; se conserva el GLB original.',a.file,cellKey,simplifyError);
+     }
     }
-    vegetationSpatialBatches.push({mesh:merged,x:cell.x,z:cell.z,maxDistance,active:true});
+    vegetationSpatialBatches.push({mesh:merged,x:cell.x,z:cell.z,maxDistance,active:true,sourceFile:a.file,cellKey,instanceCount:cell.roots.length});
    }else{
     cell.meshes.forEach(mesh=>{mesh.isPickable=false;mesh.checkCollisions=false;mesh.receiveShadows=true;shadowGenerator?.addShadowCaster(mesh,true);});
-    vegetationSpatialBatches.push({meshes:cell.meshes,x:cell.x,z:cell.z,maxDistance,active:true});
+    vegetationSpatialBatches.push({meshes:cell.meshes,x:cell.x,z:cell.z,maxDistance,active:true,sourceFile:a.file,cellKey,instanceCount:cell.roots.length});
    }
   }
  }
@@ -652,6 +729,30 @@ function updateVegetationSpatialLod(force=false){
   if(batch.mesh)batch.mesh.setEnabled(show);
   if(batch.meshes)batch.meshes.forEach(mesh=>mesh.setEnabled(show));
  }
+}
+function getVegetationGeometryLODDiagnostics(){
+ const perSpecies={},samples=[];
+ let placedInstances=0,ready=0,pending=0,rejectedQuality=0,rejectedMemoryBudget=0,errors=0,skipped=0,eligible=0;
+ let originalTriangles=0,originalVertices=0,originalBytes=0,lodTriangles=0,lodVertices=0,lodBytes=0,visibleTriangles=0,visibleOriginalTriangles=0,visibleBatches=0;
+ for(const batch of vegetationSpatialBatches){
+  placedInstances+=batch.instanceCount||0;
+  const source=batch.sourceFile||'unknown',meta=batch.mesh?.metadata||{},status=meta.vegetationLodStatus||'fallback';
+  const row=perSpecies[source]||(perSpecies[source]={batches:0,instances:0,ready:0,pending:0,rejectedQuality:0,rejectedMemoryBudget:0,errors:0,skipped:0});
+  row.batches++;row.instances+=batch.instanceCount||0;
+  if(status==='ready'){ready++;row.ready++;eligible++;}else if(status==='pending'){pending++;row.pending++;eligible++;}else if(status==='rejected-quality'){rejectedQuality++;row.rejectedQuality++;eligible++;}else if(status==='rejected-memory-budget'){rejectedMemoryBudget++;row.rejectedMemoryBudget++;eligible++;}else if(status==='error'){errors++;row.errors++;eligible++;}else{skipped++;row.skipped++;}
+  if(meta.originalGeometry){originalTriangles+=meta.originalGeometry.triangles;originalVertices+=meta.originalGeometry.vertices;originalBytes+=meta.originalGeometry.gpuBytes||0;}
+  if(status==='ready'){
+   lodBytes+=meta.estimatedLodBytes||0;
+   for(const lod of meta.lodStats||[]){lodTriangles+=lod.triangles||0;lodVertices+=lod.vertices||0;}
+  }
+  const isVisible=batch.mesh?batch.active&&batch.mesh.isEnabled():batch.active;
+  if(isVisible){visibleBatches++;if(meta.originalGeometry)visibleOriginalTriangles+=meta.originalGeometry.triangles;const selected=batch.mesh?.getLOD?.(camera)||batch.mesh;if(selected)visibleTriangles+=Math.floor((selected.getTotalIndices?.()||0)/3);}
+  if(meta.originalGeometry&&samples.length<32)samples.push({source,cell:batch.cellKey,instances:batch.instanceCount||0,status,originalTriangles:meta.originalGeometry.triangles,originalVertices:meta.originalGeometry.vertices,originalBytes:meta.originalGeometry.gpuBytes,lodLevels:meta.lodLevels||0,lodStats:(meta.lodStats||[]).map(lod=>({distance:lod.distance,triangles:lod.triangles,vertices:lod.vertices,gpuBytes:lod.gpuBytes,boundsDriftPercent:lod.boundsDriftPercent,silhouetteRatios:lod.silhouetteRatios,valid:lod.valid,reasons:lod.reasons}))});
+  }
+ }
+ const queue=scene?._simplificationQueue;
+ const memoryBudgetMB=VEGETATION_LOD_MEMORY_BUDGET_BYTES/1048576;
+ return {apiAvailable:typeof BABYLON.Mesh?.prototype?.simplify==='function'&&!!BABYLON.SimplificationType,queueAvailable:!!queue,queueRunning:!!queue?.running,queuePending:queue?._simplificationArray?.length||0,batchCount:vegetationSpatialBatches.length,eligible,completed:ready,pending,rejectedQuality,rejectedMemoryBudget,errors,skipped,placedInstances,distributionMatches:placedInstances===vegetationInstancesPlaced,vegetationInstancesPlaced,originalTriangles,originalVertices,originalGeometryMB:Math.round(originalBytes/1048576*100)/100,lodTriangles,lodVertices,lodGeometryMB:Math.round(lodBytes/1048576*100)/100,lodMemoryBudgetMB:memoryBudgetMB,lodMemoryBudgetUsedPercent:Math.round(vegetationLodMemoryBytes/VEGETATION_LOD_MEMORY_BUDGET_BYTES*1000)/10,visibleBatches,culledBatches:vegetationSpatialBatches.length-visibleBatches,visibleOriginalTriangles,visibleTriangles,visibleTriangleReductionPercent:visibleOriginalTriangles?Math.round((1-visibleTriangles/visibleOriginalTriangles)*1000)/10:0,perSpecies,samples};
 }
 function addMountains(){
  const key=worldKey==='patagonia'?'gonkoken':worldKey;
@@ -1245,7 +1346,7 @@ function installDiagnostics(){
    meshes:scene?.meshes?.length||0,activeMeshes:scene?.getActiveMeshes?.().length||0,frozenWorldMatrices:scene?.meshes?.filter(m=>m.isWorldMatrixFrozen).length||0,collisionBuckets:{environment:environmentCollisionGrid.size,dinosaurs:dinoCollisionGrid.size},renderLoopStarted,
    textures:engine?.getLoadedTexturesCache?.().length||0,dinosaurs:dinoRoots.length,drinkPoints:herdDrinkPoints.length,dinoLod:{high:dinoRoots.filter(d=>d.lodLevel==='high').length,low:dinoRoots.filter(d=>d.lodLevel==='low').length,withoutLow:dinoRoots.filter(d=>!d.hasLow).length,animated:dinoRoots.filter(d=>!!d.activeClip?.isPlaying).length,paused:dinoRoots.filter(d=>d.animationPaused).length},
    vegetationAssets:assetCache.size,vegetationInstances:vegetationInstancesPlaced,vegetationDensityFactor:VEGETATION_QUALITY,
-   vegetationGeometryLOD:(()=>{const batches=vegetationSpatialBatches.filter(batch=>batch.mesh),metadata=batches.map(batch=>batch.mesh.metadata||{}),samples=metadata.filter(meta=>meta.vegetationLodStatus==='ready'||meta.vegetationLodStatus==='invalid').slice(0,8).map(meta=>({originalTriangles:meta.originalTriangles,lodLevels:meta.lodLevels,lodStats:meta.lodStats,triangleReductionPercent:meta.triangleReductionPercent,status:meta.vegetationLodStatus}));return {apiAvailable:typeof BABYLON.Mesh?.prototype?.simplify==='function'&&!!BABYLON.SimplificationType,queueAvailable:!!scene?.simplificationQueue,mergedBatches:batches.length,pending:metadata.filter(meta=>meta.vegetationLodStatus==='pending').length,completed:metadata.filter(meta=>meta.vegetationLodStatus==='ready').length,invalid:metadata.filter(meta=>meta.vegetationLodStatus==='invalid').length,errors:metadata.filter(meta=>meta.vegetationLodStatus==='error').length,samples};})(),
+   vegetationGeometryLOD:getVegetationGeometryLODDiagnostics(),
    particles:scene?.particleSystems?.length||0,visual:{pipeline:!!visualPipeline,bloom:!!visualPipeline?.bloomEnabled,ssao:!!ssaoPipeline,ssr:!!ssrPipeline&&!!ssrPipeline.isEnabled,volumetric:!!volumetricLight&&!!volumetricLight.isEnabled,environment:!!environmentTexture,environmentReady,environmentError,clearCoat:scene.materials.some(m=>!!m.clearCoat?.isEnabled),foliageSheen:scene.materials.some(m=>!!m.sheen?.isEnabled),thinInstances:scene.meshes.some(m=>m.hasThinInstances),particleBackend,shadowMap:VP.shadow,anisotropy:VP.anisotropy,profile:qualityLabel},
    dinoStates:dinoRoots.map(d=>({id:d.id,clip:d.clipName,active:!!d.activeClip,playing:!!d.activeClip?.isPlaying,lod:d.lodLevel,animationPaused:d.animationPaused,state:d.state,goal:d.goal,personality:d.personality,juvenile:d.juvenile,socialPartner:d.socialPartner?.root?.name||null,heading:d.heading,speed:d.actualSpeed,target:d.target?{x:+d.target.x.toFixed(2),z:+d.target.z.toFixed(2)}:null,forwardYaw:d.baseYaw,position:{x:+d.root.position.x.toFixed(2),y:+d.root.position.y.toFixed(2),z:+d.root.position.z.toFixed(2)}})),
    cpuUpdateMs:Math.round(cpuUpdateMs*100)/100,cpuUpdateAvgMs:Math.round(cpuUpdateAvgMs*100)/100,cpuStagesMs:{...cpuStageMs},frameP50Ms:percentile(frameTimeSamples,50),frameP95Ms:percentile(frameTimeSamples,95),frameP99Ms:percentile(frameTimeSamples,99),fps1PercentLow:frameTimeSamples.length?Math.round(1000/Math.max(.01,percentile(frameTimeSamples,95))):null,frameSamples:frameTimeSamples.length,
@@ -1267,6 +1368,34 @@ function installDiagnostics(){
   async toggleStereo(){return await toggleMobileStereo();},
   async toggleOrientation(){await toggleMobileOrientation();return {enabled:orientationEnabled,supported:!!window.DeviceOrientationEvent};},
   lodCheck(){const original={x:camera.position.x,y:camera.position.y,z:camera.position.z};camera.position.set(5000,original.y,5000);const farAt=performance.now()+300;for(const d of dinoRoots){d.nextLodCheck=0;updateDinoLod(d,farAt);}const far=dinoRoots.filter(d=>d.lodLevel==='low').length;camera.position.set(original.x,original.y,original.z);const nearAt=farAt+300;for(const d of dinoRoots){d.nextLodCheck=0;updateDinoLod(d,nearAt);}const near=dinoRoots.filter(d=>d.lodLevel==='high').length;return {count:dinoRoots.length,farLow:far,nearHigh:near,available:dinoRoots.filter(d=>d.hasLow).length};},
+  vegetationGeometryCheck(){
+   const batch=vegetationSpatialBatches.find(item=>item.mesh&&item.mesh.metadata?.vegetationLodStatus==='ready');
+   const distributionInstances=vegetationSpatialBatches.reduce((sum,item)=>sum+(item.instanceCount||0),0);
+   if(!batch)return {ready:false,distributionInstances,distributionMatches:distributionInstances===vegetationInstancesPlaced};
+   const mesh=batch.mesh,meta=mesh.metadata||{},center=mesh.getBoundingInfo().boundingSphere.centerWorld.clone(),savedPosition=camera.position.clone(),savedRotation=camera.rotation.clone();
+   const nearDistance=Math.max(6,(meta.requestedLodDistances?.[0]||30)*.35),farDistance=(meta.requestedLodDistances?.[1]||70)+12;
+   camera.position.set(center.x,center.y,center.z-nearDistance);camera.computeWorldMatrix(true);const nearMesh=mesh.getLOD(camera);
+   camera.position.set(center.x,center.y,center.z-farDistance);camera.computeWorldMatrix(true);const farMesh=mesh.getLOD(camera);
+   camera.position.copyFrom(savedPosition);camera.rotation.copyFrom(savedRotation);camera.computeWorldMatrix(true);
+   const shadowList=shadowGenerator?.getShadowMap?.()?.renderList;
+   const shadowCaster=Array.isArray(shadowList)?shadowList.includes(mesh):null;
+   camera.position.set(batch.x,savedPosition.y,batch.z);updateVegetationSpatialLod(true);const cullingNearVisible=mesh.isEnabled();
+   camera.position.set(batch.x,savedPosition.y,batch.z-(batch.maxDistance+45));updateVegetationSpatialLod(true);const cullingFarHidden=!mesh.isEnabled();
+   camera.position.copyFrom(savedPosition);camera.rotation.copyFrom(savedRotation);camera.computeWorldMatrix(true);updateVegetationSpatialLod(true);
+   return {ready:true,source:batch.sourceFile,originalTriangles:meta.originalTriangles,nearUsesOriginal:nearMesh===mesh,farUsesLod:!!farMesh&&farMesh!==mesh,farTriangles:Math.floor((farMesh?.getTotalIndices?.()||0)/3),cullingNearVisible,cullingFarHidden,shadowCaster,distributionInstances,distributionMatches:distributionInstances===vegetationInstancesPlaced};
+  },
+  prepareVegetationLodCapture(mode){
+   const batch=vegetationSpatialBatches.find(item=>item.mesh&&item.mesh.metadata?.vegetationLodStatus==='ready');if(!batch)return {ready:false};
+   if(!this._vegetationLodCaptureState)this._vegetationLodCaptureState={position:camera.position.clone(),rotation:camera.rotation.clone()};
+   const meta=batch.mesh.metadata||{},center=batch.mesh.getBoundingInfo().boundingSphere.centerWorld.clone(),distance=mode==='far'?(meta.requestedLodDistances?.[1]||70)+12:Math.max(6,(meta.requestedLodDistances?.[0]||30)*.35);
+   camera.position.set(center.x,center.y,center.z-distance);camera.setTarget(center);camera.computeWorldMatrix(true);
+   const selected=batch.mesh.getLOD(camera);
+   return {ready:true,mode,source:batch.sourceFile,selectedTriangles:Math.floor((selected?.getTotalIndices?.()||0)/3),originalTriangles:meta.originalTriangles,usingLOD:selected!==batch.mesh};
+  },
+  restoreVegetationLodCapture(){
+   const state=this._vegetationLodCaptureState;if(!state)return {restored:false};
+   camera.position.copyFrom(state.position);camera.rotation.copyFrom(state.rotation);camera.computeWorldMatrix(true);this._vegetationLodCaptureState=null;updateVegetationSpatialLod(true);return {restored:true};
+  },
   dinoBehaviorCheck(){let overlaps=0,minGap=Infinity;for(let i=0;i<dinoRoots.length;i++)for(let j=i+1;j<dinoRoots.length;j++){const a=dinoRoots[i],b=dinoRoots[j],gap=Math.hypot(a.root.position.x-b.root.position.x,a.root.position.z-b.root.position.z)-(dinoSpacingRadius(a)+dinoSpacingRadius(b));minGap=Math.min(minGap,gap);if(gap<-.05)overlaps++;}return {count:dinoRoots.length,overlaps,minGap:Number.isFinite(minGap)?+minGap.toFixed(3):null,juveniles:dinoRoots.filter(d=>d.juvenile).length,approaching:dinoRoots.filter(d=>d.goal==='approach').length,looking:dinoRoots.filter(d=>d.state==='look').length,grazing:dinoRoots.filter(d=>d.state==='graze').length,social:dinoRoots.filter(d=>d.state==='social'||d.state==='play').length,fleeing:dinoRoots.filter(d=>d.goal==='flee').length};},
   exerciseSocial(){for(const a of dinoRoots){a.state='idle';a.target=null;a.goal=null;a.socialPartner=null;a.socialUntil=0;a.nextSocialAt=0;}const candidates=dinoRoots.filter(a=>a.juvenile||a.personality==='social');for(const d of candidates){d.testSocial=true;const started=chooseDinoSocial(d,dinoRoots.indexOf(d),performance.now());d.testSocial=false;if(started)return {started:true,partner:d.socialPartner?.root?.name||null,juvenile:d.juvenile};}return {started:false,reason:'no-valid-nearby-partner',candidates:candidates.length,positions:dinoRoots.map(d=>({name:d.root.name,personality:d.personality,state:d.state,x:+d.root.position.x.toFixed(1),z:+d.root.position.z.toFixed(1),radius:dinoSpacingRadius(d)}))};},
   exercisePlayerApproach(){const t=performance.now(),candidates=dinoRoots.filter(a=>a.state==='idle'&&!a.socialPartner),diagnostics=candidates.map(d=>{const dx=camera.position.x-d.root.position.x,dz=camera.position.z-d.root.position.z,dist=Math.hypot(dx,dz);return {name:d.root.name,dist:+dist.toFixed(2),inRange:dist>=3.5&&dist<=18,terrain:terrainValidAt(camera.position.x,camera.position.z),curiosity:d.curiosity};});for(const d of candidates){d.curiosity=1;d.nextCuriosityAt=0;if(choosePlayerApproach(d,dinoRoots.indexOf(d),t))return {started:true,dinosaur:d.root.name,juvenile:d.juvenile,diagnostics};}return {started:false,reason:'no-valid-player-approach-position',camera:{x:+camera.position.x.toFixed(2),z:+camera.position.z.toFixed(2)},candidateCount:candidates.length,nearby:diagnostics.filter(d=>d.dist<=25).slice(0,12),nearest:diagnostics.sort((a,b)=>a.dist-b.dist).slice(0,5)};},
