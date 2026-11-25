@@ -86,7 +86,6 @@
   getCustomCode(type,language){
    if(type!=='vertex'||language!==B.ShaderLanguage.GLSL)return null;
    return {
-    CUSTOM_VERTEX_DEFINITIONS:'uniform float huellasWindTime;\\nuniform float huellasWindStrength;',
     CUSTOM_VERTEX_UPDATE_POSITION:`
      float huellasWindPhase = huellasWindTime + positionUpdated.y * 2.7 + positionUpdated.x * 1.3;
      float huellasWindMask = clamp(positionUpdated.y / 1.2, 0.0, 1.0);
