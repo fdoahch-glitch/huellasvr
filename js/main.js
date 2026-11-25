@@ -489,9 +489,9 @@ function updateDinoLod(d,t){
  d.animationPaused=false;
 }
 const VEGETATION_QUALITY=.9;
-let vegetationInstancesPlaced=0;
+let vegetationInstancesPlaced=0;const vegetationSpatialBatches=[];let vegetationLodObserver=null,vegetationLodLastAt=0;
 async function addVegetation(){
- vegetationInstancesPlaced=0;
+ vegetationInstancesPlaced=0;vegetationSpatialBatches.length=0;
  const F=Object.assign({},WORLD.flora||{},{adult:WORLD.forestN?.adult??WORLD.flora?.adult??0,young:WORLD.forestN?.young??WORLD.flora?.young??0,fern:WORLD.forestN?.fern??WORLD.flora?.fern??0}),rockTint=({atacamatitan:'#c88a6a',arackar:'#6a625c',patagonia:'#bdb6a6',stegouros:'#a8a294',aysen:'#5d5c5a'}[worldKey]||'#8c8a82');
  // Parámetros exactos del catálogo VEG() de los cinco mundos publicados en v19.
  const specs=[
@@ -532,7 +532,7 @@ async function addVegetation(){
    if(a.clump)points.push({x,z});placed.push({x,z,index:i++});
   }
   vegetationInstancesPlaced+=placed.length;
-  let dimensions=null,materialsAdjusted=false,materialsTuned=false;const batchMeshes=[],batchRoots=[];
+  let dimensions=null,materialsAdjusted=false,materialsTuned=false;const spatialBatches=new Map();
   for(let i=0;i<placed.length;i++){
    const p=placed[i],instances=container.instantiateModelsToScene(n=>n+'-veg-'+si+'-'+i,false,{doNotInstantiate:false});
    const root=new BABYLON.TransformNode('world-vegetation-'+si+'-'+i,scene);
@@ -562,7 +562,9 @@ async function addVegetation(){
    root.scaling.set(scale,sy,scale);
    root.rotation.set((rng(p.index*7+41)-.5)*(a.tilt||0),rng(p.index*7+43)*Math.PI*2,(rng(p.index*7+47)-.5)*(a.tilt||0));
    meshes.forEach(mesh=>{mesh.isPickable=false;mesh.checkCollisions=false;});
-   batchMeshes.push(...meshes);batchRoots.push(root);
+   const cellSize=42,cellX=Math.floor(p.x/cellSize),cellZ=Math.floor(p.z/cellSize),cellKey=cellX+':'+cellZ;
+   let cell=spatialBatches.get(cellKey);if(!cell){cell={meshes:[],roots:[],x:(cellX+.5)*cellSize,z:(cellZ+.5)*cellSize};spatialBatches.set(cellKey,cell);}
+   cell.meshes.push(...meshes);cell.roots.push(root);
   }
    if(physicsReady&&physicsCandidates.length){
     physicsCandidates.forEach(candidate=>{const radius=candidate.tree?Math.max(.32,candidate.width*.035):Math.max(.24,candidate.width*.28);environmentCollisionZones.push({x:candidate.x,z:candidate.z,radius:radius+.18,kind:candidate.tree?'tree':'rock'});});
@@ -574,28 +576,44 @@ async function addVegetation(){
      physicsAggregates.push(new BABYLON.PhysicsAggregate(colliderMesh,BABYLON.PhysicsShapeType.CYLINDER,{mass:0,friction:.9,restitution:0},scene));environmentPhysicsColliderCount++;
     });
    }
-  if(batchMeshes.length){
-   batchMeshes.forEach(mesh=>mesh.computeWorldMatrix(true));
-   let merged=batchMeshes.length===1?batchMeshes[0]:null;
-   if(batchMeshes.length>1){
+  const maxDistance=(a.file.includes('araucaria')||a.file.includes('dead_tree')||a.file.includes('cerro_desierto'))?190:(a.file.includes('fern')?78:(a.file.includes('rock')||a.file.includes('pebble')?42:92));
+  for(const [cellKey,cell] of spatialBatches){
+   if(!cell.meshes.length)continue;
+   cell.meshes.forEach(mesh=>mesh.computeWorldMatrix(true));
+   let merged=cell.meshes.length===1?cell.meshes[0]:null;
+   if(cell.meshes.length>1){
     try{
-     // No activar multiMultiMaterials: algunos GLB no tienen subMeshes compatibles
-     // y Babylon puede fallar dentro de _MergeMeshesCoroutine leyendo .length.
-     merged=BABYLON.Mesh.MergeMeshes(batchMeshes,true,true,undefined,false,false);
+     merged=BABYLON.Mesh.MergeMeshes(cell.meshes,true,true,undefined,false,false);
     }catch(mergeError){
-     console.warn('[Huellas VR] No se pudieron fusionar las mallas de vegetación; se conservan las instancias originales.',a.file,mergeError);
+     console.warn('[Huellas VR] No se pudieron fusionar las mallas GLB de la celda; se conservan las mallas originales.',a.file,cellKey,mergeError);
      merged=null;
     }
    }
    if(merged){
-    merged.name='vegetation-batch-'+worldKey+'-'+si;merged.isPickable=false;merged.checkCollisions=false;merged.receiveShadows=true;
+    merged.name='vegetation-batch-'+worldKey+'-'+si+'-'+cellKey;merged.isPickable=false;merged.checkCollisions=false;merged.receiveShadows=true;
     shadowGenerator?.addShadowCaster(merged,true);
-    batchRoots.forEach(root=>root.dispose(false));
+    cell.roots.forEach(root=>root.dispose(false));
+    vegetationSpatialBatches.push({mesh:merged,x:cell.x,z:cell.z,maxDistance,active:true});
    }else{
-    // La fusión es una optimización opcional: nunca debe impedir entrar al mundo.
-    batchMeshes.forEach(mesh=>{mesh.isPickable=false;mesh.checkCollisions=false;mesh.receiveShadows=true;shadowGenerator?.addShadowCaster(mesh,true);});
+    cell.meshes.forEach(mesh=>{mesh.isPickable=false;mesh.checkCollisions=false;mesh.receiveShadows=true;shadowGenerator?.addShadowCaster(mesh,true);});
+    vegetationSpatialBatches.push({meshes:cell.meshes,x:cell.x,z:cell.z,maxDistance,active:true});
    }
   }
+ }
+ if(vegetationLodObserver)scene.onBeforeRenderObservable.remove(vegetationLodObserver);
+ updateVegetationSpatialLod(true);
+ vegetationLodObserver=scene.onBeforeRenderObservable.add(()=>updateVegetationSpatialLod());
+}
+function updateVegetationSpatialLod(force=false){
+ if(!camera||!scene||!vegetationSpatialBatches.length)return;
+ const now=performance.now();if(!force&&now-vegetationLodLastAt<350)return;vegetationLodLastAt=now;
+ const cx=camera.position.x,cz=camera.position.z;
+ for(const batch of vegetationSpatialBatches){
+  const dx=batch.x-cx,dz=batch.z-cz,d2=dx*dx+dz*dz;
+  const show=d2<batch.maxDistance*batch.maxDistance;
+  if(show===batch.active)continue;batch.active=show;
+  if(batch.mesh)batch.mesh.setEnabled(show);
+  if(batch.meshes)batch.meshes.forEach(mesh=>mesh.setEnabled(show));
  }
 }
 function addMountains(){
