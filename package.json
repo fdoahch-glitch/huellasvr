@@ -8,13 +8,15 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "typecheck": "tsc --noEmit",
-    "test": "node --test"
+    "test": "node --test",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@babylonjs/core": "9.37.1"
   },
   "devDependencies": {
     "typescript": "5.9.3",
-    "vite": "7.2.2"
+    "vite": "7.2.2",
+    "@playwright/test": "1.56.1"
   }
 }
