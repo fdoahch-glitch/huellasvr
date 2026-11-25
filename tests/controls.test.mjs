@@ -15,7 +15,9 @@ test("los controles de escritorio cubren flechas y WASD en los dos ejes", async 
 test("WebXR comprueba immersive-vr antes de crear la experiencia y ofrece entrar y salir", async () => {
   const source = await readFile(new URL("../src/controls/WorldControls.ts", import.meta.url), "utf8");
   assert.ok(source.includes('isSessionSupported("immersive-vr")'));
-  assert.ok(source.includes('createDefaultXRExperienceAsync'));
+  assert.ok(source.includes("WebXRDefaultExperience.CreateAsync"));
+  assert.ok(source.includes("disableDefaultUI: true"));
+  assert.ok(source.includes("@babylonjs/core/Materials/Node/Blocks"));
   assert.ok(source.includes('enterXRAsync("immersive-vr", "local-floor")'));
   assert.ok(source.includes("exitXRAsync"));
   assert.ok(source.includes("onStateChangedObservable"));
