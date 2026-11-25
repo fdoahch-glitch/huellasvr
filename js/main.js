@@ -654,15 +654,41 @@ async function addVegetation(){
   vegetationInstancesPlaced+=placed.length;
   let dimensions=null,materialsAdjusted=false,materialsTuned=false;const spatialBatches=new Map();
   for(let i=0;i<placed.length;i++){
-   const p=placed[i],instances=container.instantiateModelsToScene(n=>n+'-veg-'+si+'-'+i,false,{doNotInstantiate:false});
+   const p=placed[i],suffix='-veg-'+si+'-'+i,instances=container.instantiateModelsToScene(n=>n+suffix,false,{doNotInstantiate:true});
    const root=new BABYLON.TransformNode('world-vegetation-'+si+'-'+i,scene);
    const visualPivot=new BABYLON.TransformNode('vegetation-pivot-'+si+'-'+i,scene);visualPivot.parent=root;
    instances.rootNodes.forEach(node=>{node.parent=visualPivot;});
-   // instantiateModelsToScene usa cloneMaterials=false: los materiales se comparten entre copias.
-   // Ajustarlos una sola vez por GLB evita recorrer texturas y materiales por cada árbol/helecho.
+   // Se fuerzan Mesh clonadas, no InstancedMesh: MergeMeshes rechaza instancias Babylon.
+   // Los LOD de origen también se clonan como mallas hermanas y luego se fusionan por nivel.
    if(!materialsTuned){instances.rootNodes.forEach(node=>tuneVisualMaterials(node,true));materialsTuned=true;}
    root.computeWorldMatrix(true);
-   const meshes=root.getChildMeshes(false);
+   const allMeshes=root.getChildMeshes(false);
+   const meshes=sourceMeshes.map(sourceMesh=>allMeshes.find(mesh=>mesh.name===sourceMesh.name+suffix&&mesh.getTotalVertices?.()>0)).filter(Boolean);
+   const lodMeshesByLevel=[[],[]],usedLodClones=new Set();
+   if(assetHasLod){
+    for(const sourceMesh of sourceMeshes){
+     const baseMesh=meshes.find(mesh=>mesh.name===sourceMesh.name+suffix);if(!baseMesh)continue;
+     const sourceLevels=sourceLodMap.get(sourceMesh)||[];
+     for(let levelIndex=0;levelIndex<2;levelIndex++){
+      const sourceLevel=sourceLevels[levelIndex],sourceLod=sourceLevel?.mesh;
+      let lodClone=null;
+      if(sourceLod){
+       const candidates=allMeshes.filter(mesh=>mesh.name===sourceLod.name+suffix&&!usedLodClones.has(mesh));
+       lodClone=candidates.find(mesh=>mesh.getTotalVertices?.()===sourceLod.getTotalVertices?.())||null;
+       if(!lodClone)lodClone=candidates.sort((a,b)=>Math.abs(a.getTotalVertices()-sourceLod.getTotalVertices())-Math.abs(b.getTotalVertices()-sourceLod.getTotalVertices()))[0]||null;
+      }
+      if(!lodClone){
+       const sourceGeometry=sourceLod||baseMesh;
+       lodClone=sourceGeometry.clone(sourceGeometry.name+'-veg-lod-'+levelIndex+'-'+i,null,true);
+       lodClone.parent=baseMesh.parent;
+       lodClone.position.copyFrom(baseMesh.position);lodClone.rotation.copyFrom(baseMesh.rotation);lodClone.scaling.copyFrom(baseMesh.scaling);
+       if(baseMesh.rotationQuaternion)lodClone.rotationQuaternion=baseMesh.rotationQuaternion.clone();
+      }
+      usedLodClones.add(lodClone);lodClone.isPickable=false;lodClone.checkCollisions=false;lodClone.setEnabled(true);lodClone.isVisible=true;
+      lodMeshesByLevel[levelIndex].push(lodClone);
+     }
+    }
+   }
    if(!dimensions){
     let min=new BABYLON.Vector3(Infinity,Infinity,Infinity),max=new BABYLON.Vector3(-Infinity,-Infinity,-Infinity);
     meshes.forEach(mesh=>{mesh.computeWorldMatrix(true);const bb=mesh.getBoundingInfo().boundingBox;min=BABYLON.Vector3.Minimize(min,bb.minimumWorld);max=BABYLON.Vector3.Maximize(max,bb.maximumWorld);});
@@ -682,9 +708,11 @@ async function addVegetation(){
    root.scaling.set(scale,sy,scale);
    root.rotation.set((rng(p.index*7+41)-.5)*(a.tilt||0),rng(p.index*7+43)*Math.PI*2,(rng(p.index*7+47)-.5)*(a.tilt||0));
    meshes.forEach(mesh=>{mesh.isPickable=false;mesh.checkCollisions=false;});
+   lodMeshesByLevel.flat().forEach(mesh=>{mesh.isPickable=false;mesh.checkCollisions=false;});
+   root.computeWorldMatrix(true);
    const cellSize=42,cellX=Math.floor(p.x/cellSize),cellZ=Math.floor(p.z/cellSize),cellKey=cellX+':'+cellZ;
-   let cell=spatialBatches.get(cellKey);if(!cell){cell={meshes:[],roots:[],x:(cellX+.5)*cellSize,z:(cellZ+.5)*cellSize};spatialBatches.set(cellKey,cell);}
-   cell.meshes.push(...meshes);cell.roots.push(root);
+   let cell=spatialBatches.get(cellKey);if(!cell){cell={meshes:[],lodMeshes:[[],[]],roots:[],x:(cellX+.5)*cellSize,z:(cellZ+.5)*cellSize};spatialBatches.set(cellKey,cell);}
+   cell.meshes.push(...meshes);cell.lodMeshes[0].push(...lodMeshesByLevel[0]);cell.lodMeshes[1].push(...lodMeshesByLevel[1]);cell.roots.push(root);
   }
    if(physicsReady&&physicsCandidates.length){
     physicsCandidates.forEach(candidate=>{const radius=candidate.tree?Math.max(.32,candidate.width*.035):Math.max(.24,candidate.width*.28);environmentCollisionZones.push({x:candidate.x,z:candidate.z,radius:radius+.18,kind:candidate.tree?'tree':'rock'});});
