@@ -13,6 +13,12 @@ const assets = [
   'models/env/dead_tree_trunk_02.glb',
   'models/env/cerro_desierto.glb',
 ];
+const nonLodAssets = [
+  'models/veg/fern_tripo.glb',
+  'models/veg/fern_small.glb',
+  'models/env/fern_02.glb',
+  'models/veg/pebble.glb',
+];
 
 globalThis.window = globalThis;
 globalThis.self = globalThis;
@@ -327,6 +333,45 @@ async function testAsset(file) {
   }
 }
 
+async function testNonLodAsset(file) {
+  const engine = new B.NullEngine({ renderWidth: 320, renderHeight: 240, textureSize: 64 });
+  const scene = new B.Scene(engine);
+  try {
+    const data = read(file).toString('base64');
+    const container = await B.SceneLoader.LoadAssetContainerAsync('', 'data:application/octet-stream;base64,' + data, scene, undefined, '.glb');
+    const sourceMeshes = container.meshes.filter(mesh => mesh.getTotalVertices?.() > 0);
+    assert.ok(sourceMeshes.length, `${file}: no se encontraron mallas originales`);
+    const originalTriangles = sourceMeshes.reduce((sum, mesh) => sum + (mesh.getTotalIndices?.() || 0) / 3, 0);
+    assert.ok(file.includes('fern') || originalTriangles < 600, `${file}: un asset compatible fue clasificado como no-LOD`);
+    const clones = [];
+    for (let index = 0; index < 4; index++) {
+      const suffix = '-no-lod-' + index;
+      const instance = container.instantiateModelsToScene(name => name + suffix, false, { doNotInstantiate: true });
+      const rootNode = new B.TransformNode('no-lod-root-' + index, scene);
+      const pivot = new B.TransformNode('no-lod-pivot-' + index, scene);
+      pivot.parent = rootNode;
+      instance.rootNodes.forEach(node => { node.parent = pivot; });
+      rootNode.position.set((index % 2) * 10 - 5, 0, Math.floor(index / 2) * 10 - 5);
+      rootNode.computeWorldMatrix(true);
+      const allMeshes = rootNode.getChildMeshes(false);
+      for (const sourceMesh of sourceMeshes) {
+        const clone = allMeshes.find(mesh => mesh.name === sourceMesh.name + suffix && mesh.getTotalVertices?.() > 0);
+        assert.ok(clone, `${file}: falta una malla clonada ${sourceMesh.name}`);
+        clones.push(clone);
+      }
+    }
+    const merged = mergeSpatialMeshes(clones);
+    assert.ok(merged, `${file}: no se pudo fusionar el lote sin LOD`);
+    assert.equal(Math.floor(merged.getTotalIndices() / 3), Math.floor(originalTriangles * 4), `${file}: la fusión alteró los triángulos originales`);
+    assert.ok(sourceMeshes.every(mesh => !mesh.getLODLevels?.().length), `${file}: se simplificó un asset protegido o de baja densidad`);
+    console.log('VEGETATION_NO_LOD_ASSET_PASS', JSON.stringify({ file, sourceMeshes: sourceMeshes.length, instances: 4, triangles: Math.floor(originalTriangles * 4), material: merged.material?.getClassName?.() }));
+  } finally {
+    scene.dispose();
+    engine.dispose();
+  }
+}
+
 testMultiMaterialMerge();
 for (const asset of assets) await testAsset(asset);
-console.log('VEGETATION_LOD_RUNTIME_PASS', JSON.stringify({ babylon: B.Engine.Version, assets: assets.length }));
+for (const asset of nonLodAssets) await testNonLodAsset(asset);
+console.log('VEGETATION_LOD_RUNTIME_PASS', JSON.stringify({ babylon: B.Engine.Version, lodAssets: assets.length, protectedAssets: nonLodAssets.length }));
