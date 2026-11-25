@@ -187,9 +187,25 @@ uniform float huellasWindStrength;`};
   const ferns=place(profile.ferns,seed+101,{min:8,max:63,water:1.8,keep:7},api);
   const shrubs=place(profile.shrubs,seed+211,{min:14,max:75,water:2.2,keep:10},api);
   const trees=place(profile.trees||0,seed+307,{min:16,max:92,water:3.2,keep:13},api);
-  total+=thin(grassGeo,grass,grassMat,'procedural-grass-thin-'+api.worldKey,i=>{const h=.35+(i%7)*.065;return{x:.7+(i%3)*.12,y:h,z:.7+(i%3)*.12};});
-  total+=thin(fernGeo,ferns,fernMat,'procedural-fern-thin-'+api.worldKey,i=>{const h=.75+(i%5)*.14;return{x:h,y:h,z:h};});
-  total+=thin(shrubGeo,shrubs,leafMat,'procedural-shrub-thin-'+api.worldKey,i=>{const h=.8+(i%4)*.16;return{x:h,y:h,z:h};});
+  const grassScale=i=>{const h=.35+(i%7)*.065;return{x:.7+(i%3)*.12,y:h,z:.7+(i%3)*.12};};
+  const fernScale=i=>{const h=.75+(i%5)*.14;return{x:h,y:h,z:h};};
+  const shrubScale=i=>{const h=.8+(i%4)*.16;return{x:h,y:h,z:h};};
+  function dynamicBatch(mesh,points,mat,name,scaleFn,maxDistance){
+   mesh.name=name;mesh.material=mat;mesh.isVisible=points.length>0;mesh.isPickable=false;mesh.checkCollisions=false;
+   const buffer=new Float32Array(points.length*16);
+   points.forEach((p,i)=>{
+    const sc=scaleFn(i),m=B.Matrix.Compose(new B.Vector3(sc.x,sc.y,sc.z),B.Quaternion.RotationYawPitchRoll(p.yaw||0,0,p.tilt||0),new B.Vector3(p.x,p.y,p.z));
+    buffer.set(m.m,i*16);
+   });
+   mesh.thinInstanceSetBuffer('matrix',buffer,16,true);mesh.thinInstanceRefreshBoundingInfo(true);
+   return {mesh,points,buffer,scaleFn,maxDistance};
+  }
+  const foliageBatches=[
+   dynamicBatch(grassGeo,grass,grassMat,'procedural-grass-thin-'+api.worldKey,grassScale,30),
+   dynamicBatch(fernGeo,ferns,fernMat,'procedural-fern-thin-'+api.worldKey,fernScale,58),
+   dynamicBatch(shrubGeo,shrubs,leafMat,'procedural-shrub-thin-'+api.worldKey,shrubScale,78)
+  ];
+  total+=grass.length+ferns.length+shrubs.length;
 
   // LOD y culling dinámicos: los cuatro batches comparten las posiciones,
   // pero cada árbol solo conserva activa la representación adecuada a cámara.
@@ -224,6 +240,18 @@ uniform float huellasWindStrength;`};
     if(moved<2.25&&turned>.985)return;
    }
    visibleNear=0;visibleFar=0;
+   foliageBatches.forEach(batch=>{
+    batch.points.forEach((p,i)=>{
+     const dx=p.x-pos.x,dz=p.z-pos.z,distSq=dx*dx+dz*dz;
+     let inView=true;
+     if(forward&&distSq>64){const inv=1/Math.sqrt(distSq);inView=(dx*forward.x+dz*forward.z)*inv>-.28;}
+     const visible=inView&&distSq<=batch.maxDistance*batch.maxDistance;
+     const sc=batch.scaleFn(i),factor=visible?1:0;
+     const matrix=B.Matrix.Compose(new B.Vector3(sc.x*factor,sc.y*factor,sc.z*factor),B.Quaternion.RotationYawPitchRoll(p.yaw||0,0,p.tilt||0),new B.Vector3(p.x,p.y,p.z));
+     batch.buffer.set(matrix.m,i*16);
+    });
+    batch.mesh.thinInstanceBufferUpdated('matrix');
+   });
    const buffers=treeBatches;
    trees.forEach((p,i)=>{
     const dx=p.x-pos.x,dz=p.z-pos.z,distSq=dx*dx+dz*dz;
@@ -252,7 +280,7 @@ uniform float huellasWindStrength;`};
   total+=trees.length*2;
 
   // Las copias de malla usan geometría/material compartidos; sin cuerpos Havok por hoja.
-  return {created:true,total,grass:grass.length,ferns:ferns.length,shrubs:shrubs.length,trees:trees.length,treeNear:visibleNear,treeFar:visibleFar,treeLod:'camera-distance+view-direction',treeCullDistance:145,treeLodObserver,windMaterials:windReady,proceduralBump:!!surfaceTexture,root};
+  return {created:true,total,grass:grass.length,ferns:ferns.length,shrubs:shrubs.length,trees:trees.length,treeNear:visibleNear,treeFar:visibleFar,treeLod:'camera-distance+view-direction',treeCullDistance:145,foliageCull:'camera-distance+view-direction',foliageDistances:{grass:30,ferns:58,shrubs:78},treeLodObserver,windMaterials:windReady,proceduralBump:!!surfaceTexture,root};
  }
  window.HuellasProceduralVegetation={create,profiles:PROFILES};
 })();
