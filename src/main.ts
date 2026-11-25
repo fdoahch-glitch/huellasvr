@@ -83,6 +83,7 @@ async function enterWorld(id: WorldId): Promise<void> {
     infoCopy.textContent = definition.summary + " Arrastra para mirar alrededor; selecciona un marcador dorado para explorar un hito.";
     evidenceTag.textContent = "Paisaje reconstruido a partir de evidencia";
     home.classList.add("hidden"); explorer.classList.remove("hidden");
+    engine!.resize();
     if (pointerObserver !== null) scene.onPointerObservable.remove(pointerObserver);
     pointerObserver = scene.onPointerObservable.add((pointer) => {
       if (pointer.type !== PointerEventTypes.POINTERPICK || !pointer.pickInfo?.hit) return;
