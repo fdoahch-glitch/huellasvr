@@ -591,8 +591,35 @@ async function addVegetation(){
    }
    if(merged){
     merged.name='vegetation-batch-'+worldKey+'-'+si+'-'+cellKey;merged.isPickable=false;merged.checkCollisions=false;merged.receiveShadows=true;
+    // MergeMeshes bakea las transformaciones de las plantas en coordenadas de mundo.
+    // Recentramos el lote en su celda para que el LOD nativo mida distancia desde el grupo correcto.
+    const positionData=merged.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+    if(positionData&&positionData.length){
+     for(let vi=0;vi<positionData.length;vi+=3){positionData[vi]-=cell.x;positionData[vi+2]-=cell.z;}
+     merged.updateVerticesData(BABYLON.VertexBuffer.PositionKind,positionData,false,false);
+     merged.position.set(cell.x,0,cell.z);merged.computeWorldMatrix(true);merged.refreshBoundingInfo();
+    }
     shadowGenerator?.addShadowCaster(merged,true);
     cell.roots.forEach(root=>root.dispose(false));
+    // Babylon.js genera LOD geométricos asíncronos; la malla GLB original permanece como nivel 0.
+    // Helechos/planchas de frondas se excluyen para no destruir siluetas ni transparencias.
+    const isFern=a.file.includes('fern'),isTree=a.file.includes('araucaria')||a.file.includes('dead_tree');
+    const isRock=a.file.includes('rock')||a.file.includes('pebble');
+    const triangleCount=(merged.getTotalIndices?.()||0)/3;
+    if(!isFern&&triangleCount>=600&&typeof merged.simplify==='function'&&BABYLON.SimplificationType){
+     const nearDistance=isTree?58:(isRock?22:34),farDistance=isTree?112:(isRock?42:68);
+     const settings=isTree
+      ?[{quality:.78,distance:nearDistance,optimizeMesh:true},{quality:.52,distance:farDistance,optimizeMesh:true}]
+      :isRock
+       ?[{quality:.72,distance:nearDistance,optimizeMesh:true},{quality:.46,distance:farDistance,optimizeMesh:true}]
+       :[{quality:.84,distance:nearDistance,optimizeMesh:true},{quality:.66,distance:farDistance,optimizeMesh:true}];
+     try{
+      merged.simplify(settings,false,BABYLON.SimplificationType.QUADRATIC,()=>{
+       if(!scene||scene.isDisposed?.())return;
+       merged.metadata={...(merged.metadata||{}),nativeVegetationLOD:true,originalGLBMesh:true,lodLevels:2};
+      });
+     }catch(simplifyError){console.warn('[Huellas VR] LOD geométrico omitido; se conserva el GLB original.',a.file,cellKey,simplifyError);}
+    }
     vegetationSpatialBatches.push({mesh:merged,x:cell.x,z:cell.z,maxDistance,active:true});
    }else{
     cell.meshes.forEach(mesh=>{mesh.isPickable=false;mesh.checkCollisions=false;mesh.receiveShadows=true;shadowGenerator?.addShadowCaster(mesh,true);});
