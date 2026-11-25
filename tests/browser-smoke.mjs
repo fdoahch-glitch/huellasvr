@@ -93,6 +93,11 @@ try{
   if(stereoOff?.enabled||stereoOff.rigCameras!==0)throw new Error(world+' no restauró la cámara panorámica al salir del modo visor: '+JSON.stringify(stereoOff));
   const restoredRotation=await page.evaluate(()=>window.__HUELLAS_VR_TEST__.cameraRotation());
   if(Math.abs(restoredRotation.x-.21)>.001||Math.abs(restoredRotation.y-.42)>.001||Math.abs(restoredRotation.z-.63)>.001)throw new Error(world+' perdió la orientación al volver del visor: '+JSON.stringify(restoredRotation));
+  const xrNotice=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.sensorNotice?.('xr'));
+  if(xrNotice?.mode!=='xr'||!xrNotice.title.includes('WebXR')||!xrNotice.retry.includes('WebXR'))throw new Error(world+' no distinguió la recuperación WebXR: '+JSON.stringify(xrNotice));
+  const orientationNotice=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.sensorNotice?.('orientation'));
+  if(orientationNotice?.mode!=='orientation'||!orientationNotice.title.includes('movimiento')||orientationNotice.retry!=='Reintentar')throw new Error(world+' no distinguió la recuperación de sensores móviles: '+JSON.stringify(orientationNotice));
+  await page.evaluate(()=>document.querySelector('#continueTouch')?.click());
   const mobileModes=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.mobileModes?.());
   if(!mobileModes||mobileModes.stereoEnabled)throw new Error(world+' dejó el motor en estado estereoscópico inesperado: '+JSON.stringify(mobileModes));
   console.log('MOBILE_MODES_PASS',world,JSON.stringify({modeButtons,stereoOn,stereoOff,mobileModes}));
