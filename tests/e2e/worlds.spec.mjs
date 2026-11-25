@@ -21,6 +21,8 @@ test("abre, renderiza y permite salir de los cinco mundos con WebGL2", async ({ 
     await expect(page.locator("#world-title")).toHaveText(title);
     await expect(page.locator("#world-subtitle")).toContainText(species);
     await expect(page.locator("#render-status")).toContainText("Dinosaurio cargado");
+    await expect(page.locator("#vr-button")).toBeVisible();
+    await expect(page.locator("#touch-controls")).toBeAttached();
     for (const [animation, label] of [["Idle", "Reposo"], ["Walk", "Caminar"], ["Run", "Correr"], ["Neck_Look", "Mirar"]]) {
       const button = page.locator(`[data-animation="${animation}"]`);
       await button.click();
@@ -75,16 +77,19 @@ test("el selector y el HUD caben en una pantalla móvil", async ({ page }, testI
       topbar: rect(".world-topbar"),
       info: rect("#world-info"),
       animations: rect("#animation-controls"),
+      touch: rect("#touch-controls"),
       controls: rect(".world-controls"),
       viewport: { width: innerWidth, height: innerHeight }
     };
   });
-  for (const key of ["topbar", "info", "animations", "controls"]) {
+  for (const key of ["topbar", "info", "animations", "touch", "controls"]) {
     expect(uiBounds[key].left).toBeGreaterThanOrEqual(0);
     expect(uiBounds[key].right).toBeLessThanOrEqual(uiBounds.viewport.width);
   }
   expect(uiBounds.info.bottom).toBeLessThan(0.4 * uiBounds.viewport.height);
   expect(uiBounds.info.bottom).toBeLessThan(uiBounds.animations.top);
+  await expect(page.locator("#touch-controls")).toBeVisible();
+  await expect(page.locator("#touch-controls [data-control]")).toHaveCount(6);
   expect(uiBounds.controls.bottom).toBeLessThanOrEqual(uiBounds.viewport.height);
   await page.screenshot({ path: testInfo.outputPath("mundo-movil.png") });
 });
