@@ -6,8 +6,8 @@
 'use strict';
 const B=window.BABYLON;
 const PALEO={
- atacamatitan:{seed:11,soil:['#a9573f','#c77b51','#d49a68','#8e4b42'],rock:['#8f4b43','#b76b50','#d49a70'],ridge:['#8b4d45','#b66d52','#d19a70'],wet:0,relief:1.0},
- arackar:{seed:23,soil:['#c5a77d','#dfc79e','#a98262','#81776b'],rock:['#82776a','#b59b79','#d9c5a2'],ridge:['#8c8275','#c2ad8e','#e1d0ae'],wet:.08,relief:.82},
+ atacamatitan:{seed:11,soil:['#a9573f','#c77b51','#d49a68','#8e4b42'],rock:['#74483d','#96543f','#ad6b4d'],ridge:['#8b4d45','#b66d52','#d19a70'],wet:0,relief:1.0},
+ arackar:{seed:23,soil:['#c5a77d','#dfc79e','#a98262','#81776b'],rock:['#71665a','#97846a','#b6a082'],ridge:['#8c8275','#c2ad8e','#e1d0ae'],wet:.08,relief:.82},
  patagonia:{seed:37,soil:['#6c7866','#a59a79','#c5b58e','#657b79'],rock:['#66736c','#8e9481','#c0b69a'],ridge:['#68756d','#879185','#b1b39d'],wet:.72,relief:.52},
  stegouros:{seed:53,soil:['#626d50','#9b906e','#b9a27a','#5b7567'],rock:['#68705f','#99927a','#b6aa8c'],ridge:['#5e6d5d','#82907a','#a7a58b'],wet:.82,relief:.62},
  aysen:{seed:41,soil:['#5b696a','#8c8c7b','#b0a28a','#586d70'],rock:['#50585b','#7b8581','#a1a397'],ridge:['#454e50','#697577','#8e9993'],wet:.55,relief:1.12}
@@ -97,22 +97,22 @@ function createRidges(scene,worldKey,heightAt){
 function createRockFields(scene,worldKey,heightAt,validAt,waterDistanceAt){
  const P=PALEO[worldKey],palette=P.rock.map(color),batches=[];
  const archetypes=[
-  {name:'angular',subdivisions:2,scale:[1.7,.72,1.25]},
-  {name:'rounded',subdivisions:3,scale:[1.35,.82,1.1]},
-  {name:'slab',subdivisions:2,scale:[1.9,.42,1.25]},
-  {name:'boulder',subdivisions:3,scale:[2.25,1.05,1.8]},
-  {name:'pebble',subdivisions:2,scale:[.62,.34,.48]}
+  {name:'angular',type:4,scale:[1.35,.72,1.05]},
+  {name:'rounded',type:3,scale:[1.05,.72,.92]},
+  {name:'slab',type:4,scale:[1.45,.38,1.05]},
+  {name:'boulder',type:3,scale:[1.55,.86,1.3]},
+  {name:'pebble',type:4,scale:[.42,.24,.34]}
  ];
  for(let kind=0;kind<archetypes.length;kind++){
-  const spec=archetypes[kind],mesh=B.MeshBuilder.CreateIcoSphere('paleogeology-rock-'+worldKey+'-'+spec.name,{radius:1,subdivisions:spec.subdivisions},scene);
+  const spec=archetypes[kind],mesh=B.MeshBuilder.CreatePolyhedron('paleogeology-rock-'+worldKey+'-'+spec.name,{type:spec.type,size:1},scene);
   const mat=new B.PBRMaterial('paleogeology-rock-material-'+worldKey+'-'+spec.name,scene);mat.albedoColor=palette[kind%palette.length];mat.metallic=0;mat.roughness=.96;mesh.material=mat;mesh.isPickable=false;mesh.receiveShadows=true;
   const matrices=[];
-  const count=kind===4?64:kind===3?24:kind===2?28:kind===1?32:36;
+  const count=kind===4?40:kind===3?12:kind===2?14:kind===1?16:18;
   for(let i=0,attempt=0;i<count&&attempt<count*12;attempt++){
    const a=hash(attempt,kind+3,P.seed)*Math.PI*2,r=18+Math.sqrt(hash(attempt+17,kind+9,P.seed+7))*124,x=Math.cos(a)*r,z=Math.sin(a)*r;
    if(!validAt(x,z)||waterDistanceAt(x,z)<(kind===4?2.5:5))continue;
    if(Math.hypot(x,z)<19)continue;
-   const base=.55+hash(attempt+5,kind+13,P.seed+11)*1.15,sc=spec.scale;
+   const base=.38+hash(attempt+5,kind+13,P.seed+11)*.78,sc=spec.scale;
    const scale=new B.Vector3(base*sc[0],base*sc[1],base*sc[2]);
    const rotation=B.Quaternion.RotationYawPitchRoll(hash(attempt+1,kind,P.seed)*Math.PI*2,(hash(attempt+2,kind,P.seed)*.28)-.14,(hash(attempt+3,kind,P.seed)*.28)-.14);
    const position=new B.Vector3(x,heightAt(x,z)+scale.y*.45,z);
