@@ -219,7 +219,7 @@ uniform float huellasWindStrength;`};
   const nearScale=i=>{const h=.82+(i%5)*.12;return{x:h,y:h,z:h};};
   const farScale=i=>{const h=.9+(i%4)*.13;return{x:h,y:h,z:h};};
   function treeBatch(mesh,points,mat,name,scaleFn){
-   mesh.name=name;mesh.material=mat;mesh.isVisible=points.length>0;mesh.isPickable=false;mesh.checkCollisions=false;
+   mesh.name=name;mesh.material=mat;mesh.isVisible=points.length>0;mesh.setEnabled(points.length>0);mesh.isPickable=false;mesh.checkCollisions=false;
    mat.useVertexColor=true;mat.useVertexAlpha=false;
    const buffer=new Float32Array(points.length*16),colors=new Float32Array(points.length*4),visibleMatrices=new Array(points.length),hiddenMatrices=new Array(points.length);
    points.forEach((p,i)=>{
