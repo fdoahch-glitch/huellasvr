@@ -90,7 +90,7 @@ check('Selección por mirada para visores WebXR sin mando',()=>{
 });
 check('Visor móvil recupera salida rápida, bloqueo horizontal y pantalla activa',()=>{for(const token of ["screen.orientation?.lock?.('landscape')","navigator.wakeLock.request('screen')","stereoTapTimes.length>=3","event.key==='Escape'",'function updateStereoOrientation()'])assert.ok(main.includes(token),'Falta '+token);assert.ok(html.includes('id="exitHint"'));});
 check('Controles de orientación móvil y visor estereoscópico',()=>{
- for(const token of ['function toggleMobileOrientation()','Orientation.requestPermission','deviceorientation','function toggleMobileStereo()','BABYLON.StereoscopicUniversalCamera'])assert.ok(main.includes(token),'Falta '+token);
+ for(const token of ['function toggleMobileOrientation()','Orientation.requestPermission','deviceorientation','function toggleMobileStereo()','BABYLON.StereoscopicUniversalCamera',"$('retrySensors').onclick=()=>toggleMobileOrientation();",'stereoPosition=camera?.position?.clone?.()','stereoRotation=camera?.rotation?.clone?.()','camera.position.copyFrom(stereoPosition)','camera.rotation.copyFrom(stereoRotation)','screen.orientation?.angle??window.orientation??0'])assert.ok(main.includes(token),'Falta '+token);
  for(const id of ['sensorButton','stereoButton'])assert.ok(html.includes('id="'+id+'"'),'Falta control '+id);
 });
 check('La cámara WebXR conserva altura de cabeza sobre el suelo local',()=>{assert.ok(main.includes('headHeight=Math.max(1.1,Math.min(2.2,xrCamera.position.y||1.65))'));assert.ok(main.includes('terrainHeightAt(px,pz)+headHeight'));});
