@@ -1111,7 +1111,7 @@ async function toggleMobileStereo(){
   $('hud').classList.remove('hidden');$('exitHint').classList.add('hidden');$('rotate').classList.add('hidden');
   try{if(document.fullscreenElement)await document.exitFullscreen();}catch(e){}
   try{screen.orientation?.unlock?.();}catch(e){}
-  try{await stereoWakeLock?.release();}catch(e){}stereoWakeLock=null;stereoTapTimes=[];return;
+  try{await stereoWakeLock?.release();}catch(e){}stereoWakeLock=null;stereoTapTimes=[];return {enabled:false,rigCameras:camera?.rigCameras?.length||0,rigMode:camera?.cameraRigMode??null};
  }
  try{
   camera.setCameraRigMode(BABYLON.Camera.RIG_MODE_STEREOSCOPIC_SIDEBYSIDE_PARALLEL,{interaxialDistance:.064});
@@ -1122,7 +1122,8 @@ async function toggleMobileStereo(){
   try{await screen.orientation?.lock?.('landscape');}catch(e){}
   try{if(navigator.wakeLock)stereoWakeLock=await navigator.wakeLock.request('screen');}catch(e){}
   $('rotate').classList.toggle('hidden',window.innerHeight<=window.innerWidth);
- }catch(error){console.warn('Visor estereoscópico no disponible',error);stereoEnabled=false;$('stereoButton').textContent='🥽';$('hud').classList.remove('hidden');$('exitHint').classList.add('hidden');}
+  return {enabled:true,rigCameras:camera?.rigCameras?.length||0,rigMode:camera?.cameraRigMode??null};
+ }catch(error){console.warn('Visor estereoscópico no disponible',error);stereoEnabled=false;$('stereoButton').textContent='🥽';$('hud').classList.remove('hidden');$('exitHint').classList.add('hidden');return {enabled:false,rigCameras:camera?.rigCameras?.length||0,rigMode:camera?.cameraRigMode??null,error:String(error?.message||error)};}
 }
 function updateStereoOrientation(){if(stereoEnabled){const portrait=window.innerHeight>window.innerWidth;$('rotate').classList.toggle('hidden',!portrait);if(camera?.rigCameras?.length===2){for(const eye of camera.rigCameras){eye.viewport.width=.5;eye.viewport.height=1;}}}}
 
@@ -1159,7 +1160,7 @@ function installDiagnostics(){
  window.__HUELLAS_VR_DIAGNOSTICS__=snapshot;
  if(params.get('test')==='1')window.__HUELLAS_VR_TEST__={
   mobileModes(){return {stereoEnabled,rigMode:camera?.cameraRigMode??null,rigCameras:camera?.rigCameras?.length||0,orientationEnabled,orientationSupported:!!window.DeviceOrientationEvent,secureContext:window.isSecureContext};},
-  async toggleStereo(){await toggleMobileStereo();return {enabled:stereoEnabled,rigCameras:camera?.rigCameras?.length||0,rigMode:camera?.cameraRigMode??null};},
+  async toggleStereo(){return await toggleMobileStereo();},
   async toggleOrientation(){await toggleMobileOrientation();return {enabled:orientationEnabled,supported:!!window.DeviceOrientationEvent};},
   lodCheck(){const original={x:camera.position.x,y:camera.position.y,z:camera.position.z};camera.position.set(5000,original.y,5000);const farAt=performance.now()+300;for(const d of dinoRoots){d.nextLodCheck=0;updateDinoLod(d,farAt);}const far=dinoRoots.filter(d=>d.lodLevel==='low').length;camera.position.set(original.x,original.y,original.z);const nearAt=farAt+300;for(const d of dinoRoots){d.nextLodCheck=0;updateDinoLod(d,nearAt);}const near=dinoRoots.filter(d=>d.lodLevel==='high').length;return {count:dinoRoots.length,farLow:far,nearHigh:near,available:dinoRoots.filter(d=>d.hasLow).length};},
   dinoBehaviorCheck(){let overlaps=0,minGap=Infinity;for(let i=0;i<dinoRoots.length;i++)for(let j=i+1;j<dinoRoots.length;j++){const a=dinoRoots[i],b=dinoRoots[j],gap=Math.hypot(a.root.position.x-b.root.position.x,a.root.position.z-b.root.position.z)-(dinoSpacingRadius(a)+dinoSpacingRadius(b));minGap=Math.min(minGap,gap);if(gap<-.05)overlaps++;}return {count:dinoRoots.length,overlaps,minGap:Number.isFinite(minGap)?+minGap.toFixed(3):null,juveniles:dinoRoots.filter(d=>d.juvenile).length,approaching:dinoRoots.filter(d=>d.goal==='approach').length,looking:dinoRoots.filter(d=>d.state==='look').length,grazing:dinoRoots.filter(d=>d.state==='graze').length,social:dinoRoots.filter(d=>d.state==='social'||d.state==='play').length,fleeing:dinoRoots.filter(d=>d.goal==='flee').length};},
