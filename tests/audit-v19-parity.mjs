@@ -390,3 +390,9 @@ check('Correcciones integrales: mezcla visual por perfil, navegación de manada,
  assert.ok(main.includes('engine.setHardwareScalingLevel(adaptiveScale)'),'No está conectado el escalado adaptativo al motor');
  const smoke=read('tests/browser-smoke.mjs');assert.ok(smoke.includes('simulateHerd?.(600)'),'Falta prueba extendida de separación y navegación');
 });
+
+check('Colisión de jugador con todos los obstáculos del índice espacial y deslizamiento por ejes',()=>{
+ for(const token of ['function isPlayerPositionBlocked(x,z)','function resolvePlayerObstacleVelocity(position,vx,vz,dt)','playerObstacleAvoidance:typeof isPlayerPositionBlocked'])assert.ok(main.includes(token),'Falta colisión del jugador '+token);
+ const movement=main.slice(main.indexOf('function movePlayer(dt){'),main.indexOf('const dinoFootFX='));assert.ok(movement.includes('resolvePlayerObstacleVelocity(current,desiredX,desiredZ,dt)'),'El controlador de personaje no consulta la colisión ambiental');
+ const smoke=read('tests/browser-smoke.mjs');assert.ok(smoke.includes('playerProbeBlocked'),'Falta prueba de colisión del jugador');
+});
