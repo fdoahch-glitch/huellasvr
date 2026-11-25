@@ -2,7 +2,7 @@
 
 **Versión:** 1.0  
 **Fecha:** 25 de noviembre de 2026  
-**Estado:** Implementación de escenarios procedurales guardada en `main`; validación automática pendiente de ejecución/lectura de GitHub Actions.  
+**Estado:** Implementación de escenarios procedurales guardada en `main`; compilación automática aún sin resultado verificable. El lockfile de npm y las pruebas visuales quedan pendientes.  
 **Motor:** Babylon.js 9.37.1  
 **Render:** WebGL2  
 **Base:** documentos de las etapas 1–4.
@@ -133,7 +133,8 @@ Se añadió workflow de GitHub Actions que ejecuta:
 - [x] Los dinosaurios GLB no se sustituyen por modelos inventados.
 - [x] Pruebas de integridad y workflow de compilación añadidos.
 - [ ] Confirmar resultado verde de GitHub Actions.
+- [ ] Generar y versionar `package-lock.json` para instalaciones reproducibles.
 - [ ] Ejecutar inspección visual en navegador y prueba real en Android/PC.
 - [ ] Integrar los modelos GLB originales (Etapa 6, no incluida aquí).
 
-La implementación de los escenarios está realizada y versionada. La validación automática y de dispositivos permanece explícitamente pendiente; el cierre de la etapa no equivale a certificación visual o de rendimiento.
+La implementación de los escenarios está realizada y versionada. No se declara todavía la etapa como validada: falta obtener un resultado satisfactorio de compilación/CI, generar y versionar `package-lock.json`, y realizar la inspección visual en navegador. El cierre de implementación no equivale a certificación visual o de rendimiento.
