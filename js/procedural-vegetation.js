@@ -283,7 +283,7 @@ uniform float huellasWindStrength;`};
   total+=trees.length*2;
 
   // Las copias de malla usan geometría/material compartidos; sin cuerpos Havok por hoja.
-  return {created:true,total,grass:grass.length,ferns:ferns.length,shrubs:shrubs.length,trees:trees.length,treeNear:visibleNear,treeFar:visibleFar,treeLod:'camera-distance+view-direction',treeCullDistance:145,foliageCull:'camera-distance+view-direction',foliageDistances:{grass:30,ferns:58,shrubs:78},treeLodObserver,windMaterials:windReady,proceduralBump:!!surfaceTexture,root};
+  return {created:true,total,grass:grass.length,ferns:ferns.length,shrubs:shrubs.length,trees:trees.length,treeNear:visibleNear,treeFar:visibleFar,treeLod:'camera-distance+view-direction',treeCullDistance:145,foliageCull:'camera-distance+view-direction',foliageDistances:{grass:30,ferns:58,shrubs:78},treeLodObserver,refreshTreeLod,windMaterials:windReady,proceduralBump:!!surfaceTexture,root,backend:'babylon-native-thin-instances'};
  }
  window.HuellasProceduralVegetation={create,profiles:PROFILES};
 })();
