@@ -552,6 +552,49 @@ function vegetationCompareGeometry(original,lod){
  if(!materialPass)reasons.push('material-class-changed');
  return {valid:trianglesReduced&&boundsPass&&silhouettePass&&streamsPass&&materialPass,boundsDriftPercent:Math.round(boundsDrift*10000)/100,silhouetteRatios,trianglesReduced,streamsPass,materialPass,reasons};
 }
+function vegetationLodPolicy(file){
+ if(file.includes('fern'))return null;
+ const isTree=file.includes('araucaria')||file.includes('dead_tree');
+ const isRock=file.includes('rock')||file.includes('pebble')||file.includes('cerro_desierto');
+ const nearDistance=isTree?58:(isRock?22:34),farDistance=isTree?112:(isRock?42:68);
+ const settings=isTree
+  ?[{quality:.82,distance:nearDistance,optimizeMesh:true},{quality:.64,distance:farDistance,optimizeMesh:true}]
+  :isRock
+   ?[{quality:.72,distance:nearDistance,optimizeMesh:true},{quality:.46,distance:farDistance,optimizeMesh:true}]
+   :[{quality:.82,distance:nearDistance,optimizeMesh:true},{quality:.62,distance:farDistance,optimizeMesh:true}];
+ return {nearDistance,farDistance,settings};
+}
+async function drainVegetationSimplificationQueue(tasks){
+ if(!tasks.length)return true;
+ const started=performance.now();
+ return await new Promise(resolve=>{
+  const pump=()=>{
+   const queue=scene?._simplificationQueue;
+   if(queue&&!queue.running&&queue._simplificationArray.length){try{queue.executeNext();}catch(error){tasks.forEach(task=>{if(!task.done){task.done=true;task.error=String(error?.message||error);}});}}
+   const done=tasks.every(task=>task.done);
+   if(done&&(!queue||(!queue.running&&queue._simplificationArray.length===0))){resolve(true);return;}
+   if(performance.now()-started>60000){resolve(false);return;}
+   setTimeout(pump,8);
+  };
+  pump();
+ });
+}
+function mergeVegetationCellMeshes(meshes,cell,name){
+ if(!meshes?.length)return null;
+ meshes.forEach(mesh=>mesh.computeWorldMatrix(true));
+ let merged=null;
+ try{merged=BABYLON.Mesh.MergeMeshes(meshes,true,true,undefined,false,false);}
+ catch(error){console.warn('[Huellas VR] Falló la fusión espacial de geometría GLB.',name,error);return null;}
+ if(!merged)return null;
+ merged.name=name;merged.isPickable=false;merged.checkCollisions=false;merged.receiveShadows=true;
+ const positions=merged.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+ if(positions?.length){
+  for(let i=0;i<positions.length;i+=3){positions[i]-=cell.x;positions[i+2]-=cell.z;}
+  merged.updateVerticesData(BABYLON.VertexBuffer.PositionKind,positions,false,false);
+  merged.position.set(cell.x,0,cell.z);merged.computeWorldMatrix(true);merged.refreshBoundingInfo();
+ }
+ return merged;
+}
 async function addVegetation(){
  vegetationInstancesPlaced=0;vegetationSpatialBatches.length=0;vegetationLodMemoryBytes=0;vegetationLodLastAt=0;
  const F=Object.assign({},WORLD.flora||{},{adult:WORLD.forestN?.adult??WORLD.flora?.adult??0,young:WORLD.forestN?.young??WORLD.flora?.young??0,fern:WORLD.forestN?.fern??WORLD.flora?.fern??0}),rockTint=({atacamatitan:'#c88a6a',arackar:'#6a625c',patagonia:'#bdb6a6',stegouros:'#a8a294',aysen:'#5d5c5a'}[worldKey]||'#8c8a82');
