@@ -53,16 +53,31 @@ try{
   await page.locator('#explore').click();
   await page.waitForFunction(()=>!document.querySelector('#hud')?.classList.contains('hidden'),undefined,{polling:100,timeout:5000});
   await page.waitForTimeout(1200);
-  if(world==='atacamatitan'){
-   await page.waitForFunction(()=>{const lod=window.__HUELLAS_VR_DIAGNOSTICS__?.().vegetationGeometryLOD;return !lod?.apiAvailable||lod.completed>0||lod.errors>0;},undefined,{polling:250,timeout:30000});
-   const lodAudit=await page.evaluate(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().vegetationGeometryLOD);
-   if(!lodAudit?.apiAvailable)throw new Error('El bundle UMD real no expone Mesh.simplify y SimplificationType: '+JSON.stringify(lodAudit));
-   if(!lodAudit.queueAvailable)throw new Error('La escena Babylon no inicializó simplificationQueue: '+JSON.stringify(lodAudit));
-   if(lodAudit.completed<1)throw new Error('No se generó ningún lote con dos LOD geométricos: '+JSON.stringify(lodAudit));
-   if(lodAudit.invalid||lodAudit.errors)throw new Error('La comparación de geometría original/LOD detectó niveles incompletos o errores: '+JSON.stringify(lodAudit));
-   if(lodAudit.samples.some(sample=>sample.lodLevels!==2||sample.lodStats?.length!==2||sample.lodStats.some(level=>!level.triangles||level.triangles>=sample.originalTriangles)))throw new Error('Los dos LOD no reducen triángulos respecto al GLB original: '+JSON.stringify(lodAudit));
-   console.log('VEGETATION_GEOMETRY_LOD_PASS',JSON.stringify(lodAudit));
+  await page.waitForFunction(()=>{const lod=window.__HUELLAS_VR_DIAGNOSTICS__?.().vegetationGeometryLOD;return !lod?.apiAvailable||(lod.pending===0&&lod.queuePending===0&&!lod.queueRunning);},undefined,{polling:250,timeout:45000});
+  const lodAudit=await page.evaluate(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().vegetationGeometryLOD);
+  if(!lodAudit?.apiAvailable)throw new Error(world+' el bundle UMD real no expone Mesh.simplify y SimplificationType: '+JSON.stringify(lodAudit));
+  if(!lodAudit.queueAvailable)throw new Error(world+' la escena Babylon no inicializó simplificationQueue: '+JSON.stringify(lodAudit));
+  if(lodAudit.pending||lodAudit.queuePending||lodAudit.queueRunning)throw new Error(world+' la cola de simplificación no terminó: '+JSON.stringify(lodAudit));
+  if(lodAudit.completed<1)throw new Error(world+' no generó dos LOD geométricos válidos: '+JSON.stringify(lodAudit));
+  if(lodAudit.errors||lodAudit.rejectedQuality)throw new Error(world+' hay LOD rechazados por pérdida de geometría o errores de simplificación: '+JSON.stringify(lodAudit));
+  if(lodAudit.rejectedMemoryBudget&&lodAudit.completed<1)throw new Error(world+' el presupuesto de memoria impidió generar LOD: '+JSON.stringify(lodAudit));
+  if(!lodAudit.distributionMatches)throw new Error(world+' la agrupación espacial alteró el número de instancias vegetales: '+JSON.stringify(lodAudit));
+  if(lodAudit.lodMemoryBudgetUsedPercent>100)throw new Error(world+' excedió el presupuesto de memoria de LOD: '+JSON.stringify(lodAudit));
+  const readySamples=lodAudit.samples.filter(sample=>sample.status==='ready');
+  if(!readySamples.length||readySamples.some(sample=>sample.lodLevels!==2||sample.lodStats?.length!==2||sample.lodStats.some(level=>!level.triangles||level.triangles>=sample.originalTriangles||level.vertices>sample.originalVertices||level.boundsDriftPercent>2.5||!level.valid)))throw new Error(world+' los dos LOD no conservan geometría, atributos o silueta dentro de tolerancia: '+JSON.stringify(lodAudit));
+  const lodBehavior=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.vegetationGeometryCheck?.());
+  if(!lodBehavior?.ready||!lodBehavior.nearUsesOriginal||!lodBehavior.farUsesLod||!lodBehavior.cullingNearVisible||!lodBehavior.cullingFarHidden||lodBehavior.shadowCaster===false||!lodBehavior.distributionMatches)throw new Error(world+' falló LOD por distancia, culling, sombras o distribución: '+JSON.stringify(lodBehavior));
+  const lodCapture=await page.context().newCDPSession(page);
+  for(const mode of ['near','far']){
+   const view=await page.evaluate(mode=>window.__HUELLAS_VR_TEST__?.prepareVegetationLodCapture?.(mode),mode);
+   if(!view?.ready||view.usingLOD!==(mode==='far'))throw new Error(world+' no seleccionó la geometría esperada para captura '+mode+': '+JSON.stringify(view));
+   await page.waitForTimeout(250);
+   const shot=await lodCapture.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
+   writeFileSync(path.join(resultsDir,world+'-vegetation-'+mode+'.png'),Buffer.from(shot.data,'base64'));
   }
+  await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.restoreVegetationLodCapture?.());
+  await lodCapture.detach();
+  console.log('VEGETATION_GEOMETRY_LOD_PASS',world,JSON.stringify({lodAudit,lodBehavior,performance:{fps:lodAudit.visibleTriangleReductionPercent,drawCalls:(await page.evaluate(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().drawCalls))}}));
   if(visualMode)await page.waitForFunction(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().visual?.environmentReady===true,undefined,{polling:100,timeout:20000});
   const capture=await page.context().newCDPSession(page);
   const screenshot=await capture.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
