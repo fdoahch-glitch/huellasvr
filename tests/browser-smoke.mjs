@@ -156,8 +156,8 @@ try{
   const collision=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.collisionCheck?.());if(!collision?.havok||collision.aggregates<1||collision.environmentZones<1||collision.obstacleColliders<1||!collision.probeBlocked||!collision.playerProbeBlocked)throw new Error(world+' no valida colisión de jugador y dinosaurios con obstáculos: '+JSON.stringify(collision));
   console.log('GROUND',world,JSON.stringify(state.diagnostics.terrain));
   if(!state.diagnostics.physics?.enabled||!state.diagnostics.physics?.controller||state.diagnostics.physics.colliders<1)throw new Error(world+' no inicializó Havok Physics V2: '+JSON.stringify(state.diagnostics.physics));
-  const physicsProbe=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.advancePhysics?.(120));
-  if(!physicsProbe||physicsProbe.support!=='grounded')throw new Error(world+' Havok no apoyó el controlador tras 120 pasos físicos deterministas: '+JSON.stringify(physicsProbe)+'; diagnostics='+JSON.stringify(await page.evaluate(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().physics)));
+  const physicsProbe=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.probeGroundSupport?.());
+  if(!physicsProbe?.ready||physicsProbe.support!=='grounded')throw new Error(world+' Havok no detectó apoyo en la superficie de terreno muestreada: '+JSON.stringify(physicsProbe)+'; diagnostics='+JSON.stringify(await page.evaluate(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().physics)));
   if(state.diagnostics.dinosaurs!==15)throw new Error(world+' debe cargar exactamente 15 dinosaurios; cargó '+state.diagnostics.dinosaurs);
   if(state.diagnostics.dinoLod?.withoutLow!==0)throw new Error(world+' no cargó los 15 modelos LOD reducidos: '+JSON.stringify(state.diagnostics.dinoLod));
   const lodCheck=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.lodCheck?.());
