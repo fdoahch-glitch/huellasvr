@@ -482,7 +482,7 @@ function updateDinoLod(d,t){
  d.lodLevel=next;d.clips=next==='low'?d.lowClips:d.highClips;d.activeClip=null;d.transitionFrom=null;d.clipName='';
  d.animationPaused=false;
 }
-const VEGETATION_QUALITY={alta:1,media:1,baja:1}[quality]||1;
+const VEGETATION_QUALITY={alta:1,media:.82,baja:.65}[quality]??1;
 let vegetationInstancesPlaced=0;
 async function addVegetation(){
  vegetationInstancesPlaced=0;
@@ -1189,22 +1189,21 @@ function installDiagnostics(){
   setAnimation(name){
    const d=dinoRoots[0];if(!d)throw new Error('No hay dinosaurios cargados para probar.');
    if(!['Idle','Walk','Run','Neck_Look'].includes(name))throw new Error('Clip de prueba no permitido: '+name);
-   // Aislar la prueba de locomoción: las pruebas sociales previas pueden dejar
-   // un vínculo de pareja activo que bloquea el movimiento aunque exista destino.
+   // Aislar el test de IA social y fijar el LOD alto durante la comprobación.
    if(d.socialPartner){const partner=d.socialPartner;partner.socialPartner=null;partner.socialUntil=0;if(partner.state==='social'||partner.state==='play')partner.state='idle';}
-   d.socialPartner=null;d.socialUntil=0;d.testSocial=false;d.state='idle';d.speed=0;
-   d.testClip=name;d.clipName='';d.target=null;d.goal=null;d.running=name==='Run';d.lookUntil=name==='Neck_Look'?performance.now()+5000:0;
+   d.socialPartner=null;d.socialUntil=0;d.testSocial=false;
+   if(d.activeClip?.isPlaying)d.activeClip.stop();if(d.transitionFrom?.isPlaying)d.transitionFrom.stop();
+   d.activeClip=null;d.transitionFrom=null;d.transitionElapsed=0;d.clipName='';
+   if(d.lodLevel!=='high'){d.highVisual.setEnabled(true);d.lowVisual.setEnabled(false);d.lodLevel='high';}
+   d.clips=d.highClips;d.nextLodCheck=performance.now()+30000;d.animationPaused=false;
+   d.state='idle';d.speed=0;d.testClip=name;d.target=null;d.goal=null;d.running=name==='Run';d.lookUntil=name==='Neck_Look'?performance.now()+5000:0;
    if(name==='Walk'||name==='Run'){
     const radius=(d.length||DINO[d.id].length)*.3,start={x:d.root.position.x,z:d.root.position.z};let found=false,chosen=null;
-    // La ruta de prueba debe respetar las mismas colisiones que usa animateDinos.
-    // Antes solo se comprobaba el terreno: podía elegir un destino detrás de
-    // otro dinosaurio y la locomoción se detenía en el primer fotograma.
     rebuildDinoCollisionGrid();
     for(let k=0;k<64&&!found;k++){
      const angle=k*Math.PI/32,sx=Math.sin(angle),cz=Math.cos(angle);
      for(const distance of [8,7,6,5,4,3]){
-      const x=start.x+sx*distance,z=start.z+cz*distance;
-      let valid=true;
+      const x=start.x+sx*distance,z=start.z+cz*distance;let valid=true;
       for(let travelled=.45;travelled<=distance;travelled+=.45){
        const px=start.x+sx*travelled,pz=start.z+cz*travelled;
        const support=[[px,pz],[px+sx*radius,pz+cz*radius],[px-sx*radius,pz-cz*radius]];
@@ -1214,10 +1213,14 @@ function installDiagnostics(){
      }
     }
     if(found){d.heading=chosen.angle;d.target={x:chosen.x,z:chosen.z};d.goal='test';d.state='walk';d.timer=0;d.running=name==='Run';}
-    return {clip:name,movementPathFound:found,position:{x:start.x,y:d.root.position.y,z:start.z},target:chosen?{x:chosen.x,z:chosen.z}:null};
-   }
-   d.state=name==='Neck_Look'?'look':'idle';d.timer=100;
-   return {clip:name,movementPathFound:false,position:{x:d.root.position.x,y:d.root.position.y,z:d.root.position.z}};
+    else throw new Error('No se encontró una ruta libre para probar '+name+' en '+d.id+'.');
+   }else{d.state=name==='Neck_Look'?'look':'idle';d.timer=100;}
+   // Ejecuta el mismo bucle de animación que el juego; no depende de un frame
+   // oportunista de SwiftShader para iniciar el clip dentro del test.
+   animateDinos(performance.now()+16,.016);
+   const clip=resolveDinoClip(d.clips,name);
+   if(!clip||d.activeClip!==clip||!clip.isPlaying)throw new Error('No se pudo iniciar '+name+' para '+d.id+'; grupos='+d.clips.map(a=>a.name).join(','));
+   return {clip:name,movementPathFound:name==='Walk'||name==='Run',position:{x:d.root.position.x,y:d.root.position.y,z:d.root.position.z},target:d.target?{x:d.target.x,z:d.target.z}:null,active:true,playing:clip.isPlaying};
   },
   advanceDinoSimulation(frames=8){
    const count=Math.max(1,Math.min(120,Math.floor(frames)||8)),start=performance.now();
