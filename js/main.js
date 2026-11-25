@@ -1466,15 +1466,17 @@ function installDiagnostics(){
   },
   prepareVegetationLodCapture(mode){
    const batch=vegetationSpatialBatches.find(item=>item.mesh&&item.mesh.metadata?.vegetationLodStatus==='ready');if(!batch)return {ready:false};
-   if(!this._vegetationLodCaptureState)this._vegetationLodCaptureState={position:camera.position.clone(),rotation:camera.rotation.clone()};
+   if(!this._vegetationLodCaptureState)this._vegetationLodCaptureState={position:camera.position.clone(),rotation:camera.rotation.clone(),mesh:batch.mesh,meshEnabled:batch.mesh.isEnabled()};
    const meta=batch.mesh.metadata||{},center=batch.mesh.getBoundingInfo().boundingSphere.centerWorld.clone(),distance=mode==='far'?(meta.requestedLodDistances?.[1]||70)+12:Math.max(6,(meta.requestedLodDistances?.[0]||30)*.35);
-   camera.position.set(center.x,center.y,center.z-distance);camera.setTarget(center);camera.computeWorldMatrix(true);
+   camera.position.set(center.x,center.y+3,center.z-distance);camera.setTarget(new BABYLON.Vector3(center.x,center.y+1.4,center.z));camera.computeWorldMatrix(true);
+   // La captura debe mostrar el LOD aunque el culling normal hubiera ocultado el lote antes de mover la cámara.
+   batch.mesh.setEnabled(true);
    const selected=batch.mesh.getLOD(camera);
-   return {ready:true,mode,source:batch.sourceFile,selectedTriangles:Math.floor((selected?.getTotalIndices?.()||0)/3),originalTriangles:meta.originalTriangles,usingLOD:selected!==batch.mesh};
+   return {ready:true,mode,source:batch.sourceFile,selectedTriangles:Math.floor((selected?.getTotalIndices?.()||0)/3),originalTriangles:meta.originalTriangles,usingLOD:selected!==batch.mesh,visible:batch.mesh.isEnabled(),distance};
   },
   restoreVegetationLodCapture(){
    const state=this._vegetationLodCaptureState;if(!state)return {restored:false};
-   camera.position.copyFrom(state.position);camera.rotation.copyFrom(state.rotation);camera.computeWorldMatrix(true);this._vegetationLodCaptureState=null;updateVegetationSpatialLod(true);return {restored:true};
+   camera.position.copyFrom(state.position);camera.rotation.copyFrom(state.rotation);camera.computeWorldMatrix(true);state.mesh?.setEnabled(state.meshEnabled);this._vegetationLodCaptureState=null;updateVegetationSpatialLod(true);return {restored:true};
   },
   dinoBehaviorCheck(){let overlaps=0,minGap=Infinity;for(let i=0;i<dinoRoots.length;i++)for(let j=i+1;j<dinoRoots.length;j++){const a=dinoRoots[i],b=dinoRoots[j],gap=Math.hypot(a.root.position.x-b.root.position.x,a.root.position.z-b.root.position.z)-(dinoSpacingRadius(a)+dinoSpacingRadius(b));minGap=Math.min(minGap,gap);if(gap<-.05)overlaps++;}return {count:dinoRoots.length,overlaps,minGap:Number.isFinite(minGap)?+minGap.toFixed(3):null,juveniles:dinoRoots.filter(d=>d.juvenile).length,approaching:dinoRoots.filter(d=>d.goal==='approach').length,looking:dinoRoots.filter(d=>d.state==='look').length,grazing:dinoRoots.filter(d=>d.state==='graze').length,social:dinoRoots.filter(d=>d.state==='social'||d.state==='play').length,fleeing:dinoRoots.filter(d=>d.goal==='flee').length};},
   exerciseSocial(){for(const a of dinoRoots){a.state='idle';a.target=null;a.goal=null;a.socialPartner=null;a.socialUntil=0;a.nextSocialAt=0;}const candidates=dinoRoots.filter(a=>a.juvenile||a.personality==='social');for(const d of candidates){d.testSocial=true;const started=chooseDinoSocial(d,dinoRoots.indexOf(d),performance.now());d.testSocial=false;if(started)return {started:true,partner:d.socialPartner?.root?.name||null,juvenile:d.juvenile};}return {started:false,reason:'no-valid-nearby-partner',candidates:candidates.length,positions:dinoRoots.map(d=>({name:d.root.name,personality:d.personality,state:d.state,x:+d.root.position.x.toFixed(1),z:+d.root.position.z.toFixed(1),radius:dinoSpacingRadius(d)}))};},
