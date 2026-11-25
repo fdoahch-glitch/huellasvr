@@ -144,7 +144,7 @@ check('Dinosaurios beben usando puntos de orilla precalculados por mundo',()=>{
 check('Diagnóstico mide coste CPU por actualización y carga de partículas',()=>{for(const token of ['cpuUpdateMs','cpuUpdateAvgMs','scene?.particleSystems?.length','CPU actualización JS:'])assert.ok(main.includes(token),'Falta '+token);});
 check('Optimización de vegetación y diagnóstico de rendimiento',()=>{
  assert.ok(main.includes('BABYLON.Mesh.MergeMeshes'));assert.ok(main.includes('__HUELLAS_VR_DIAGNOSTICS__'));
- assert.ok(main.includes('VEGETATION_QUALITY={alta:1,media:1,baja:1}'),'La vegetación no debe eliminarse por perfil');assert.ok(main.includes('mobileDevice ||'));
+ assert.ok(main.includes('VEGETATION_QUALITY={alta:1,media:.82,baja:.65}'),'La densidad vegetal debe escalar entre ALTA, MEDIA y BAJA sin desaparecer');assert.ok(main.includes('mobileDevice ||'));assert.ok(main.includes('d.nextLodCheck=performance.now()+30000'),'El test de clips debe congelar el LOD para evitar cambios durante la reproducción');assert.ok(main.includes('animateDinos(performance.now()+16,.016)'),'El test debe iniciar el clip por el bucle real de animación');
 });
 check('Todos los recursos GLB referenciados existen',()=>{
  const refs=[...new Set([...main.matchAll(/['"](models\/[^'"]+\.glb)['"]/g)].map(m=>m[1]))];
