@@ -8,8 +8,8 @@
  if(!B)return;
  const PROFILES={
   // Atacama: matorral ralo y vegetación restringida a depresiones; sin bosque genérico.
-  atacamatitan:{trees:0,grass:0,ferns:4,shrubs:5,wind:.24,grassColor:'#aa955e',leafColor:'#85804f',fernColor:'#8c8757'},
-  arackar:{trees:0,grass:8,ferns:7,shrubs:12,wind:.32,grassColor:'#b5a36c',leafColor:'#8d8958',fernColor:'#929064'},
+  atacamatitan:{trees:5,grass:5,ferns:8,shrubs:16,wind:.24,grassColor:'#aa955e',leafColor:'#85804f',fernColor:'#8c8757'},
+  arackar:{trees:7,grass:12,ferns:10,shrubs:18,wind:.32,grassColor:'#b5a36c',leafColor:'#8d8958',fernColor:'#929064'},
   // Dorotea / Gonkoken: delta abierto con bandas de ribera y claros amplios.
   patagonia:{trees:14,grass:38,ferns:22,shrubs:26,wind:.62,grassColor:'#879653',leafColor:'#547449',fernColor:'#66824c'},
   stegouros:{trees:10,grass:48,ferns:32,shrubs:28,wind:.58,grassColor:'#8d9b5a',leafColor:'#5c7849',fernColor:'#708a52'},
@@ -194,7 +194,7 @@ uniform float huellasWindStrength;`};
   const fernScale=i=>{const h=.75+(i%5)*.14;return{x:h,y:h,z:h};};
   const shrubScale=i=>{const h=.8+(i%4)*.16;return{x:h,y:h,z:h};};
   function dynamicBatch(mesh,points,mat,name,scaleFn,maxDistance){
-   mesh.name=name;mesh.material=mat;mesh.isVisible=points.length>0;mesh.isPickable=false;mesh.checkCollisions=false;
+   mesh.name=name;mesh.material=mat;mesh.isVisible=points.length>0;mesh.setEnabled(points.length>0);mesh.isPickable=false;mesh.checkCollisions=false;
    mat.useVertexColor=true;mat.useVertexAlpha=false;
    const buffer=new Float32Array(points.length*16),colors=new Float32Array(points.length*4),visibleMatrices=new Array(points.length),hiddenMatrices=new Array(points.length);
    points.forEach((p,i)=>{
