@@ -1477,7 +1477,22 @@ function installDiagnostics(){
   cameraRotation(){return {x:camera.rotation.x,y:camera.rotation.y,z:camera.rotation.z};},
   setCameraPosition(x,y,z){camera.position.set(x,y,z);camera.computeWorldMatrix(true);window.__HUELLAS_PROCEDURAL_VEGETATION__?.refreshTreeLod?.(true);return {x:camera.position.x,y:camera.position.y,z:camera.position.z};},
   cameraPosition(){return {x:camera.position.x,y:camera.position.y,z:camera.position.z};},
-  moveCameraAlongView(distance){const direction=camera.getForwardRay().direction;camera.position.addInPlace(direction.scale(distance));camera.computeWorldMatrix(true);window.__HUELLAS_PROCEDURAL_VEGETATION__?.refreshTreeLod?.(true);return this.cameraPosition();},
+  moveCameraAlongView(distance){const direction=camera.getForwardRay().direction;camera.position.addInPlace(direction.scale(distance));camera.computeWorldMatrix(true);window.__HUELLAS_PROCEDURAL_VEGETATION__?.refreshTreeLod?.(true);scene.render();return this.cameraPosition();},
+  setSkyLayer(layer,enabled){if(layer==='clouds')skyLife?.clouds?.setEnabled(enabled);else if(layer==='pterosaurs')skyLife?.pterosaurs?.forEach(p=>p.root.setEnabled(enabled));else throw new Error('Capa de cielo desconocida: '+layer);scene.render();return {layer,enabled};},
+  visualMeshInventory(){
+   const width=engine.getRenderWidth(),height=engine.getRenderHeight(),viewport=camera.viewport.toGlobal(width,height),identity=BABYLON.Matrix.Identity(),transform=scene.getTransformMatrix(),out=[];
+   for(const mesh of scene.meshes){
+    if(!mesh||mesh.isDisposed?.()||!mesh.isEnabled?.()||!mesh.isVisible||!mesh.material)continue;
+    try{
+     mesh.computeWorldMatrix(true);const bounds=mesh.getBoundingInfo(),center=bounds.boundingSphere.centerWorld,radius=bounds.boundingSphere.radiusWorld;
+     const projected=BABYLON.Vector3.Project(center,identity,transform,viewport),edge=BABYLON.Vector3.Project(center.add(new BABYLON.Vector3(radius,0,0)),identity,transform,viewport),screenRadius=Math.hypot(edge.x-projected.x,edge.y-projected.y);
+     if(projected.z<0||projected.z>1||projected.x<0||projected.x>width||projected.y<0||projected.y>height||screenRadius<3)continue;
+     const material=mesh.material,color=material.albedoColor||material.diffuseColor;
+     out.push({name:mesh.name,screen:[+projected.x.toFixed(1),+projected.y.toFixed(1)],screenRadius:+screenRadius.toFixed(1),world:[+center.x.toFixed(1),+center.y.toFixed(1),+center.z.toFixed(1)],radius:+radius.toFixed(1),material:material.name,materialType:material.getClassName?.()||null,color:color?[+color.r.toFixed(2),+color.g.toFixed(2),+color.b.toFixed(2)]:null,alpha:material.alpha??1,texture:material.albedoTexture?.name||material.diffuseTexture?.name||null,vertices:mesh.getTotalVertices?.()||0,instances:mesh.thinInstanceCount||0});
+    }catch{}
+   }
+   return out.sort((a,b)=>b.screenRadius-a.screenRadius).slice(0,90);
+  },
   async toggleStereo(){return await toggleMobileStereo();},
   async toggleOrientation(){await toggleMobileOrientation();return {enabled:orientationEnabled,supported:!!window.DeviceOrientationEvent};},
   lodCheck(){const original=camera.position.clone(),rotation=camera.rotation.clone();if(!dinoRoots.length)return {count:0,farLow:0,nearHigh:0,available:0};camera.position.set(5000,original.y,5000);camera.computeWorldMatrix(true);const farAt=performance.now()+300;for(const d of dinoRoots){d.nextLodCheck=0;updateDinoLod(d,farAt);}const far=dinoRoots.filter(d=>d.hasLow&&d.lodLevel==='low').length;const nearAt=farAt+300;for(const d of dinoRoots){camera.position.set(d.root.position.x,d.root.position.y+1.6,d.root.position.z+4);camera.computeWorldMatrix(true);d.nextLodCheck=0;updateDinoLod(d,nearAt);}const near=dinoRoots.filter(d=>d.hasLow&&d.lodLevel==='high').length;camera.position.copyFrom(original);camera.rotation.copyFrom(rotation);camera.computeWorldMatrix(true);return {count:dinoRoots.length,farLow:far,nearHigh:near,available:dinoRoots.filter(d=>d.hasLow).length,probe:'each-dinosaur',probeDistance:4};},
