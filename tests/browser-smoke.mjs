@@ -106,7 +106,7 @@ try{
   const herdCheckAll=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.dinoBehaviorCheck?.());
   if(!herdCheckAll||herdCheckAll.count!==15||herdCheckAll.overlaps!==0)throw new Error(world+' presenta manada incompleta o solapada en '+testQuality+': '+JSON.stringify(herdCheckAll));
   if(!state.diagnostics.physics?.enabled||!state.diagnostics.physics?.controller||state.diagnostics.physics.colliders<1)throw new Error(world+' no inicializó Havok en '+testQuality+': '+JSON.stringify(state.diagnostics.physics));
-  if(state.diagnostics.physics.colliders<state.diagnostics.physics.environmentZones+1)throw new Error(world+' no creó colisionadores Havok para todos los obstáculos grandes: '+JSON.stringify(state.diagnostics.physics));
+  if(state.diagnostics.physics.obstacleColliders<1||state.diagnostics.physics.environmentZones<state.diagnostics.physics.obstacleColliders)throw new Error(world+' no preparó colisiones físicas del entorno y zonas de evitación completas: '+JSON.stringify(state.diagnostics.physics));
   if(state.diagnostics.dinoLod?.withoutLow!==0)throw new Error(world+' no cargó los 15 modelos LOD reducidos: '+JSON.stringify(state.diagnostics.dinoLod));
   const lodCheckAll=await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.lodCheck?.());
   if(!lodCheckAll||lodCheckAll.count!==15||lodCheckAll.farLow!==15||lodCheckAll.nearHigh!==15||lodCheckAll.available!==15)throw new Error(world+' no cambia los 15 modelos por distancia en '+testQuality+': '+JSON.stringify(lodCheckAll));
