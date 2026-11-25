@@ -130,7 +130,8 @@ function addLandmark(scene: Scene, root: TransformNode, world: WorldDefinition, 
 export interface BuiltWorld { scene: Scene; camera: import("@babylonjs/core").ArcRotateCamera; root: TransformNode; }
 
 export function buildProceduralWorld(scene: Scene, world: WorldDefinition): BuiltWorld {
-  scene.clearColor = new Color4(...color(world.palette.sky).asArray(), 1);
+  const skyColor = color(world.palette.sky);
+  scene.clearColor = new Color4(skyColor.r, skyColor.g, skyColor.b, 1);
   scene.ambientColor = new Color3(0.25, 0.25, 0.25);
   const root = new TransformNode(`world-root-${world.id}`, scene);
   const hemi = new HemisphericLight(`hemi-${world.id}`, new Vector3(0, 1, 0), scene);
