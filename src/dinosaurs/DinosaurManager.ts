@@ -131,6 +131,14 @@ export async function loadDinosaur(
   root.computeWorldMatrix(true);
 
   const groups = result.animationGroups;
+  const requiredAnimations: DinosaurAnimation[] = ["Idle", "Walk", "Run", "Neck_Look"];
+  const availableNames = new Set(groups.map((group) => group.name.toLowerCase()));
+  const missingAnimations = requiredAnimations.filter((name) => !availableNames.has(name.toLowerCase()));
+  if (missingAnimations.length) {
+    for (const group of groups) group.dispose();
+    root.dispose(false, true);
+    throw new Error(`${definition.displayName}: faltan animaciones ${missingAnimations.join(", ")}.`);
+  }
   const byName = new Map(groups.map((group) => [group.name.toLowerCase(), group]));
   const play = (animation: DinosaurAnimation): boolean => {
     const selected = byName.get(animation.toLowerCase());
