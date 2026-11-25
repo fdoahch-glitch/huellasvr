@@ -557,8 +557,9 @@ function vegetationLodPolicy(file){
  const isTree=file.includes('araucaria')||file.includes('dead_tree');
  const isRock=file.includes('rock')||file.includes('pebble')||file.includes('cerro_desierto');
  const nearDistance=isTree?58:(isRock?22:34),farDistance=isTree?112:(isRock?42:68);
+ const youngAraucaria=file.includes('araucaria_joven');
  const settings=isTree
-  ?[{quality:.82,distance:nearDistance,optimizeMesh:true},{quality:.64,distance:farDistance,optimizeMesh:true}]
+  ?[{quality:.82,distance:nearDistance,optimizeMesh:true},{quality:youngAraucaria?.76:.64,distance:farDistance,optimizeMesh:true}]
   :isRock
    ?[{quality:.72,distance:nearDistance,optimizeMesh:true},{quality:.46,distance:farDistance,optimizeMesh:true}]
    :[{quality:.82,distance:nearDistance,optimizeMesh:true},{quality:.62,distance:farDistance,optimizeMesh:true}];
