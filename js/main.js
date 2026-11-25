@@ -1191,6 +1191,7 @@ function installDiagnostics(){
  window.__HUELLAS_VR_DIAGNOSTICS__=snapshot;
  if(params.get('test')==='1')window.__HUELLAS_VR_TEST__={
   mobileModes(){return {stereoEnabled,rigMode:camera?.cameraRigMode??null,rigCameras:camera?.rigCameras?.length||0,orientationEnabled,orientationSupported:!!window.DeviceOrientationEvent,secureContext:window.isSecureContext};},
+  sensorNotice(mode){showSensorNotice(mode);return {title:$('sensorNotice').querySelector('h2').textContent,retry:$('retrySensors').textContent,continue:$('continueTouch').textContent,mode:sensorNoticeMode};},
   setCameraRotation(x,y,z){camera.rotation.set(x,y,z);return this.cameraRotation();},
   cameraRotation(){return {x:camera.rotation.x,y:camera.rotation.y,z:camera.rotation.z};},
   async toggleStereo(){return await toggleMobileStereo();},
