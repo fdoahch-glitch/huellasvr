@@ -53,7 +53,7 @@ try{
   await page.locator('#explore').click();
   await page.waitForFunction(()=>!document.querySelector('#hud')?.classList.contains('hidden'),undefined,{polling:100,timeout:5000});
   await page.waitForTimeout(1200);
-  const nativeVegetation=await page.evaluate(()=>window.__HUELLAS_PROCEDURAL_VEGETATION__||null);
+  const nativeVegetation=await page.evaluate(()=>{const v=window.__HUELLAS_PROCEDURAL_VEGETATION__;return v?{created:v.created,backend:v.backend,total:v.total,trees:v.trees,grass:v.grass,ferns:v.ferns,shrubs:v.shrubs,treeLod:v.treeLod,treeCullDistance:v.treeCullDistance,windMaterials:v.windMaterials,proceduralBump:v.proceduralBump}:null;});
   if(!nativeVegetation?.created||nativeVegetation.backend!=='babylon-native-thin-instances'||nativeVegetation.total<1)throw new Error(world+' no generó vegetación nativa Babylon suficiente: '+JSON.stringify(nativeVegetation));
   if(nativeVegetation.trees<0||nativeVegetation.grass<0||nativeVegetation.ferns<0||nativeVegetation.shrubs<0)throw new Error(world+' diagnóstico de vegetación inválido: '+JSON.stringify(nativeVegetation));
   await page.screenshot({path:path.join(resultsDir,world+'-vegetation-near.png'),fullPage:false});
