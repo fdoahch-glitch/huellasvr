@@ -39,7 +39,7 @@ const worldKey = WORLDS[requested] ? requested : 'valle';
 const WORLD = WORLDS[worldKey];
 let havokInstance=null,physicsPlugin=null,physicsController=null,physicsAggregates=[],environmentCollisionZones=[],physicsReady=false,physicsLastSupport='not-started',skyReady=false,skyError=null,terrainPhotoReady=false,terrainNormalReady=false,terrainTextureError=null,herdDrinkPoints=[],dinoCollisionBucketPool=[],environmentCollisionScratch=[],dinoCollisionScratch=[],terrainValidNearWaterAt=()=>false;
 let engine, scene, camera, xr, player, ground, waterMesh, rainSystem, visualPipeline=null, ssaoPipeline=null, ssrPipeline=null, volumetricLight=null, environmentTexture=null, environmentReady=false, environmentError=null, particleBackend='cpu', soundOn=true, night=false, raining=false, moving=false, target=null, lastTime=0, dinoRoots=[], pickables=[], assetCache=new Map(), animationGroups=[], waterTextures=[], shadowGenerator=null, xrMovement=null, skyMaterial=null, hemiLight=null, sunLight=null, audioContext=null, audioMaster=null, rainGain=null, waterGain=null, lightingBase=null, timeMode='dia', skyLife=null, nightInsectGain=null, rainBlend=0, xrGazeActor=null, xrGazeSince=0, xrGazeFired=false;
-let orientationEnabled=false,orientationBase=null,orientationHandler=null,stereoEnabled=false,stereoWakeLock=null,stereoTapTimes=[],cpuUpdateMs=0,cpuUpdateAvgMs=0,cpuStageMs={player:0,herd:0,dinosaurs:0,footFx:0,environment:0,gaze:0,water:0,total:0},frameTimeSamples=[],lastPerfFrameAt=0,ambientAudioMixKey='',renderLoop=null,contextLost=false,renderPausedForVisibility=false,renderLoopStarted=false,particleTextureCache=null,collisionCellSize=12,environmentCollisionGrid=new Map(),dinoCollisionGrid=new Map(),collisionGridReady=false;
+let mobileStereoCamera=null,panoramaCamera=null,orientationEnabled=false,orientationBase=null,orientationHandler=null,stereoEnabled=false,stereoWakeLock=null,stereoTapTimes=[],cpuUpdateMs=0,cpuUpdateAvgMs=0,cpuStageMs={player:0,herd:0,dinosaurs:0,footFx:0,environment:0,gaze:0,water:0,total:0},frameTimeSamples=[],lastPerfFrameAt=0,ambientAudioMixKey='',renderLoop=null,contextLost=false,renderPausedForVisibility=false,renderLoopStarted=false,particleTextureCache=null,collisionCellSize=12,environmentCollisionGrid=new Map(),dinoCollisionGrid=new Map(),collisionGridReady=false;
 const setProgress=(v,t)=>{$('progressFill').style.width=Math.round(v*100)+'%';$('loadText').textContent=t;};
 const DINO_TURN_ANGLES=[0,.22,-.22,.44,-.44,.68,-.68,.94,-.94,1.2,-1.2,1.55,-1.55,Math.PI];
 const DINO_GAIT={atacamatitan:{walk:.10,run:.50},arackar:{walk:.16,run:.72},gonkoken:{walk:.08,run:1},stegouros:{walk:.22,run:.60},chilesaurus:{walk:.45,run:2.2}};
@@ -1107,26 +1107,42 @@ async function toggleMobileOrientation(){
 }
 async function toggleMobileStereo(){
  if(stereoEnabled){
-  camera.setCameraRigMode(BABYLON.Camera.RIG_MODE_NONE);stereoEnabled=false;$('stereoButton').textContent='🥽';
+  try{camera.detachControl();}catch(e){}
+  mobileStereoCamera?.dispose();mobileStereoCamera=null;
+  camera=panoramaCamera;panoramaCamera=null;scene.activeCamera=camera;camera.attachControl(canvas,true);
+  stereoEnabled=false;$('stereoButton').textContent='🥽';
   $('hud').classList.remove('hidden');$('exitHint').classList.add('hidden');$('rotate').classList.add('hidden');
   try{if(document.fullscreenElement)await document.exitFullscreen();}catch(e){}
   try{screen.orientation?.unlock?.();}catch(e){}
-  try{await stereoWakeLock?.release();}catch(e){}stereoWakeLock=null;stereoTapTimes=[];return {enabled:false,rigCameras:camera?.rigCameras?.length||0,rigMode:camera?.cameraRigMode??null};
+  try{await stereoWakeLock?.release();}catch(e){}stereoWakeLock=null;stereoTapTimes=[];
+  return {enabled:false,rigCameras:0,rigMode:0};
  }
  try{
-  const stereoRigParams={interaxialDistance:.064};
-  camera._cameraRigParams=stereoRigParams;
-  camera.interaxialDistance=.064;
-  camera.setCameraRigMode(BABYLON.Camera.RIG_MODE_STEREOSCOPIC_SIDEBYSIDE_PARALLEL,stereoRigParams);
+  if(typeof BABYLON.StereoscopicUniversalCamera!=='function')throw new Error('Esta versión de Babylon.js no incluye StereoscopicUniversalCamera.');
+  panoramaCamera=camera;
+  mobileStereoCamera=new BABYLON.StereoscopicUniversalCamera('mobile-stereo-camera',camera.position.clone(),.064,true,scene);
+  mobileStereoCamera.rotation.copyFrom(camera.rotation);
+  mobileStereoCamera.fov=camera.fov;mobileStereoCamera.minZ=camera.minZ;mobileStereoCamera.maxZ=camera.maxZ;
+  mobileStereoCamera.speed=camera.speed;mobileStereoCamera.inertia=camera.inertia;
+  mobileStereoCamera.angularSensibility=camera.angularSensibility;
+  mobileStereoCamera.applyGravity=camera.applyGravity;mobileStereoCamera.checkCollisions=camera.checkCollisions;
+  mobileStereoCamera.ellipsoid=camera.ellipsoid.clone();
+  camera.detachControl();camera=mobileStereoCamera;scene.activeCamera=camera;camera.attachControl(canvas,true);
   if(!camera.rigCameras||camera.rigCameras.length!==2)throw new Error('Babylon no creó las dos cámaras estereoscópicas.');
   stereoEnabled=true;$('stereoButton').textContent='🥽✓';$('hud').classList.add('hidden');$('exitHint').classList.remove('hidden');
   if(!orientationEnabled)toggleMobileOrientation();
   try{const el=document.documentElement;if(el.requestFullscreen)await el.requestFullscreen({navigationUI:'hide'});else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();}catch(e){}
   try{await screen.orientation?.lock?.('landscape');}catch(e){}
   try{if(navigator.wakeLock)stereoWakeLock=await navigator.wakeLock.request('screen');}catch(e){}
-  $('rotate').classList.toggle('hidden',window.innerHeight<=window.innerWidth);
-  return {enabled:true,rigCameras:camera?.rigCameras?.length||0,rigMode:camera?.cameraRigMode??null};
- }catch(error){console.warn('Visor estereoscópico no disponible',error);stereoEnabled=false;$('stereoButton').textContent='🥽';$('hud').classList.remove('hidden');$('exitHint').classList.add('hidden');return {enabled:false,rigCameras:camera?.rigCameras?.length||0,rigMode:camera?.cameraRigMode??null,error:String(error?.message||error)};}
+  updateStereoOrientation();
+  return {enabled:true,rigCameras:camera.rigCameras.length,rigMode:camera.cameraRigMode};
+ }catch(error){
+  console.warn('Visor estereoscópico no disponible',error);
+  if(mobileStereoCamera){try{mobileStereoCamera.detachControl();mobileStereoCamera.dispose();}catch(e){}mobileStereoCamera=null;}
+  if(panoramaCamera){camera=panoramaCamera;panoramaCamera=null;scene.activeCamera=camera;camera.attachControl(canvas,true);}
+  stereoEnabled=false;$('stereoButton').textContent='🥽';$('hud').classList.remove('hidden');$('exitHint').classList.add('hidden');
+  return {enabled:false,rigCameras:0,rigMode:camera?.cameraRigMode??null,error:String(error?.message||error)};
+ }
 }
 function updateStereoOrientation(){if(stereoEnabled){const portrait=window.innerHeight>window.innerWidth;$('rotate').classList.toggle('hidden',!portrait);if(camera?.rigCameras?.length===2){for(const eye of camera.rigCameras){eye.viewport.width=.5;eye.viewport.height=1;}}}}
 
