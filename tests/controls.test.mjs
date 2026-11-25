@@ -16,6 +16,8 @@ test("WebXR comprueba immersive-vr antes de crear la experiencia y ofrece entrar
   const source = await readFile(new URL("../src/controls/WorldControls.ts", import.meta.url), "utf8");
   assert.ok(source.includes('isSessionSupported("immersive-vr")'));
   assert.ok(source.includes("WebXRDefaultExperience.CreateAsync"));
+  assert.ok(source.includes("WebXRState.IN_XR"));
+  assert.ok(source.includes("WebXRState.NOT_IN_XR"));
   assert.ok(source.includes("disableDefaultUI: true"));
   assert.ok(source.includes("@babylonjs/core/Materials/Node/Blocks"));
   assert.ok(source.includes('enterXRAsync("immersive-vr", "local-floor")'));
@@ -32,6 +34,7 @@ test("los controles táctiles detienen la repetición y se liberan al salir del 
   assert.ok(source.includes("pointercancel"));
   assert.ok(source.includes("clearInterval"));
   assert.ok(source.includes("camera.detachControl()"));
+  assert.ok(source.includes(`removeByType("ArcRotateCameraKeyboardMoveInput")`));
   const main = await readFile(new URL("../src/main.ts", import.meta.url), "utf8");
   assert.ok(main.includes("worldControls?.dispose()"));
   assert.ok(main.includes("setupWorldControls(scene, built.camera, canvas, built.root, status)"));
