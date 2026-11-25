@@ -1,5 +1,5 @@
 import {
-  Color3, Color4, DirectionalLight, HemisphericLight, Mesh, MeshBuilder,
+  ArcRotateCamera, Color3, Color4, DirectionalLight, HemisphericLight, Mesh, MeshBuilder,
   Scene, StandardMaterial, TransformNode, Vector3, VertexData
 } from "@babylonjs/core";
 import type { WorldDefinition } from "../../domain/worlds";
@@ -163,7 +163,7 @@ export function buildProceduralWorld(scene: Scene, world: WorldDefinition): Buil
   }
   world.landmarks.forEach((poi, i) => addLandmark(scene, root, world, i, poi, markerMat));
 
-  const camera = new (requireArcCamera())(`camera-${world.id}`, -Math.PI / 2, 1.08, 105, new Vector3(0, 3, 0), scene);
+  const camera = new ArcRotateCamera(`camera-${world.id}`, -Math.PI / 2, 1.08, 105, new Vector3(0, 3, 0), scene);
   camera.lowerRadiusLimit = 24; camera.upperRadiusLimit = 170;
   camera.lowerBetaLimit = 0.28; camera.upperBetaLimit = Math.PI / 2.05;
   camera.wheelDeltaPercentage = 0.012; camera.panningSensibility = 65;
