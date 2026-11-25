@@ -606,6 +606,9 @@ async function addVegetation(){
     const isFern=a.file.includes('fern'),isTree=a.file.includes('araucaria')||a.file.includes('dead_tree');
     const isRock=a.file.includes('rock')||a.file.includes('pebble');
     const triangleCount=(merged.getTotalIndices?.()||0)/3;
+    // La API UMD registra Mesh.simplify de forma diferida al crear la cola de la escena.
+    // Inicializarla antes de comprobar el método evita omitir todos los LOD por orden de carga.
+    const simplificationQueue=scene.simplificationQueue;
     if(!isFern&&triangleCount>=600&&typeof merged.simplify==='function'&&BABYLON.SimplificationType){
      const nearDistance=isTree?58:(isRock?22:34),farDistance=isTree?112:(isRock?42:68);
      const settings=isTree
@@ -616,7 +619,16 @@ async function addVegetation(){
      try{
       merged.simplify(settings,false,BABYLON.SimplificationType.QUADRATIC,()=>{
        if(!scene||scene.isDisposed?.())return;
-       merged.metadata={...(merged.metadata||{}),nativeVegetationLOD:true,originalGLBMesh:true,lodLevels:2};
+       const lodStats=(merged.getLODLevels?.()||[]).map(level=>({
+        distance:level.distanceOrScreenCoverage,
+        triangles:level.mesh?Math.floor((level.mesh.getTotalIndices?.()||0)/3):0,
+        vertices:level.mesh?.getTotalVertices?.()||0
+       }));
+       const generatedTriangles=lodStats.reduce((sum,lod)=>sum+lod.triangles,0);
+       merged.metadata={...(merged.metadata||{}),nativeVegetationLOD:true,originalGLBMesh:true,originalTriangles:triangleCount,lodLevels:lodStats.length,lodStats,triangleReductionPercent:triangleCount?Math.round((1-generatedTriangles/(triangleCount*2))*1000)/10:0};
+       if(lodStats.length!==2||lodStats.some(lod=>!lod.triangles||lod.triangles>=triangleCount)){
+        console.warn('[Huellas VR] Comparación LOD geométrico requiere revisión.',a.file,cellKey,{originalTriangles:triangleCount,lodStats});
+       }
       });
      }catch(simplifyError){console.warn('[Huellas VR] LOD geométrico omitido; se conserva el GLB original.',a.file,cellKey,simplifyError);}
     }
