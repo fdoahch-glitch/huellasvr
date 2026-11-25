@@ -404,7 +404,7 @@ check('Diagnóstico Havok expone el estado de soporte y la cobertura de colisió
 });
 
 check('La cuadrícula de manada se mantiene incrementalmente sin reconstrucción por fotograma',()=>{
- const start=main.indexOf('function animateDinos(t,dt){'),end=main.indexOf('function showSensorNotice',start),loop=main.slice(start,end);
+ const start=main.indexOf('function animateDinos(t,dt){'),end=main.indexOf('\n}\nfunction ',start),loop=main.slice(start,end+2);
  assert.ok(start>=0&&end>start,'No se encuentra el bucle de manada');
  assert.ok(loop.includes('if(!dinoCollisionGrid.size)rebuildDinoCollisionGrid()'),'La cuadrícula debe inicializarse solo cuando falta');
  assert.ok(loop.includes('moveDinoCollisionGridActor(d,oldX,oldZ,x,z)'),'Los movimientos deben actualizar la cuadrícula incrementalmente');
