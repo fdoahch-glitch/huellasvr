@@ -94,8 +94,7 @@ test("el selector y el HUD caben en una pantalla móvil", async ({ page }, testI
   await expect(page.locator("#touch-controls")).toBeVisible();
   await expect(page.locator("#touch-controls [data-control]")).toHaveCount(6);
   const leftTouch = page.locator("#touch-controls [data-control=left]");
-  await leftTouch.dispatchEvent("pointerdown", { pointerId: 1, pointerType: "touch", isPrimary: true, button: 0 });
-  await leftTouch.dispatchEvent("pointerup", { pointerId: 1, pointerType: "touch", isPrimary: true, button: 0 });
+  await leftTouch.click();
   expect(uiBounds.controls.bottom).toBeLessThanOrEqual(uiBounds.viewport.height);
   await page.screenshot({ path: testInfo.outputPath("mundo-movil.png") });
 });
