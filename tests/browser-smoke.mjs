@@ -81,6 +81,7 @@ try{
   if(!String(state.diagnostics.terrain.materialType||'').includes('PBR'))throw new Error(world+' no usa material PBR en el terreno: '+state.diagnostics.terrain.materialType);
   if(state.diagnostics.dinosaurs!==15)throw new Error(world+' debe cargar exactamente 15 dinosaurios en '+testQuality+'; cargó '+state.diagnostics.dinosaurs);
   if(!Number.isFinite(state.diagnostics.vegetationInstances)||state.diagnostics.vegetationInstances<50)throw new Error(world+' no conserva una densidad vegetal suficiente en '+testQuality+': '+state.diagnostics.vegetationInstances);
+  const expectedVegetationFactor={baja:.65,media:.82,alta:1}[testQuality];if(state.diagnostics.vegetationDensityFactor!==expectedVegetationFactor)throw new Error(world+' no aplicó el factor vegetal del perfil '+testQuality+': '+state.diagnostics.vegetationDensityFactor);
   if(state.diagnostics.drinkPoints<1)throw new Error(world+' no precalculó puntos válidos para beber: '+state.diagnostics.drinkPoints);
   if(state.diagnostics.dinoStates?.length!==15||state.diagnostics.dinoStates.some(d=>!d.active||!d.clip))throw new Error(world+' tiene uno o más dinosaurios sin animación activa en '+testQuality);
   const modeButtons=await page.evaluate(()=>({panorama:document.querySelector('#explore')?.textContent||'',stereo:document.querySelector('#visor')?.textContent||''}));
@@ -133,10 +134,16 @@ try{
   // SwiftShader puede bloquear el render durante segundos en la prueba de máxima carga; la reproducción dinámica de clips se valida en la pasada funcional. La auditoría estática verifica los cuatro clips de cada GLB también en los modelos de alta calidad.
   if(!visualMode&&testQuality==='baja')for(const clip of ['Idle','Walk','Run','Neck_Look']){
    const before=await page.evaluate(name=>window.__HUELLAS_VR_TEST__.setAnimation(name),clip);
-   await page.waitForFunction(name=>{
-    const d=window.__HUELLAS_VR_DIAGNOSTICS__?.().dinoStates?.[0];
-    return d&&d.clip===name&&d.active&&d.playing;
-   },clip,{polling:100,timeout:10000});
+   if(!before.active||!before.playing)throw new Error(world+' no inició inmediatamente el clip '+clip+': '+JSON.stringify(before));
+   try{
+    await page.waitForFunction(name=>{
+     const d=window.__HUELLAS_VR_DIAGNOSTICS__?.().dinoStates?.[0];
+     return d&&d.clip===name&&d.active&&d.playing;
+    },clip,{polling:100,timeout:10000});
+   }catch(error){
+    const diagnostic=await page.evaluate(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().dinoStates?.[0]||null).catch(()=>null);
+    throw new Error(world+' no mantuvo activo el clip '+clip+': '+JSON.stringify(diagnostic)+'; '+error.message);
+   }
    await page.waitForTimeout(300);
    if((clip==='Walk'||clip==='Run')&&before.movementPathFound){
     await page.evaluate(()=>window.__HUELLAS_VR_TEST__.advanceDinoSimulation(8));
