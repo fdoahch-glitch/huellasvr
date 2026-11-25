@@ -18,23 +18,23 @@ function material(scene: Scene, name: string, hex: string, roughness = 1): Stand
   return mat;
 }
 
-function makeTerrain(scene: Scene, root: TransformNode, world: WorldDefinition, seed: number): void {
-  const rand = seeded(seed);
+function terrainHeight(world: WorldDefinition, x: number, z: number): number {
+  const basin = Math.sin(x * 0.035) * 2.4 + Math.cos(z * 0.028) * 2.1;
+  const ridges = Math.sin((x + z) * 0.022) * Math.cos(z * 0.04) * 3.2;
+  const channel = world.terrain === "channel" || world.terrain === "riverplain"
+    ? -Math.exp(-Math.pow((x - Math.sin(z * 0.025) * 25) / 18, 2)) * 2.4 : 0;
+  const fan = world.terrain === "fan" ? Math.max(0, 9 - Math.abs(z + x * 0.38) * 0.07) * 0.24 : 0;
+  const volcanic = world.terrain === "volcanic" ? Math.sin(x * 0.055) * 4 + Math.cos(z * 0.06) * 3 : 0;
+  return basin + ridges + channel + fan + volcanic;
+}
+
+function makeTerrain(scene: Scene, root: TransformNode, world: WorldDefinition): void {
   const positions: number[] = [], indices: number[] = [], uvs: number[] = [];
   const segments = 100, size = 240;
-  const heightAt = (x: number, z: number) => {
-    const basin = Math.sin(x * 0.035) * 2.4 + Math.cos(z * 0.028) * 2.1;
-    const ridges = Math.sin((x + z) * 0.022) * Math.cos(z * 0.04) * 3.2;
-    const channel = world.terrain === "channel" || world.terrain === "riverplain"
-      ? -Math.exp(-Math.pow((x - Math.sin(z * 0.025) * 25) / 18, 2)) * 2.4 : 0;
-    const fan = world.terrain === "fan" ? Math.max(0, 9 - Math.abs(z + x * 0.38) * 0.07) * 0.24 : 0;
-    const volcanic = world.terrain === "volcanic" ? Math.sin(x * 0.055) * 4 + Math.cos(z * 0.06) * 3 : 0;
-    return basin + ridges + channel + fan + volcanic + (rand() - 0.5) * 0.45;
-  };
   for (let z = 0; z <= segments; z++) {
     for (let x = 0; x <= segments; x++) {
       const px = (x / segments - 0.5) * size, pz = (z / segments - 0.5) * size;
-      positions.push(px, heightAt(px, pz), pz);
+      positions.push(px, terrainHeight(world, px, pz), pz);
       uvs.push(x / segments * 12, z / segments * 12);
       if (x < segments && z < segments) {
         const a = z * (segments + 1) + x, b = a + segments + 1;
@@ -62,25 +62,25 @@ function addRock(scene: Scene, root: TransformNode, mat: StandardMaterial, x: nu
   return rock;
 }
 
-function addTree(scene: Scene, root: TransformNode, trunkMat: StandardMaterial, leafMat: StandardMaterial, x: number, z: number, scale: number, type: string, i: number): void {
+function addTree(scene: Scene, root: TransformNode, trunkMat: StandardMaterial, leafMat: StandardMaterial, x: number, z: number, groundY: number, scale: number, type: string, i: number): void {
   const trunk = MeshBuilder.CreateCylinder(`trunk-${i}`, { height: scale * 2.1, diameterTop: scale * 0.12, diameterBottom: scale * 0.28, tessellation: 7 }, scene);
-  trunk.position.set(x, scale * 1.05, z); trunk.material = trunkMat; trunk.parent = root; trunk.isPickable = false;
+  trunk.position.set(x, groundY + scale * 1.05, z); trunk.material = trunkMat; trunk.parent = root; trunk.isPickable = false;
   if (type === "sparse" || type === "mixed") {
     for (let tier = 0; tier < 3; tier++) {
       const crown = MeshBuilder.CreateCylinder(`crown-${i}-${tier}`, { height: scale * 1.0, diameterTop: 0, diameterBottom: scale * (1.5 - tier * 0.28), tessellation: 7 }, scene);
-      crown.position.set(x, scale * (1.1 + tier * 0.52), z);
+      crown.position.set(x, groundY + scale * (1.1 + tier * 0.52), z);
       crown.material = leafMat; crown.parent = root; crown.isPickable = false;
     }
   } else if (type === "ferns") {
     for (let j = 0; j < 5; j++) {
       const frond = MeshBuilder.CreateCylinder(`frond-${i}-${j}`, { height: scale * 0.95, diameterTop: scale * 0.025, diameterBottom: scale * 0.12, tessellation: 5 }, scene);
-      frond.position.set(x + Math.cos(j * 1.256) * scale * 0.25, scale * 0.5, z + Math.sin(j * 1.256) * scale * 0.25);
+      frond.position.set(x + Math.cos(j * 1.256) * scale * 0.25, groundY + scale * 0.5, z + Math.sin(j * 1.256) * scale * 0.25);
       frond.rotation.z = Math.PI / 3; frond.rotation.y = j * 1.256;
       frond.material = leafMat; frond.parent = root; frond.isPickable = false;
     }
   } else {
     const crown = MeshBuilder.CreateSphere(`crown-${i}`, { diameter: scale * 1.55, segments: 6 }, scene);
-    crown.position.set(x, scale * 1.8, z); crown.scaling.y = 0.75;
+    crown.position.set(x, groundY + scale * 1.8, z); crown.scaling.y = 0.75;
     crown.material = leafMat; crown.parent = root; crown.isPickable = false;
   }
 }
@@ -92,11 +92,11 @@ function addStrata(scene: Scene, root: TransformNode, rockMat: StandardMaterial,
     const x = side * (57 + rand() * 30), z = -82 + rand() * 155;
     const h = 9 + rand() * 24, w = 13 + rand() * 18, d = 12 + rand() * 25;
     const mesa = MeshBuilder.CreateBox(`outcrop-${world.id}-${i}`, { width: w, height: h, depth: d }, scene);
-    mesa.position.set(x, h / 2 - 1, z); mesa.rotation.y = (rand() - 0.5) * 0.22;
+    const groundY = terrainHeight(world, x, z);\n    mesa.position.set(x, groundY + h / 2, z); mesa.rotation.y = (rand() - 0.5) * 0.22;
     mesa.material = i % 4 === 0 ? accentMat : rockMat; mesa.parent = root; mesa.isPickable = false;
     for (let band = 0; band < 2; band++) {
       const ledge = MeshBuilder.CreateBox(`stratum-${world.id}-${i}-${band}`, { width: w * 1.04, height: 0.7, depth: d * 1.04 }, scene);
-      ledge.position.set(x, h * (0.28 + band * 0.32), z); ledge.material = band ? accentMat : rockMat;
+      ledge.position.set(x, groundY + h * (0.28 + band * 0.32), z); ledge.material = band ? accentMat : rockMat;
       ledge.parent = root; ledge.isPickable = false;
     }
   }
@@ -119,10 +119,10 @@ function addWater(scene: Scene, root: TransformNode, world: WorldDefinition, wat
 
 function addLandmark(scene: Scene, root: TransformNode, world: WorldDefinition, index: number, poi: WorldDefinition["landmarks"][number], markerMat: StandardMaterial): Mesh {
   const marker = MeshBuilder.CreateCylinder(`poi-${poi.id}`, { height: 2.2, diameterTop: 0.2, diameterBottom: 0.9, tessellation: 12 }, scene);
-  marker.position.set(poi.position[0], poi.position[1] + 1.1, poi.position[2]);
+  const groundY = terrainHeight(world, poi.position[0], poi.position[2]);\n  marker.position.set(poi.position[0], groundY + poi.position[1] + 1.1, poi.position[2]);
   marker.material = markerMat; marker.parent = root; marker.metadata = { poiId: poi.id, worldId: world.id, poiIndex: index };
   const orb = MeshBuilder.CreateSphere(`poi-orb-${poi.id}`, { diameter: 1.05, segments: 12 }, scene);
-  orb.position.set(poi.position[0], poi.position[1] + 2.6, poi.position[2]); orb.material = markerMat; orb.parent = root;
+  orb.position.set(poi.position[0], groundY + poi.position[1] + 2.6, poi.position[2]); orb.material = markerMat; orb.parent = root;
   orb.metadata = marker.metadata;
   return marker;
 }
@@ -145,7 +145,7 @@ export function buildProceduralWorld(scene: Scene, world: WorldDefinition): Buil
   const waterMat = material(scene, `water-${world.id}`, world.palette.water ?? "#568b91", 0.45);
   waterMat.alpha = 0.88;
   const markerMat = material(scene, `marker-${world.id}`, "#f4d35e", 0.5);
-  makeTerrain(scene, root, world, world.id.length * 827 + world.id.charCodeAt(0));
+  makeTerrain(scene, root, world);
   addStrata(scene, root, rockMat, accentMat, world);
   addWater(scene, root, world, waterMat);
 
@@ -155,12 +155,12 @@ export function buildProceduralWorld(scene: Scene, world: WorldDefinition): Buil
     const x = (rand() - 0.5) * 190, z = (rand() - 0.5) * 180;
     if (Math.abs(x) < 20 && z > -15 && z < 18) continue;
     const scale = 2.2 + rand() * (world.vegetation === "sparse" ? 2.5 : 4.2);
-    addTree(scene, root, trunkMat, leafMat, x, z, scale, world.vegetation, i);
+    addTree(scene, root, trunkMat, leafMat, x, z, terrainHeight(world, x, z), scale, world.vegetation, i);
   }
   for (let i = 0; i < 78; i++) {
     const x = (rand() - 0.5) * 200, z = (rand() - 0.5) * 190;
     if (Math.abs(x) < 17 && z > -18 && z < 18) continue;
-    addRock(scene, root, rockMat, x, 0, z, 1.1 + rand() * 3.4, i);
+    addRock(scene, root, rockMat, x, terrainHeight(world, x, z), z, 1.1 + rand() * 3.4, i);
   }
   world.landmarks.forEach((poi, i) => addLandmark(scene, root, world, i, poi, markerMat));
 
