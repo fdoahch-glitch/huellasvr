@@ -240,3 +240,109 @@ La etapa solo se podrá marcar como terminada cuando:
 - Manríquez et al. (2015). Stratigraphic architecture of a tide-influenced shelf-edge delta, Upper Cretaceous Dorotea Formation, Magallanes-Austral Basin, Patagonia. *Sedimentology*. https://doi.org/10.1111/sed.12176
 - Estudios geocronológicos U-Pb de Cerrillos–Hornitos, *Andean Geology*: https://www.andeangeology.cl/index.php/revista1/article/view/V36n2-a05/html
 - Asociación Chilena de Paleontología, actas y resúmenes de paleobotánica y tafonomía: https://www.achp.cl/
+
+
+---
+
+# ANEXO DE AUDITORÍA CIENTÍFICA Y CIERRE DE ALCANCE — 25-11-2026
+
+Este anexo amplía y corrige la versión inicial. Tiene prioridad cuando precise una afirmación anterior. Se revisaron las descripciones originales disponibles, trabajos geológicos de las unidades, tesis universitarias y resúmenes paleontológicos chilenos. La consulta web no sustituye una revisión presencial de colecciones ni una evaluación formal por pares.
+
+## A. Correcciones y precisiones obligatorias
+
+### A.1 Atacamatitan — Formación Tolar
+- La descripción original de Kellner et al. (2011) confirma restos parciales de un titanosaurio en areniscas rojas de la Formación Tolar y usa ese hallazgo para confirmar edad cretácica superior en los afloramientos portadores. No entrega una edad numérica puntual para el individuo.
+- La revisión del registro de dinosaurios de Chile describe Tolar como una sucesión continental roja de brechas, conglomerados y areniscas, asignada al Cretácico Superior por correlación estratigráfica. La unidad tiene variaciones laterales y contactos con unidades volcánicas; no se debe traducir el color rojo de las rocas en un clima árido extremo.
+- El holotipo es fragmentario y no conserva cráneo ni esqueleto articulado completo. La forma corporal total debe basarse en comparaciones explícitas con titanosaurios; no se puede asegurar la cabeza, piel, color o patrón.
+- **Paleobotánica:** en esta revisión no se encontró un inventario publicado y verificable de plantas fósiles procedentes del mismo nivel de Tolar que el holotipo. Por tanto, árboles, arbustos y vegetación ribereña son hipótesis de paisaje posibles, no especies confirmadas para ese punto.
+- **Decisión visual:** ambiente continental del Cretácico Superior con relieve sedimentario rojizo. Agua y vegetación pueden aparecer como hipótesis ambientales prudentes, sin representar selva tropical ni el desierto hiperárido actual como hechos.
+
+### A.2 Arackar — Formación Hornitos
+- El artículo descriptivo de Rubilar-Rogers et al. (2021) define *Arackar licanantay* a partir de un esqueleto parcial de un subadulto, con longitud estimada de aproximadamente 6,3 m, y lo asigna a niveles del Cretácico Superior de Hornitos (Campaniano–Maastrichtiano en la interpretación de los autores).
+- La controversia cronológica debe expresarse con precisión: Maksaev et al. (2009) obtuvieron edades U-Pb de 66,9 ± 1,0 a 65,2 ± 1,0 Ma en rocas volcánicas mapeadas como la parte inferior de Hornitos y señalaron que esos datos cuestionaban el rango Campaniano–Maastrichtiano asignado a la unidad. El problema incluye correlación cartográfica y la heterogeneidad de una unidad volcano-sedimentaria extensa. **No demuestra por sí solo que el nivel fosilífero de Arackar tenga 65–67 Ma**, ni invalida automáticamente la edad bioestratigráfica usada por el artículo descriptivo.
+- La Formación Hornitos descrita en la literatura incluye brechas, tobas, lavas, conglomerados, areniscas rojas, fangolitas calcáreas y calizas lenticulares; existen depósitos continentales y niveles lacustres. La facies exacta del ejemplar debe separarse de la litología general de toda la formación.
+- **Paleobotánica:** no se identificó en las fuentes consultadas una asociación florística diagnóstica vinculada directamente al nivel de Arackar. No presentar araucarias, palmeras, helechos arborescentes u otras plantas concretas como hallazgo local confirmado.
+- **Decisión visual:** cuenca continental con sectores de aporte volcánico y sedimentario, abanicos/conos, cauces y cuerpos lacustres posibles donde la facies lo permita. No hacer del lago una masa de agua universal ni inventar un bosque de araucarias como dato científico.
+
+### A.3 Chilesaurus — Formación Toqui y el problema estratigráfico
+- La localidad de Mallín Grande, Región de Aysén, y la asociación de los fósiles de *Chilesaurus diegosuarezi* con la base de la Formación Toqui se recogen en la bibliografía y en la tesis de estratigrafía y sedimentología de Riveros Martínez (2020).
+- Las dataciones U-Pb SHRIMP citadas para los niveles portadores dan aproximadamente 148,7 ± 1,4; 147,9 ± 1,5 y 147,0 ± 1,0 Ma, que sitúan los fósiles en el Titoniense del Jurásico Superior. Las edades numéricas y la asociación fósil son más precisas que usar una etiqueta amplia de “Jurásico”.
+- Hay que evitar una simplificación que puede inducir a error: estudios posteriores redefinen la Formación Toqui en sectores de la cuenca como parte de una sucesión volcaniclástica-carbonatada marina somera, con cambios laterales y diacronía; no todos los afloramientos ni miembros son equivalentes. Un estudio de 2021 describe la unidad en su localidad tipo como una rampa nerítica mixta volcaniclástica-carbonatada dentro de una secuencia transgresiva-regresiva Tithoniano–Aptiano. Esto no permite atribuir automáticamente esa facies concreta al nivel fosilífero de Chilesaurus.
+- La tesis de Mallín Grande estudia las facies y el ambiente sedimentario del sector y debe consultarse en su texto íntegro antes de decidir si la reconstrucción principal será abanico deltaico, litoral, plataforma somera o una transición entre ellos. En la presente auditoría, el resultado seguro es un sistema volcano-sedimentario de cuenca austral con influencia marina demostrada en la sucesión regional; la geometría local exacta del hábitat inmediato debe mantenerse abierta hasta cotejar columna y facies del nivel portador.
+- **Paleobotánica:** no se encontró una lista diagnóstica de plantas fósiles asociada al nivel de Chilesaurus en las fuentes consultadas. Troncos fósiles reportados en la secuencia regional no deben identificarse automáticamente como la flora del mismo nivel ni asignarse a especies modernas.
+- **Decisión visual:** paisaje jurásico austral de origen volcánico y sedimentario, con agua somera/costa o canales solo en la medida que el nivel local lo respalde. No convertir el escenario en un bosque templado moderno ni copiar la flora cretácica de Magallanes.
+
+### A.4 Gonkoken — Formación Dorotea superior
+- La localidad tipo está publicada como Loma Koken, sector El Puesto, valle del Río de las Chinas, Estancia Cerro Guido, Magallanes, coordenadas 50°42′42″S, 72°32′29″W. El artículo original sitúa los fósiles en la parte superior de Dorotea y en el Maastrichtiano temprano, entre 71,7 ± 1,2 y 70,5 ± 5,0 Ma.
+- La longitud estimada cercana a 4 m es una reconstrucción, no un ejemplar completo medido.
+- La Formación Dorotea contiene sistemas fluviales, planicies de inundación, shoreface y deltas, con variaciones entre sectores y niveles. La facies de la localidad tipo no debe inferirse solo de la descripción general de la formación.
+- La paleobotánica del valle del Río de las Chinas sí ofrece evidencia real: resúmenes científicos chilenos informan improntas foliares, maderas silicificadas, palinomorfos, hojas de *Nothofagus* y *Taeniopteris* en niveles superiores de Dorotea; otro resumen describe gimnospermas y angiospermas e interacciones planta-insecto. Estos registros justifican una flora diversa a escala regional/estratigráfica, pero no todas las plantas citadas coexistieron necesariamente en el mismo instante o en Loma Koken.
+- **Decisión visual:** paisaje austral del Maastrichtiano temprano, con mosaico fluvial y deltaico y vegetación fósil regional como referencia. Priorizar plantas de afinidad y morfología documentadas; no reproducir un bosque actual de Nothofagus sin distinguir la incertidumbre taxonómica de las hojas fósiles.
+
+### A.5 Stegouros — Formación Dorotea inferior
+- El artículo de Nature describe un esqueleto mayoritariamente completo y semiarticulado, pequeño, con longitud publicada inicialmente cercana a 2 m; los autores publicaron después una estimación revisada de 1,50–1,65 m en un comentario asociado al artículo. Para diseño, expresar 1,5–1,8 m como intervalo aproximado y no tratar 2 m como una medida exacta.
+- La anatomía de la cola es inequívoca y debe conservarse: siete pares de osteodermos laterales y una estructura terminal aplanada/frondiforme. No sustituir por una maza esférica.
+- El sitio SP17 se ubica en Dorotea inferior, valle del Río de las Chinas. El resumen tafonómico de la Asociación Chilena de Paleontología describe arenisca de grano medio con la mayor parte del esqueleto, cubierta por lutitas con algunos restos desarticulados; la arenisca se interpreta como barra de canal. Es la evidencia más directa para el escenario del punto de hallazgo.
+- La unidad completa incluye otros ambientes fluviales, deltaicos y costeros. Esos ambientes regionales no son equivalentes al microambiente de enterramiento.
+- **Paleobotánica:** existe registro de flora para el valle y para niveles de Dorotea, pero su asignación exacta al nivel SP17 no queda demostrada por el resumen tafonómico citado. La flora puede orientar la reconstrucción regional con etiqueta de inferencia, no como inventario exacto del sitio.
+- **Decisión visual:** canal fluvial con barra arenosa y llanura asociada como base del mundo. La vegetación debe ser plausible y coherente con registros de niveles comparables, no un decorado genérico de bosque.
+
+## B. Matriz comparativa final para la dirección artística
+
+| Mundo | Tiempo | Evidencia ambiental más sólida | Flora local | Nivel de libertad visual |
+|---|---|---|---|---|
+| Atacamatitan / Tolar | Cretácico Superior, sin edad numérica precisa para el fósil | Secuencia continental de brechas, conglomerados y areniscas rojas | Sin inventario directo confirmado en el nivel del holotipo | Alto para flora y microhábitat; bajo para geología general |
+| Arackar / Hornitos | Cretácico Superior según descripción; edad de la unidad discutida | Depósitos volcano-sedimentarios continentales, con facies lacustres documentadas en la unidad | Sin flora diagnóstica asociada al holotipo identificada | Medio-alto, con cautela cronológica y de facies |
+| Chilesaurus / Toqui | Titoniense, aprox. 148–147 Ma | Sucesión volcano-sedimentaria; influencia marina somera regional, facies local a precisar | No hay inventario local concluyente identificado | Alto para flora; medio para configuración de costa/canales |
+| Gonkoken / Dorotea superior | Maastrichtiano temprano, aprox. 71,7–70,5 Ma | Contexto regional fluvial-deltaico-costero; facies local debe afinarse | Macroflora y palinología regional documentadas | Medio, usando plantas fósiles regionales con cautela |
+| Stegouros / Dorotea inferior | Campaniano tardío–Maastrichtiano temprano | Barra de canal fluvial en el nivel del esqueleto | Registro regional de Dorotea, no inventario demostrado de SP17 | Medio para paisaje inmediato; medio-alto para vegetación |
+
+## C. Matriz anatómica: qué debe respetarse en los GLB cuando se integren
+
+| Especie | Rasgos que deben respetarse | Lo que el fósil no permite fijar por sí solo |
+|---|---|---|
+| Atacamatitan | Saurópodo titanosaurio cuadrúpedo; proporciones generales contrastadas con titanosaurios comparables | Cráneo, cuello completo, piel, color y patrón exactos |
+| Arackar | Saurópodo titanosaurio; esqueleto tipo subadulto y elementos vertebrales/apendiculares descritos | Cráneo, tamaño adulto definitivo, piel y color |
+| Chilesaurus | Anatomía singular documentada; hocico y dentición herbívora, extremidades y pelvis según material descrito | Color, piel, tejidos blandos y algunos detalles de postura/locomoción |
+| Gonkoken | Hadrosauroideo no hadrosáurido; combinación craneal y poscraneal diagnóstica | Color, plumaje/escamas detalladas y apariencia de tejidos blandos |
+| Stegouros | Cuerpo acorazado pequeño y arma caudal plana frondiforme; placas y osteodermos según reconstrucción publicada | Color, patrón y algunos tejidos blandos |
+
+**Nota de control:** la inspección técnica de los archivos GLB no forma parte de la investigación paleontológica documental. Corresponde a la etapa de integración de modelos (etapa 6), cuando los archivos estén disponibles en el repositorio o sean entregados en la conversación. No se puede declarar que los modelos fueron auditados sin abrirlos.
+
+## D. Revisión de los seis enfoques de trabajo
+
+1. **Paleontología:** se separaron taxonomía, anatomía preservada, edad, unidad geológica y ambiente; se registraron controversias y límites de evidencia.
+2. **Diseño de videojuegos:** cada especie tendrá un mundo con identidad ambiental propia, evitando cinco escenarios intercambiables.
+3. **Diseño visual:** se definieron paletas geológicas y elementos visuales sustentables, y se marcaron flora, coloración y detalles desconocidos como decisiones artísticas.
+4. **Creación de videojuegos:** se definieron elementos de escenario que podrán traducirse a módulos 3D (canales, barras, abanicos, orillas, depósitos volcánicos, llanuras).
+5. **Programación:** la investigación queda estructurada como datos por especie/unidad/edad/facies/nivel de confianza, para que posteriormente pueda convertirse en configuración de cada mundo sin mezclar épocas.
+6. **Edición y documentación:** se normalizaron nombres científicos, fechas, unidades, citas, incertidumbres y criterios de aceptación.
+
+Estos seis enfoques son una revisión interna de diseño y documentación; no equivalen a un peritaje firmado por seis especialistas externos.
+
+## E. Bibliografía y fuentes verificadas añadidas en esta auditoría
+
+- Kellner, A. W. A. et al. (2011). *A new titanosaur sauropod from the Atacama Desert, Chile*. Anais da Academia Brasileira de Ciências. https://pubmed.ncbi.nlm.nih.gov/21437382/
+- Rubilar-Rogers, D. et al. (2021). *Arackar licanantay* gen. et sp. nov. Cretaceous Research. https://www.sciencedirect.com/science/article/pii/S0195667121000495
+- Maksaev, V. et al. (2009). Geocronología U-Pb de Cerrillos y Hornitos. Andean Geology 36(2), 264–287. https://www.scielo.cl/scielo.php?pid=S0718-71062009000200005&script=sci_arttext
+- Novas, F. E. et al. (2015). *An enigmatic plant-eating theropod from the Late Jurassic period of Chile*. Nature. https://www.nature.com/articles/nature14307
+- Suárez, M. et al. (2016). Tithonian age of dinosaur fossils in central Patagonian, Chile: U–Pb SHRIMP geochronology. https://doi.org/10.1007/s00531-015-1287-7
+- Riveros Martínez, D. N. (2020). *Estratigrafía y sedimentología en torno a Mallín Grande, Cordillera Patagónica, Región de Aysén, Chile*. Universidad Andrés Bello. https://repositorio.unab.cl/items/c1f9f74e-c5f2-4e63-91c4-a4821d0ac1a6
+- Rivas et al. (2021). Facies and sequence stratigraphy of a mixed carbonate-volcaniclastic ramp in intra-arc settings: Toqui Formation. Journal of South American Earth Sciences. https://www.sciencedirect.com/science/article/pii/S0895981121001395
+- Alarcón-Muñoz, J. et al. (2023). *Relict duck-billed dinosaurs survived into the last age of the dinosaurs in subantarctic Chile*. Science Advances. https://pmc.ncbi.nlm.nih.gov/articles/PMC10275600/
+- Soto-Acuña, S. et al. (2021). *Bizarre tail weaponry in a transitional ankylosaur from subantarctic Chile*. Nature. https://www.nature.com/articles/s41586-021-04147-1
+- Asociación Chilena de Paleontología (2022). Actas del II Congreso Chileno de Paleontología: tafonomía de SP17 y otros yacimientos de Dorotea. https://www.achp.cl/manejador/resources/admin/actaslibroresumenestaguatagua2022.pdf
+- Cisterna et al. (2014/2015). Contribución al registro paleo-palinológico del sector Río de las Chinas. https://www.achp.cl/manejador/resources/libro-de-resumenes-iv-simposio-paleontologia-en-chile-valdivia-2014.pdf
+- V Simposio de Paleontología de Chile (2016). Resumen de macroflora y palinología del valle del Río de las Chinas. https://www.achp.cl/manejador/resources/libro-de-resmenes-v-simposio-paleo-en-chile-1.pdf
+- *An overview of the dinosaur fossil record from Chile* (2012). Journal of South American Earth Sciences. https://www.sciencedirect.com/science/article/pii/S0895981112000338
+
+## F. Estado de la Etapa 1 — decisión de cierre
+
+**La Etapa 1 se considera CERRADA en su alcance paleontológico-documental.** Se completaron las cinco fichas, la comparación de unidades, la matriz de certeza, las restricciones anatómicas para futuras integraciones, la revisión interna desde los seis enfoques y la bibliografía científica base.
+
+Quedan explícitamente fuera de esta etapa y no bloquean su cierre:
+- inspección geométrica/rigging de los archivos GLB (etapa 6);
+- diseño visual definitivo y construcción de los cinco mundos (etapas 2 y 5);
+- dictamen formal firmado por un paleontólogo externo (no contratado ni disponible en este flujo).
+
+**Advertencias científicas que deben acompañar la siguiente etapa:** (1) controversia de edad/correlación de Hornitos; (2) facies local de Toqui asociada a Chilesaurus debe comprobarse en columnas y tesis; (3) no existe inventario paleobotánico local concluyente para Tolar, Hornitos o Toqui en las fuentes consultadas; (4) Gonkoken y Stegouros proceden de niveles distintos de Dorotea y no deben fusionarse en un mismo hábitat por defecto.
