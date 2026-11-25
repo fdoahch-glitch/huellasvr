@@ -145,7 +145,7 @@ check('Dinosaurios beben usando puntos de orilla precalculados por mundo',()=>{
 check('Diagnóstico mide coste CPU por actualización y carga de partículas',()=>{for(const token of ['cpuUpdateMs','cpuUpdateAvgMs','scene?.particleSystems?.length','CPU actualización JS:'])assert.ok(main.includes(token),'Falta '+token);});
 check('Optimización de vegetación y diagnóstico de rendimiento',()=>{
  assert.ok(main.includes('BABYLON.Mesh.MergeMeshes'));assert.ok(main.includes('__HUELLAS_VR_DIAGNOSTICS__'));
- assert.ok(main.includes('VEGETATION_QUALITY=.9'),'La densidad vegetal debe escalar entre ALTA, MEDIA y BAJA sin desaparecer');assert.ok(main.includes('mobileDevice ||'));assert.ok(main.includes('d.nextLodCheck=performance.now()+30000'),'El test de clips debe congelar el LOD para evitar cambios durante la reproducción');assert.ok(main.includes('animateDinos(performance.now()+16,.016)'),'El test debe iniciar el clip por el bucle real de animación');
+ assert.ok(main.includes('VEGETATION_QUALITY=.9'),'La densidad vegetal equilibrada debe conservar el 90% del catálogo sin desaparecer');assert.ok(main.includes('mobileDevice'),'La detección móvil debe seguir activa para desactivar efectos costosos');assert.ok(main.includes('d.nextLodCheck=performance.now()+30000'),'El test de clips debe congelar el LOD para evitar cambios durante la reproducción');assert.ok(main.includes('animateDinos(performance.now()+16,.016)'),'El test debe iniciar el clip por el bucle real de animación');
 });
 check('Todos los recursos GLB referenciados existen',()=>{
  const refs=[...new Set([...main.matchAll(/['"](models\/[^'"]+\.glb)['"]/g)].map(m=>m[1]))];
@@ -317,10 +317,10 @@ check('Colisión dinámica de dinosaurios con obstáculos y manada',()=>{
 check('Mejoras visuales Babylon.js/WebGL2: perfiles, PBR, sombras y postprocesado',()=>{
  for(const token of ['const VP={shadow:1024','function tuneVisualMaterials(root,foliage=false)','material.sheen.isEnabled=true','function addEnvironmentLighting()','new BABYLON.EquiRectangularCubeTexture','scene.environmentTexture=environmentTexture','function addVisualPipeline()','DefaultRenderingPipeline','fxaaEnabled=VP.samples<=1','bloomEnabled=VP.bloom>0','shadowGenerator=new BABYLON.ShadowGenerator(VP.shadow','waterMat.metallic=.08','waterMat.roughness=.16','anisotropicFilteringLevel=VP.anisotropy','function addSSAO()','new BABYLON.SSAORenderingPipeline','function addAdvancedVisualEffects()','new BABYLON.SSRRenderingPipeline','function createParticleSystem(name,capacity)','BABYLON.GPUParticleSystem.IsSupported','new BABYLON.GPUParticleSystem','particleBackend','ssao:!!ssaoPipeline','environmentReady','thinInstances:scene.meshes.some(m=>m.hasThinInstances)'])assert.ok(main.includes(token),'Falta mejora visual '+token);
  assert.ok(main.includes('addVisualPipeline();bindControls()'));
- assert.ok(main.includes("quality!=='media'")&&main.includes('mobileDevice'),'SSAO pesado debe permanecer desactivado en el perfil equilibrado');
+ assert.ok(main.includes("quality!=='alta'")&&main.includes('mobileDevice'),'SSAO pesado debe permanecer desactivado en el perfil equilibrado');
  assert.ok(main.includes('removeSSAO()')&&main.includes('addSSAO()'),'SSAO debe liberarse en VR y restaurarse al salir');
  assert.ok(main.includes('createParticleSystem(\'ambient-dust\',VP.particles)')&&main.includes("createParticleSystem('rain',rainCapacity)"),'Polvo y lluvia deben usar GPU con fallback');
- assert.ok(main.includes("quality!=='media'||mobileDevice"),'SSR pesado debe permanecer desactivado en el perfil equilibrado');
+ assert.ok(main.includes("quality!=='alta'||mobileDevice"),'SSR pesado debe permanecer desactivado en el perfil equilibrado');
  assert.ok(main.includes('state===BABYLON.WebXRState.IN_XR')&&main.includes('ssrPipeline.isEnabled=false'),'Los efectos avanzados deben apagarse al entrar en VR');
  assert.ok(!main.includes('THREE.WebGLRenderer'));
 });
