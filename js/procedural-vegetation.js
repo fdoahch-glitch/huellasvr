@@ -51,11 +51,14 @@
  function place(count,seed,opts,api){
   const out=[];let state=seed>>>0;
   const rnd=()=>{state=(state*1664525+1013904223)>>>0;return state/4294967296;};
-  for(let tries=0;out.length<count&&tries<count*35+100;tries++){
-   const a=rnd()*Math.PI*2,r=opts.min+Math.sqrt(rnd())*(opts.max-opts.min);
-   const x=Math.cos(a)*r,z=Math.sin(a)*r;
+  const origin=opts.origin||{x:0,z:0},forward=opts.forward||null,cone=opts.cone??Math.PI*2;
+  const baseAngle=forward?Math.atan2(forward.z,forward.x):0;
+  for(let tries=0;out.length<count&&tries<count*55+140;tries++){
+   const a=forward?baseAngle+(rnd()-.5)*cone:rnd()*Math.PI*2,r=opts.min+Math.sqrt(rnd())*(opts.max-opts.min);
+   const x=origin.x+Math.cos(a)*r,z=origin.z+Math.sin(a)*r;
    if(!api.terrainValidAt(x,z))continue;
-   if(api.waterDistanceAt&&api.waterDistanceAt(x,z)<(opts.water||1))continue;
+   const waterDistance=api.waterDistanceAt?api.waterDistanceAt(x,z):1e9;
+   if(waterDistance<(opts.water||1)||(Number.isFinite(opts.waterMax)&&waterDistance>opts.waterMax))continue;
    if(Math.hypot(x-api.home.x,z-api.home.z)<(opts.keep||8))continue;
    out.push({x,y:api.terrainHeightAt(x,z),z,yaw:rnd()*Math.PI*2,tilt:(rnd()-.5)*.18});
   }
@@ -189,7 +192,9 @@ uniform float huellasWindStrength;`};
   const grass=place(profile.grass,seed,{min:7,max:49,water:1.1,keep:7},api);
   const ferns=place(profile.ferns,seed+101,{min:8,max:63,water:1.8,keep:7},api);
   const shrubs=place(profile.shrubs,seed+211,{min:14,max:75,water:2.2,keep:10},api);
-  const trees=place(profile.trees||0,seed+307,{min:16,max:92,water:3.2,keep:13},api);
+  const view=api.camera?.getForwardRay?.().direction||null,treeOrigin=api.camera?.position||{x:0,z:12};
+  const arid=['atacamatitan','arackar'].includes(api.worldKey);
+  const trees=place(profile.trees||0,seed+307,{min:19,max:96,water:arid?.8:3.2,waterMax:arid?undefined:58,keep:13,origin:{x:treeOrigin.x,z:treeOrigin.z},forward:view,cone:1.72},api);
   const grassScale=i=>{const h=.35+(i%7)*.065;return{x:.7+(i%3)*.12,y:h,z:.7+(i%3)*.12};};
   const fernScale=i=>{const h=.75+(i%5)*.14;return{x:h,y:h,z:h};};
   const shrubScale=i=>{const h=.8+(i%4)*.16;return{x:h,y:h,z:h};};
@@ -216,8 +221,9 @@ uniform float huellasWindStrength;`};
 
   // LOD y culling dinámicos: los cuatro batches comparten las posiciones,
   // pero cada árbol solo conserva activa la representación adecuada a cámara.
-  const nearScale=i=>{const h=.82+(i%5)*.12;return{x:h,y:h,z:h};};
-  const farScale=i=>{const h=.9+(i%4)*.13;return{x:h,y:h,z:h};};
+  const treeHeightFactor=({atacamatitan:1.28,arackar:1.22,patagonia:1.48,stegouros:1.38,aysen:1.42}[api.worldKey]||1.3);
+  const nearScale=i=>{const h=(.98+(i%5)*.13)*treeHeightFactor;return{x:h*.92,y:h*1.08,z:h*.92};};
+  const farScale=i=>{const h=(.9+(i%4)*.12)*treeHeightFactor;return{x:h*.9,y:h,z:h*.9};};
   function treeBatch(mesh,points,mat,name,scaleFn){
    mesh.name=name;mesh.material=mat;mesh.isVisible=points.length>0;mesh.setEnabled(points.length>0);mesh.isPickable=false;mesh.checkCollisions=false;
    mat.useVertexColor=true;mat.useVertexAlpha=false;
@@ -283,7 +289,7 @@ uniform float huellasWindStrength;`};
   total+=trees.length*2;
 
   // Las copias de malla usan geometría/material compartidos; sin cuerpos Havok por hoja.
-  return {created:true,total,grass:grass.length,ferns:ferns.length,shrubs:shrubs.length,trees:trees.length,treeNear:visibleNear,treeFar:visibleFar,treeLod:'camera-distance+view-direction',treeCullDistance:145,foliageCull:'camera-distance+view-direction',foliageDistances:{grass:30,ferns:58,shrubs:78},treeLodObserver,refreshTreeLod,windMaterials:windReady,proceduralBump:!!surfaceTexture,root,backend:'babylon-native-thin-instances'};
+  return {created:true,total,grass:grass.length,ferns:ferns.length,shrubs:shrubs.length,trees:trees.length,treeNear:visibleNear,treeFar:visibleFar,treeLod:'camera-distance+view-direction',treeCullDistance:145,foliageCull:'camera-distance+view-direction',foliageDistances:{grass:30,ferns:58,shrubs:78},treeLodObserver,refreshTreeLod,treeMeshes,windMaterials:windReady,proceduralBump:!!surfaceTexture,root,backend:'babylon-native-thin-instances'};
  }
  window.HuellasProceduralVegetation={create,profiles:PROFILES};
 })();
