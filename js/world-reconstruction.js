@@ -61,7 +61,19 @@ function createSurface(scene,worldKey,heightAt,validAt,waterDistanceAt,sourceMat
   normalContext.putImageData(normalImage,0,0);normalTexture.update(false);normalTexture.wrapU=normalTexture.wrapV=B.Texture.WRAP_ADDRESSMODE;normalTexture.uScale=normalTexture.vScale=18;normalTexture.anisotropicFilteringLevel=8;
  }
  mat.albedoTexture=detail;mat.bumpTexture=normalTexture;mat.bumpTexture.level=sourceNormal?.level??.42;mat.albedoColor=new B.Color3(1,1,1);mat.useVertexColors=true;mat.metallic=0;mat.roughness=.94;mat.backFaceCulling=true;mat.environmentIntensity=.42;
+ // La ortofoto y las tres capas ya contienen el color y el detalle geológico.
+ // Multiplicarlas otra vez por la paleta vertex-color oscurecía el suelo hasta gris/negro.
+ mat.useVertexColors=false;
  mesh.material=mat;mesh.isPickable=true;mesh.checkCollisions=true;mesh.receiveShadows=true;mesh.metadata={ground:true,paleogeography:true,world:worldKey};
+ // Capa base continua bajo la topografía irregular: elimina los grandes vacíos blancos
+ // en los bordes de las máscaras de altura sin alterar canales ni colisiones.
+ const minGroundY=positions.reduce((min,value,index)=>index%3===1?Math.min(min,value):min,Infinity);
+ const underlay=B.MeshBuilder.CreateGround('paleogeography-underlay-'+worldKey,{width:760,height:760,subdivisions:2},scene);
+ underlay.position.y=(Number.isFinite(minGroundY)?minGroundY:-8)-3.5;
+ const underlayMat=new B.PBRMaterial('paleogeography-underlay-material-'+worldKey,scene);
+ underlayMat.albedoColor=palette[0].scale(.92);underlayMat.metallic=0;underlayMat.roughness=1;
+ underlayMat.backFaceCulling=true;underlay.material=underlayMat;underlay.isPickable=false;underlay.checkCollisions=false;underlay.receiveShadows=false;
+ underlay.metadata={ground:true,paleogeographyUnderlay:true,world:worldKey};
  return mesh;
 }
 function createRidges(scene,worldKey,heightAt){
