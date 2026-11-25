@@ -192,14 +192,16 @@ uniform float huellasWindStrength;`};
   const shrubScale=i=>{const h=.8+(i%4)*.16;return{x:h,y:h,z:h};};
   function dynamicBatch(mesh,points,mat,name,scaleFn,maxDistance){
    mesh.name=name;mesh.material=mat;mesh.isVisible=points.length>0;mesh.isPickable=false;mesh.checkCollisions=false;
-   const buffer=new Float32Array(points.length*16),visibleMatrices=new Array(points.length),hiddenMatrices=new Array(points.length);
+   mat.useVertexColor=true;mat.useVertexAlpha=false;
+   const buffer=new Float32Array(points.length*16),colors=new Float32Array(points.length*4),visibleMatrices=new Array(points.length),hiddenMatrices=new Array(points.length);
    points.forEach((p,i)=>{
     const sc=scaleFn(i),rotation=B.Quaternion.RotationYawPitchRoll(p.yaw||0,0,p.tilt||0),position=new B.Vector3(p.x,p.y,p.z);
     const visible=B.Matrix.Compose(new B.Vector3(sc.x,sc.y,sc.z),rotation,position);
     const hidden=B.Matrix.Compose(B.Vector3.Zero(),rotation,position);
     visibleMatrices[i]=visible.m.slice();hiddenMatrices[i]=hidden.m.slice();buffer.set(visible.m,i*16);
+    const tint=.91+(i%9)*.022;colors.set([tint,tint*(.96+(i%3)*.012),tint*(.9+(i%4)*.018),1],i*4);
    });
-   mesh.thinInstanceSetBuffer('matrix',buffer,16,true);mesh.thinInstanceRefreshBoundingInfo(true);
+   mesh.thinInstanceSetBuffer('matrix',buffer,16,true);mesh.thinInstanceSetBuffer('color',colors,4,true);mesh.thinInstanceRefreshBoundingInfo(true);
    return {mesh,points,buffer,scaleFn,maxDistance,visibleMatrices,hiddenMatrices};
   }
   const foliageBatches=[
@@ -215,13 +217,15 @@ uniform float huellasWindStrength;`};
   const farScale=i=>{const h=.9+(i%4)*.13;return{x:h,y:h,z:h};};
   function treeBatch(mesh,points,mat,name,scaleFn){
    mesh.name=name;mesh.material=mat;mesh.isVisible=points.length>0;mesh.isPickable=false;mesh.checkCollisions=false;
-   const buffer=new Float32Array(points.length*16),visibleMatrices=new Array(points.length),hiddenMatrices=new Array(points.length);
+   mat.useVertexColor=true;mat.useVertexAlpha=false;
+   const buffer=new Float32Array(points.length*16),colors=new Float32Array(points.length*4),visibleMatrices=new Array(points.length),hiddenMatrices=new Array(points.length);
    points.forEach((p,i)=>{
     const sc=scaleFn(i),rotation=B.Quaternion.RotationYawPitchRoll(p.yaw||0,0,p.tilt||0),position=new B.Vector3(p.x,p.y,p.z);
     const visible=B.Matrix.Compose(new B.Vector3(sc.x,sc.y,sc.z),rotation,position),hidden=B.Matrix.Compose(B.Vector3.Zero(),rotation,position);
     visibleMatrices[i]=visible.m.slice();hiddenMatrices[i]=hidden.m.slice();buffer.set(visible.m,i*16);
+    const tint=.92+(i%7)*.023;colors.set([tint,tint*(.97+(i%3)*.01),tint*(.9+(i%4)*.02),1],i*4);
    });
-   mesh.thinInstanceSetBuffer('matrix',buffer,16,true);mesh.thinInstanceRefreshBoundingInfo(true);
+   mesh.thinInstanceSetBuffer('matrix',buffer,16,true);mesh.thinInstanceSetBuffer('color',colors,4,true);mesh.thinInstanceRefreshBoundingInfo(true);
    return {buffer,visibleMatrices,hiddenMatrices};
   }
   const nearWood=treeBatch(treeNearGeo.wood,trees,trunkMat,'procedural-tree-near-wood-'+api.worldKey,nearScale);
