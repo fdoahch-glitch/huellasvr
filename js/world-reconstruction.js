@@ -66,10 +66,14 @@ function createSurface(scene,worldKey,heightAt,validAt,waterDistanceAt,sourceMat
   normalImage.data[q]=Math.round(116+n*34);normalImage.data[q+1]=Math.round(116+f*34);normalImage.data[q+2]=245;normalImage.data[q+3]=255;
  }
  normalContext.putImageData(normalImage,0,0);normalTexture.update(false);normalTexture.wrapU=normalTexture.wrapV=B.Texture.WRAP_ADDRESSMODE;normalTexture.uScale=normalTexture.vScale=3.2;normalTexture.anisotropicFilteringLevel=8;
- mat.albedoTexture=detail;mat.bumpTexture=normalTexture;mat.bumpTexture.level=.32;mat.albedoColor=new B.Color3(1,1,1);mat.useVertexColors=true;mat.metallic=0;mat.roughness=.94;mat.backFaceCulling=true;mat.environmentIntensity=.42;
+ const sourceAlbedo=sourceMaterial?.albedoTexture||sourceMaterial?.diffuseTexture||null;
+ const sourceNormal=sourceMaterial?.bumpTexture||null;
+ // addTerrain compone la ortofoto del mundo con arena, grava y grietas: usarla como textura principal.
+ mat.albedoTexture=sourceAlbedo||detail;mat.bumpTexture=sourceNormal||normalTexture;mat.bumpTexture.level=sourceNormal?.level??.48;mat.albedoColor=new B.Color3(1,1,1);mat.useVertexColors=true;mat.metallic=0;mat.roughness=.94;mat.backFaceCulling=true;mat.environmentIntensity=.42;
  // La ortofoto y las tres capas ya contienen el color y el detalle geológico.
  // Multiplicarlas otra vez por la paleta vertex-color oscurecía el suelo hasta gris/negro.
  mat.useVertexColors=false;
+ if(sourceAlbedo){detail.dispose();normalTexture.dispose();}
  mesh.material=mat;mesh.isPickable=true;mesh.checkCollisions=true;mesh.receiveShadows=true;mesh.metadata={ground:true,paleogeography:true,world:worldKey};
  // Capa base continua bajo la topografía irregular: elimina los grandes vacíos blancos
  // en los bordes de las máscaras de altura sin alterar canales ni colisiones.
@@ -101,8 +105,9 @@ function createRidges(scene,worldKey,heightAt){
    const ridgeNoise=fbm(Math.cos(a)*radius*.022,Math.sin(a)*radius*.022,seed+31);
    const spur=noise(Math.cos(a)*radius*.075,Math.sin(a)*radius*.075,seed+71);
    const crest=Math.pow(Math.max(0,Math.sin(a*3+seed*.13)*.5+.5),2);
-   let h=(peak*.62+ridgeNoise*.28+crest*.1)*P.relief*(.52+.48*smooth(inner,outer,radius));
-   h*=1.0+spur*.24;h=Math.max(.8,h*74*(1-smooth(outer-28,outer,radius)));
+   const angularPeak=Math.pow(clamp(peak),.72),ridgeSpine=Math.pow(Math.max(0,Math.sin(a*5+seed*.13)*.5+.5),3.2);
+   let h=(angularPeak*.58+ridgeNoise*.18+crest*.08+ridgeSpine*.16)*P.relief*(.62+.38*smooth(inner,outer,radius));
+   h*=1.0+spur*.32;h=Math.max(1.2,h*112*(1-smooth(outer-34,outer,radius)));
    const base=radius<160?heightAt(Math.cos(a)*Math.min(radius,149),Math.sin(a)*Math.min(radius,149)):-1.5;
    positions[k*3]=Math.cos(a)*radius;positions[k*3+1]=base+h;positions[k*3+2]=Math.sin(a)*radius;
    const rockBand=clamp((h/80)*.72+ridgeNoise*.28),c=mix(bands[0],bands[1],smooth(.15,.58,rockBand));
