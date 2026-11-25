@@ -74,15 +74,17 @@ test("el selector y el HUD caben en una pantalla móvil", async ({ page }, testI
     return {
       topbar: rect(".world-topbar"),
       info: rect("#world-info"),
+      animations: rect("#animation-controls"),
       controls: rect(".world-controls"),
       viewport: { width: innerWidth, height: innerHeight }
     };
   });
-  for (const key of ["topbar", "info", "controls"]) {
+  for (const key of ["topbar", "info", "animations", "controls"]) {
     expect(uiBounds[key].left).toBeGreaterThanOrEqual(0);
     expect(uiBounds[key].right).toBeLessThanOrEqual(uiBounds.viewport.width);
   }
-  expect(uiBounds.info.bottom).toBeLessThanOrEqual(uiBounds.viewport.height);
+  expect(uiBounds.info.bottom).toBeLessThan(0.4 * uiBounds.viewport.height);
+  expect(uiBounds.info.bottom).toBeLessThan(uiBounds.animations.top);
   expect(uiBounds.controls.bottom).toBeLessThanOrEqual(uiBounds.viewport.height);
   await page.screenshot({ path: testInfo.outputPath("mundo-movil.png") });
 });
