@@ -108,13 +108,15 @@ function addWater(scene: Scene, root: TransformNode, world: WorldDefinition, wat
   if (world.water === "meandering") {
     for (let i = 0; i < 5; i++) {
       const segment = MeshBuilder.CreateGround(`water-${world.id}-${i}`, { width: 15 + i * 1.5, height: 42, subdivisions: 2 }, scene);
-      segment.position.set(Math.sin(i * 0.8) * 18, -0.4, -72 + i * 34);
+      const waterX = Math.sin(i * 0.8) * 18, waterZ = -72 + i * 34;
+      segment.position.set(waterX, terrainHeight(world, waterX, waterZ) + 0.2, waterZ);
       segment.rotation.y = Math.cos(i * 0.8) * 0.16;
       segment.material = waterMat; segment.parent = root; segment.isPickable = false;
     }
   } else {
     const water = MeshBuilder.CreateGround(`water-${world.id}`, { width: world.water === "seasonal" ? 27 : 38, height: world.water === "seasonal" ? 18 : 28, subdivisions: 2 }, scene);
-    water.position.set(world.id === "tolar" ? 0 : 16, -0.45, 42); water.material = waterMat; water.parent = root; water.isPickable = false;
+    const waterX = world.id === "tolar" ? 0 : 16, waterZ = 42;
+    water.position.set(waterX, terrainHeight(world, waterX, waterZ) + 0.2, waterZ); water.material = waterMat; water.parent = root; water.isPickable = false;
   }
 }
 
