@@ -7,12 +7,12 @@
  const B=window.BABYLON;
  if(!B)return;
  const PROFILES={
-  atacamatitan:{grass:0,ferns:28,shrubs:12,grassColor:'#9b8b55',leafColor:'#78834c',fernColor:'#78834c'},
-  arackar:{grass:0,ferns:42,shrubs:20,grassColor:'#a49a63',leafColor:'#71814c',fernColor:'#71814c'},
-  patagonia:{grass:90,ferns:54,shrubs:34,grassColor:'#81934f',leafColor:'#496e43',fernColor:'#547b48'},
-  stegouros:{grass:110,ferns:72,shrubs:42,grassColor:'#819b58',leafColor:'#527647',fernColor:'#60884d'},
-  aysen:{grass:125,ferns:80,shrubs:48,grassColor:'#718b50',leafColor:'#426d45',fernColor:'#527b4b'},
-  valle:{grass:80,ferns:40,shrubs:24,grassColor:'#819451',leafColor:'#527548',fernColor:'#63854c'}
+  atacamatitan:{grass:0,ferns:28,shrubs:12,wind:.42,grassColor:'#9b8b55',leafColor:'#78834c',fernColor:'#78834c'},
+  arackar:{grass:0,ferns:42,shrubs:20,wind:.58,grassColor:'#a49a63',leafColor:'#71814c',fernColor:'#71814c'},
+  patagonia:{grass:90,ferns:54,shrubs:34,wind:.82,grassColor:'#81934f',leafColor:'#496e43',fernColor:'#547b48'},
+  stegouros:{grass:110,ferns:72,shrubs:42,wind:.74,grassColor:'#819b58',leafColor:'#527647',fernColor:'#60884d'},
+  aysen:{grass:125,ferns:80,shrubs:48,wind:.92,grassColor:'#718b50',leafColor:'#426d45',fernColor:'#527b4b'},
+  valle:{grass:80,ferns:40,shrubs:24,wind:.68,grassColor:'#819451',leafColor:'#527548',fernColor:'#63854c'}
  };
  const hex=c=>B.Color3.FromHexString(c);
  function material(name,color,scene,alpha=1){
