@@ -61,6 +61,8 @@ try{
   if(lodAudit.completed<1)throw new Error(world+' no generó dos LOD geométricos válidos: '+JSON.stringify(lodAudit));
   if(lodAudit.errors||lodAudit.rejectedQuality)throw new Error(world+' hay LOD rechazados por pérdida de geometría o errores de simplificación: '+JSON.stringify(lodAudit));
   if(lodAudit.rejectedMemoryBudget&&lodAudit.completed<1)throw new Error(world+' el presupuesto de memoria impidió generar LOD: '+JSON.stringify(lodAudit));
+  const lodCoverage=Object.entries(lodAudit.perSpecies||{}).filter(([,stats])=>stats.eligible>0);
+  if(lodCoverage.some(([,stats])=>stats.ready===0))throw new Error(world+' hay especies compatibles sin ningún lote LOD aceptado: '+JSON.stringify(lodCoverage));
   if(!lodAudit.distributionMatches)throw new Error(world+' la agrupación espacial alteró el número de instancias vegetales: '+JSON.stringify(lodAudit));
   if(lodAudit.lodMemoryBudgetUsedPercent>100)throw new Error(world+' excedió el presupuesto de memoria de LOD: '+JSON.stringify(lodAudit));
   const readySamples=lodAudit.samples.filter(sample=>sample.status==='ready');
@@ -77,7 +79,8 @@ try{
   }
   await page.evaluate(()=>window.__HUELLAS_VR_TEST__?.restoreVegetationLodCapture?.());
   await lodCapture.detach();
-  console.log('VEGETATION_GEOMETRY_LOD_PASS',world,JSON.stringify({lodAudit,lodBehavior,performance:{fps:lodAudit.visibleTriangleReductionPercent,drawCalls:(await page.evaluate(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().drawCalls))}}));
+  const vegetationPerformance=await page.evaluate(()=>{const d=window.__HUELLAS_VR_DIAGNOSTICS__?.()||{};return {fps:d.fps,frameP50Ms:d.frameP50Ms,frameP95Ms:d.frameP95Ms,frameP99Ms:d.frameP99Ms,drawCalls:d.drawCalls,gpuFrameTimeMs:d.gpuFrameTimeMs,heapMB:d.heapMB,activeMeshes:d.activeMeshes,totalMeshes:d.meshes};});
+  console.log('VEGETATION_GEOMETRY_LOD_PASS',world,JSON.stringify({lodAudit,lodBehavior,vegetationPerformance}));
   if(visualMode)await page.waitForFunction(()=>window.__HUELLAS_VR_DIAGNOSTICS__?.().visual?.environmentReady===true,undefined,{polling:100,timeout:20000});
   const capture=await page.context().newCDPSession(page);
   const screenshot=await capture.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
