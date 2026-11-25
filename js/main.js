@@ -620,6 +620,21 @@ async function addVegetation(){
  for(let si=0;si<specs.length;si++){
   const a=specs[si],count=Math.max(0,Math.round(a.n*VEGETATION_QUALITY));if(!count)continue;
   let container;try{container=await loadContainer(a.file);}catch(e){throw new Error('No se pudo cargar el modelo original '+a.file+': '+e.message);}
+  const sourceMeshes=container.meshes.filter(mesh=>mesh.getTotalVertices?.()>0),lodPolicy=vegetationLodPolicy(a.file),sourceLodTasks=[];
+  const simplificationApi=typeof BABYLON.Mesh?.prototype?.simplify==='function'&&!!BABYLON.SimplificationType;
+  if(lodPolicy&&simplificationApi){
+   for(const sourceMesh of sourceMeshes){
+    const triangles=Math.floor((sourceMesh.getTotalIndices?.()||0)/3);
+    if(triangles<600||(sourceMesh.getLODLevels?.().length||0)>=2)continue;
+    const task={mesh:sourceMesh,done:false,error:null};sourceLodTasks.push(task);
+    try{sourceMesh.simplify(lodPolicy.settings,false,BABYLON.SimplificationType.QUADRATIC,()=>{task.done=true;});}
+    catch(error){task.done=true;task.error=String(error?.message||error);}
+   }
+  }
+  const sourceQueueCompleted=await drainVegetationSimplificationQueue(sourceLodTasks);
+  if(!sourceQueueCompleted)console.warn('[Huellas VR] La simplificación de origen superó el tiempo de espera; se conserva el GLB original.',a.file);
+  const sourceLodMap=new Map(sourceMeshes.map(mesh=>[mesh,(mesh.getLODLevels?.()||[]).slice().sort((left,right)=>left.distanceOrScreenCoverage-right.distanceOrScreenCoverage).slice(0,2)]));
+  const assetHasLod=simplificationApi&&!!lodPolicy&&[...sourceLodMap.values()].some(levels=>levels.length===2);
   const points=[],placed=[],physicsCandidates=[],rng=n=>rand(seedBase+si*7919+n*17.17);
   for(let i=0,attempt=0;i<count&&attempt<count*80+240;attempt++){
    let x,z;
