@@ -165,7 +165,7 @@ function createRockFields(scene,worldKey,heightAt,validAt,waterDistanceAt){
    const scale=new B.Vector3(base*sc[0],base*sc[1],base*sc[2]);
    const rotation=B.Quaternion.RotationYawPitchRoll(hash(attempt+1,kind,P.seed)*Math.PI*2,(hash(attempt+2,kind,P.seed)*.34)-.17,(hash(attempt+3,kind,P.seed)*.34)-.17);
    const y=heightAt(x,z),position=new B.Vector3(x,y+scale.y*.38,z);
-   matrices.push(...B.Matrix.Compose(scale,rotation,position).toArray());if(kind<4)collisionPoints.push({x,z,radius:Math.max(.55,Math.min(2.4,Math.max(scale.x,scale.z)*.32),height:Math.max(.7,scale.y*1.2)});i++;
+   matrices.push(...B.Matrix.Compose(scale,rotation,position).toArray());if(kind<4)collisionPoints.push({x,z,radius:Math.max(.55,Math.min(2.4,Math.max(scale.x,scale.z)*.32)),height:Math.max(.7,scale.y*1.2)});i++;
   }
   if(matrices.length){mesh.thinInstanceSetBuffer('matrix',new Float32Array(matrices),16,true);mesh.thinInstanceRefreshBoundingInfo(true);mesh.metadata={paleogeography:true,world:worldKey,rockArchetype:spec.name,instances:matrices.length/16};batches.push({mesh,count:matrices.length/16});}
   else mesh.dispose();
