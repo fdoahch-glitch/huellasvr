@@ -606,9 +606,7 @@ async function addVegetation(){
     const isFern=a.file.includes('fern'),isTree=a.file.includes('araucaria')||a.file.includes('dead_tree');
     const isRock=a.file.includes('rock')||a.file.includes('pebble');
     const triangleCount=(merged.getTotalIndices?.()||0)/3;
-    // Babylon UMD puede exponer la cola de simplificación de forma diferida por escena.
-    // Se fuerza su inicialización y se registra el estado para poder auditarlo en navegador.
-    const simplificationQueue=scene.simplificationQueue;
+    // El bundle UMD distribuido registra Mesh.simplify y SimplificationType al cargarse.
     if(!isFern&&triangleCount>=600&&typeof merged.simplify==='function'&&BABYLON.SimplificationType){
      const nearDistance=isTree?58:(isRock?22:34),farDistance=isTree?112:(isRock?42:68);
      const settings=isTree
