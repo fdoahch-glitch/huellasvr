@@ -56,6 +56,9 @@ jobs:
           npx playwright install chromium
       - name: Empaquetar Babylon.js, cargadores y Havok localmente
         run: npm run vendor:babylon
+      - name: Validar simplificación geométrica nativa de los GLB
+        run: node tests/vegetation-lod-runtime.mjs
+        timeout-minutes: 15
       - name: Incorporar dependencias locales generadas al repositorio
         if: success()
         run: |
