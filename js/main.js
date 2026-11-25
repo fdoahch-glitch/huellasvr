@@ -608,11 +608,11 @@ async function addVegetation(){
   {file:'models/veg/araucaria_joven.glb',n:F.young||0,size:[3.5,8],sink:.07,water:3,keep:2,rMin:9,rMax:44},
   {file:'models/veg/fern_tripo.glb',n:F.fern||0,free:true,clump:.65,size:[.9,1.8],sink:.05,water:1.2,keep:0,rMin:2.5,rMax:30},
   {file:'models/veg/fern_small.glb',n:F.fern2||0,free:true,clump:.6,size:[.7,1.5],sink:0,bright:1.15,water:1.2,keep:0,rMin:2.5,rMax:32},
-  {file:'models/veg/pebble.glb',n:F.pebble||0,free:true,size:[.12,.45],sink:.2,squash:1.5,tint:rockTint,bright:1.6,band:[0,6],rMax:34},
-  {file:'models/env/rock_07.glb',n:F.rocks||0,size:[.6,1.8],sink:.15,squash:1.4,tint:rockTint,bright:1.6,rMin:6,rMax:44},
-  {file:'models/env/rock_09.glb',n:F.pebbleDetail??0,size:[.12,.4],sink:.2,squash:1.5,tint:'#d8b894',bright:1.9,rMax:16},
+  {file:'models/veg/pebble.glb',n:0,free:true,size:[.12,.45],sink:.2,squash:1.5,tint:rockTint,bright:1.6,band:[0,6],rMax:34},
+  {file:'models/env/rock_07.glb',n:0,size:[.6,1.8],sink:.15,squash:1.4,tint:rockTint,bright:1.6,rMin:6,rMax:44},
+  {file:'models/env/rock_09.glb',n:0,size:[.12,.4],sink:.2,squash:1.5,tint:'#d8b894',bright:1.9,rMax:16},
   {file:'models/env/fern_02.glb',n:F.fernDetail??0,size:[.7,1.3],bright:1.2,keep:1.2,rMax:18},
-  {file:'models/env/rock_07.glb',n:F.rocksSmall??0,size:[.35,.8],sink:.15,squash:1.4,tint:'#e0b898',bright:1.8,rMax:22},
+  {file:'models/env/rock_07.glb',n:0,size:[.35,.8],sink:.15,squash:1.4,tint:'#e0b898',bright:1.8,rMax:22},
   {file:'models/env/dead_tree_trunk_02.glb',n:F.logs||0,size:[3.5,6],sink:.1,water:3,keep:4,rMin:8,rMax:40}
  ];
  if(worldKey==='atacamatitan')specs.unshift({file:'models/env/cerro_desierto.glb',n:11,size:[70,120],squash:1.9,sink:.12,bright:1.6,tint:'#ffb090',water:-1,keep:0,rMin:85,rMax:125});
