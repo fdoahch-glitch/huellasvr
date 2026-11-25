@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: huellas-vr-quality-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
