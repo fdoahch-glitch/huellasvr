@@ -187,21 +187,72 @@ uniform float huellasWindStrength;`};
   const ferns=place(profile.ferns,seed+101,{min:8,max:63,water:1.8,keep:7},api);
   const shrubs=place(profile.shrubs,seed+211,{min:14,max:75,water:2.2,keep:10},api);
   const trees=place(profile.trees||0,seed+307,{min:16,max:92,water:3.2,keep:13},api);
-  const nearTrees=trees.filter(p=>Math.hypot(p.x-api.home.x,p.z-api.home.z)<39);
-  const farTrees=trees.filter(p=>Math.hypot(p.x-api.home.x,p.z-api.home.z)>=39);
-
   total+=thin(grassGeo,grass,grassMat,'procedural-grass-thin-'+api.worldKey,i=>{const h=.35+(i%7)*.065;return{x:.7+(i%3)*.12,y:h,z:.7+(i%3)*.12};});
   total+=thin(fernGeo,ferns,fernMat,'procedural-fern-thin-'+api.worldKey,i=>{const h=.75+(i%5)*.14;return{x:h,y:h,z:h};});
   total+=thin(shrubGeo,shrubs,leafMat,'procedural-shrub-thin-'+api.worldKey,i=>{const h=.8+(i%4)*.16;return{x:h,y:h,z:h};});
+
+  // LOD y culling dinámicos: los cuatro batches comparten las posiciones,
+  // pero cada árbol solo conserva activa la representación adecuada a cámara.
   const nearScale=i=>{const h=.82+(i%5)*.12;return{x:h,y:h,z:h};};
   const farScale=i=>{const h=.9+(i%4)*.13;return{x:h,y:h,z:h};};
-  total+=thin(treeNearGeo.wood,nearTrees,trunkMat,'procedural-tree-near-wood-'+api.worldKey,nearScale);
-  total+=thin(treeNearGeo.foliage,nearTrees,canopyMat,'procedural-tree-near-crown-'+api.worldKey,nearScale);
-  total+=thin(treeFarGeo.wood,farTrees,trunkMat,'procedural-tree-far-wood-'+api.worldKey,farScale);
-  total+=thin(treeFarGeo.foliage,farTrees,distantCanopyMat,'procedural-tree-far-crown-'+api.worldKey,farScale);
+  function treeBatch(mesh,points,mat,name,scaleFn){
+   mesh.name=name;mesh.material=mat;mesh.isVisible=points.length>0;mesh.isPickable=false;mesh.checkCollisions=false;
+   const buffer=new Float32Array(points.length*16);
+   points.forEach((p,i)=>{
+    const sc=scaleFn(i),m=B.Matrix.Compose(new B.Vector3(sc.x,sc.y,sc.z),B.Quaternion.RotationYawPitchRoll(p.yaw||0,0,p.tilt||0),new B.Vector3(p.x,p.y,p.z));
+    buffer.set(m.m,i*16);
+   });
+   mesh.thinInstanceSetBuffer('matrix',buffer,16,true);mesh.thinInstanceRefreshBoundingInfo(true);
+   return buffer;
+  }
+  const nearWood=treeBatch(treeNearGeo.wood,trees,trunkMat,'procedural-tree-near-wood-'+api.worldKey,nearScale);
+  const nearLeaves=treeBatch(treeNearGeo.foliage,trees,canopyMat,'procedural-tree-near-crown-'+api.worldKey,nearScale);
+  const farWood=treeBatch(treeFarGeo.wood,trees,trunkMat,'procedural-tree-far-wood-'+api.worldKey,farScale);
+  const farLeaves=treeBatch(treeFarGeo.foliage,trees,distantCanopyMat,'procedural-tree-far-crown-'+api.worldKey,farScale);
+  const treeBatches=[nearWood,nearLeaves,farWood,farLeaves];
+  const treeMeshes=[treeNearGeo.wood,treeNearGeo.foliage,treeFarGeo.wood,treeFarGeo.foliage];
+  const lastCamera={position:null,forward:null,time:0};
+  let visibleNear=0,visibleFar=0;
+  const camera=api.camera||scene.activeCamera;
+  function refreshTreeLod(force=false){
+   if(!camera||!camera.position)return;
+   const now=performance.now(),pos=camera.position,forward=camera.getForwardRay?camera.getForwardRay().direction:null;
+   if(!force&&now-lastCamera.time<400)return;
+   if(!force&&lastCamera.position){
+    const moved=B.Vector3.DistanceSquared(pos,lastCamera.position);
+    const turned=forward&&lastCamera.forward?B.Vector3.Dot(forward,lastCamera.forward):1;
+    if(moved<2.25&&turned>.985)return;
+   }
+   visibleNear=0;visibleFar=0;
+   const buffers=treeBatches;
+   trees.forEach((p,i)=>{
+    const dx=p.x-pos.x,dz=p.z-pos.z,distSq=dx*dx+dz*dz;
+    let inView=true;
+    if(forward&&distSq>324){const inv=1/Math.sqrt(distSq);inView=(dx*forward.x+dz*forward.z)*inv>-.18;}
+    const near=inView&&distSq<=48*48;
+    const far=inView&&distSq>48*48&&distSq<=145*145;
+    if(near)visibleNear++;else if(far)visibleFar++;
+    const nearFactor=near?1:0,farFactor=far?1:0;
+    for(let b=0;b<2;b++){
+     const n=nearFactor,idx=i*16,buf=buffers[b];
+     const sc=nearScale(i),m=B.Matrix.Compose(new B.Vector3(sc.x*n,sc.y*n,sc.z*n),B.Quaternion.RotationYawPitchRoll(p.yaw||0,0,p.tilt||0),new B.Vector3(p.x,p.y,p.z));
+     buf.set(m.m,idx);
+    }
+    for(let b=2;b<4;b++){
+     const n=farFactor,idx=i*16,buf=buffers[b],sc=farScale(i);
+     const m=B.Matrix.Compose(new B.Vector3(sc.x*n,sc.y*n,sc.z*n),B.Quaternion.RotationYawPitchRoll(p.yaw||0,0,p.tilt||0),new B.Vector3(p.x,p.y,p.z));
+     buf.set(m.m,idx);
+    }
+   });
+   treeMeshes.forEach(mesh=>mesh.thinInstanceBufferUpdated('matrix'));
+   lastCamera.position=pos.clone();lastCamera.forward=forward?forward.clone():null;lastCamera.time=now;
+  }
+  refreshTreeLod(true);
+  const treeLodObserver=scene.onBeforeRenderObservable.add(()=>refreshTreeLod());
+  total+=trees.length*2;
 
   // Las copias de malla usan geometría/material compartidos; sin cuerpos Havok por hoja.
-  return {created:true,total,grass:grass.length,ferns:ferns.length,shrubs:shrubs.length,trees:trees.length,treeNear:nearTrees.length,treeFar:farTrees.length,windMaterials:windReady,proceduralBump:!!surfaceTexture,root};
+  return {created:true,total,grass:grass.length,ferns:ferns.length,shrubs:shrubs.length,trees:trees.length,treeNear:visibleNear,treeFar:visibleFar,treeLod:'camera-distance+view-direction',treeCullDistance:145,treeLodObserver,windMaterials:windReady,proceduralBump:!!surfaceTexture,root};
  }
  window.HuellasProceduralVegetation={create,profiles:PROFILES};
 })();
