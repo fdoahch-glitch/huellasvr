@@ -272,6 +272,5 @@ export function buildProceduralWorld(scene: Scene, world: WorldDefinition): Buil
   camera.lowerRadiusLimit = 24; camera.upperRadiusLimit = 170;
   camera.lowerBetaLimit = 0.28; camera.upperBetaLimit = Math.PI / 2.05;
   camera.wheelDeltaPercentage = 0.012; camera.panningSensibility = 65;
-  camera.attachControl(true);
   return { scene, camera, root };
 }
