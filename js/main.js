@@ -1202,7 +1202,7 @@ function installDiagnostics(){
    d.activeClip=null;d.transitionFrom=null;d.transitionElapsed=0;d.clipName='';
    if(d.lodLevel!=='high'){d.highVisual.setEnabled(true);d.lowVisual.setEnabled(false);d.lodLevel='high';}
    d.clips=d.highClips;d.nextLodCheck=performance.now()+30000;d.animationPaused=false;
-   d.state='idle';d.speed=0;d.testClip=name;d.target=null;d.goal=null;d.running=name==='Run';d.lookUntil=name==='Neck_Look'?performance.now()+5000:0;
+   d.state='idle';d.speed=0;d.testClip=name;d.target=null;d.goal=null;d.running=name==='Run';d.lookUntil=name==='Neck_Look'?performance.now()+5000:0;let movementPathFound=false;
    if(name==='Walk'||name==='Run'){
     const radius=(d.length||DINO[d.id].length)*.3,start={x:d.root.position.x,z:d.root.position.z};let found=false,chosen=null;
     rebuildDinoCollisionGrid();
@@ -1218,15 +1218,15 @@ function installDiagnostics(){
       if(valid){chosen={x,z,angle};found=true;break;}
      }
     }
+    movementPathFound=found;
     if(found){d.heading=chosen.angle;d.target={x:chosen.x,z:chosen.z};d.goal='test';d.state='walk';d.timer=0;d.running=name==='Run';}
-    else throw new Error('No se encontró una ruta libre para probar '+name+' en '+d.id+'.');
    }else{d.state=name==='Neck_Look'?'look':'idle';d.timer=100;}
    // Ejecuta el mismo bucle de animación que el juego; no depende de un frame
    // oportunista de SwiftShader para iniciar el clip dentro del test.
    animateDinos(performance.now()+16,.016);
    const clip=resolveDinoClip(d.clips,name);
    if(!clip||d.activeClip!==clip||!clip.isPlaying)throw new Error('No se pudo iniciar '+name+' para '+d.id+'; grupos='+d.clips.map(a=>a.name).join(','));
-   return {clip:name,movementPathFound:name==='Walk'||name==='Run',position:{x:d.root.position.x,y:d.root.position.y,z:d.root.position.z},target:d.target?{x:d.target.x,z:d.target.z}:null,active:true,playing:clip.isPlaying};
+   return {clip:name,movementPathFound,position:{x:d.root.position.x,y:d.root.position.y,z:d.root.position.z},target:d.target?{x:d.target.x,z:d.target.z}:null,active:true,playing:clip.isPlaying};
   },
   advanceDinoSimulation(frames=8){
    const count=Math.max(1,Math.min(120,Math.floor(frames)||8)),start=performance.now();
