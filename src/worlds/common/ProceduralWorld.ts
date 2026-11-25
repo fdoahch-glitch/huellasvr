@@ -171,8 +171,3 @@ export function buildProceduralWorld(scene: Scene, world: WorldDefinition): Buil
   camera.attachControl(true);
   return { scene, camera, root };
 }
-
-function requireArcCamera(): typeof import("@babylonjs/core").ArcRotateCamera {
-  return (globalThis as unknown as { __ArcRotateCamera?: typeof import("@babylonjs/core").ArcRotateCamera }).__ArcRotateCamera
-    ?? (class extends (Object as unknown as typeof import("@babylonjs/core").ArcRotateCamera) {} as never);
-}
