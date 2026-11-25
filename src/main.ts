@@ -1,4 +1,4 @@
-import { Engine, Scene, PointerEventTypes } from "@babylonjs/core";
+import { ArcRotateCamera, Engine, Scene, PointerEventTypes, type Observer, type PointerInfo } from "@babylonjs/core";
 import { worlds, type WorldId } from "./domain/worlds";
 import { buildWorld } from "./worlds/WorldFactory";
 import "./styles.css";
@@ -20,7 +20,7 @@ let engine: Engine | null = null;
 let scene: Scene | null = null;
 let activeWorld: WorldId | null = null;
 let cameraHome: { alpha: number; beta: number; radius: number } | null = null;
-let pointerObserver: number | null = null;
+let pointerObserver: Observer<PointerInfo> | null = null;
 
 const evidenceLabels = {
   "direct-evidence": "Evidencia geológica/paleontológica",
@@ -123,8 +123,8 @@ backButton.addEventListener("click", () => {
   home.classList.remove("hidden");
 });
 resetButton.addEventListener("click", () => {
-  const camera = scene?.activeCamera;
-  if (camera && cameraHome && "alpha" in camera) {
+  const camera = scene?.activeCamera as ArcRotateCamera | null;
+  if (camera && cameraHome) {
     camera.alpha = cameraHome.alpha;
     camera.beta = cameraHome.beta;
     camera.radius = cameraHome.radius;
