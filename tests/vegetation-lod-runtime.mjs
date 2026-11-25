@@ -163,6 +163,27 @@ async function drainQueue(scene, tasks, timeoutMs = 90000) {
   });
 }
 
+function testMultiMaterialMerge() {
+  const engine = new B.NullEngine({ renderWidth: 64, renderHeight: 64, textureSize: 32 });
+  const scene = new B.Scene(engine);
+  const make = (name, materialName, x) => {
+    const mesh = B.MeshBuilder.CreateBox(name, { size: 1 }, scene);
+    const material = new B.StandardMaterial(materialName, scene);
+    material.diffuseColor = new B.Color3(x, 1 - x, .2);
+    mesh.material = material;
+    mesh.position.x = x * 2;
+    mesh.computeWorldMatrix(true);
+    return mesh;
+  };
+  const merged = mergeSpatialMeshes([make('lod-material-a', 'lod-red', .2), make('lod-material-b', 'lod-blue', .8)]);
+  assert.ok(merged, 'La fusión multi-material debe producir una malla');
+  assert.equal(merged.material?.getClassName?.(), 'MultiMaterial', 'La fusión debe conservar ambos materiales');
+  assert.equal(merged.subMeshes?.length, 2, 'La fusión debe conservar los dos submeshes');
+  assert.equal(merged.material.subMaterials.length, 2, 'La fusión debe conservar los dos materiales originales');
+  scene.dispose();
+  engine.dispose();
+}
+
 async function testAsset(file) {
   const engine = new B.NullEngine({ renderWidth: 640, renderHeight: 480, textureSize: 128 });
   const scene = new B.Scene(engine);
@@ -253,10 +274,19 @@ async function testAsset(file) {
       roots.push(rootNode);
     }
 
+    // Liberar los LOD auxiliares originales: las instancias ya tienen sus copias por nivel.
+    for (const [sourceMesh, levels] of sourceLods) {
+      for (const level of levels) {
+        sourceMesh.removeLODLevel(level.mesh);
+        if (!level.mesh.isDisposed?.()) level.mesh.dispose(false, false);
+      }
+    }
+
     const base = mergeSpatialMeshes(baseMeshes);
     const near = mergeSpatialMeshes(lodMeshes[0]);
     const far = mergeSpatialMeshes(lodMeshes[1]);
     assert.ok(base && near && far, `${file}: no se pudieron fusionar base/near/far en lotes espaciales`);
+    assert.equal(scene.meshes.filter(mesh => mesh.name.includes('Decimated') && mesh.getTotalVertices?.() > 0).length, 0, `${file}: quedaron LOD fuente auxiliares sin liberar`);
     for (const mesh of [base, near, far]) {
       mesh.position.set(0, 0, 0);
       mesh.computeWorldMatrix(true);
@@ -297,5 +327,6 @@ async function testAsset(file) {
   }
 }
 
+testMultiMaterialMerge();
 for (const asset of assets) await testAsset(asset);
 console.log('VEGETATION_LOD_RUNTIME_PASS', JSON.stringify({ babylon: B.Engine.Version, assets: assets.length }));
