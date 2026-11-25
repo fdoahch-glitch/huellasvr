@@ -1,67 +1,27 @@
 # Informe de rendimiento — Huellas VR
 
-**Estado: línea base parcial; no hay benchmark de navegador/dispositivo en esta entrega.**
+**Estado: instrumentación implementada; rendimiento físico no certificado.**
 
-## Instrumentación que ya existe en el proyecto
+## Perfil vigente
+El único perfil público es **Equilibrado**. No existen opciones ALTA/MEDIA/BAJA ni parámetros URL para alternarlas. En js/main.js, `quality='media'` es un identificador interno heredado por compatibilidad; la etiqueta visible es `Equilibrado`.
 
-El motor expone `window.__HUELLAS_VR_DIAGNOSTICS__()` y permite abrir el panel con `?mundo=atacamatitan&debug=1`. Actualmente registra:
+Parámetros principales centralizados:
+- Sombras 1024; blur 10.
+- Anisotropía 8; bloom 0.055; muestras 2.
+- Partículas 360.
+- Resolución dinámica inicial 1.0, mínimo 0.88, máximo 1.12.
+- Vegetación 90%; IBL y texturas con presupuesto moderado.
 
-- FPS reportados por Babylon Engine.
-- Cantidad total y activa de mallas.
-- Texturas cargadas en caché.
-- Cantidad de dinosaurios.
-- Cantidad de contenedores de recursos ambientales en caché.
-- Sistemas de partículas.
-- Tiempo CPU del bloque de actualización y promedio suavizado.
-- Heap JavaScript cuando `performance.memory` está disponible.
-- Estado de WebXR.
+## Diagnóstico disponible
+`window.__HUELLAS_VR_DIAGNOSTICS__()` y `?debug=1` exponen, según soporte del navegador: FPS, mallas, texturas, partículas, CPU del bloque de actualización JS, draw calls, frame/render/física, tiempo GPU cuando existe extensión, heap JS, resolución, WebGL, Havok y WebXR. El tiempo JS no es el tiempo total de CPU. VRAM no tiene contador universal fiable.
 
-La métrica de CPU actual mide el bloque de actualización JavaScript, no el tiempo total de CPU del navegador. Babylon no expone un tiempo GPU universal en todos los navegadores; debe medirse mediante extensiones disponibles o herramientas del dispositivo. VRAM tampoco está disponible como contador fiable multiplataforma.
+## Evidencia y límites
+La auditoría estática y la carga funcional de los cinco mundos pasaron en la ejecución CI consultada. Chromium puede usar SwiftShader: sus FPS son renderizado software y no representan Android/PC con GPU física. La prueba de rendimiento omite la certificación si no identifica una GPU física.
 
-## Optimizaciones ya presentes que deben medirse
+## Pendiente
+1. Android real: FPS sostenidos, frame-time p95/p99, CPU, memoria y temperatura.
+2. PC real: mismas métricas, GPU, navegador y resolución registrados.
+3. Arranque y memoria tras cambiar repetidamente entre mundos.
+4. Coste de sombras, vegetación y draw calls en dispositivos modestos.
 
-- Reutilización de `AssetContainer` y recursos compartidos.
-- Thin Instances para grupos de bosque.
-- Fusión de lotes ambientales cuando la geometría/materiales lo permiten.
-- Perfiles de calidad alta/media/baja.
-- Reducción escalada de partículas y vegetación.
-- Pausa del render loop cuando la página queda en segundo plano.
-
-## Lectura preliminar de Chromium headless (SwiftShader)
-
-La ejecución automatizada `45348814252` abrió los cinco mundos con perfil `baja`. Los FPS registrados por el panel fueron 8–14, con 581–934 mallas y 51–56 texturas por mundo. Estos números corresponden a Chromium headless usando renderizado software SwiftShader en CI; no representan el rendimiento de una GPU Android/PC y no permiten afirmar ni descartar 60 FPS en hardware real. Sí muestran que esta configuración de prueba no sirve como benchmark de rendimiento.
-
-| Mundo | FPS headless | Mallas | Texturas | Dinosaurios |
-|---|---:|---:|---:|---:|
-| Atacamatitan | 14 | 703 | 56 | 7 |
-| Arackar | 10 | 665 | 54 | 7 |
-| Patagonia | 10 | 581 | 53 | 7 |
-| Stegouros | 10 | 794 | 51 | 5 |
-| Aysén | 8 | 934 | 55 | 8 |
-
-## Observación adicional con panel debug habilitado
-
-Las capturas de `45350786896` registraron aproximadamente 2–5 FPS y 400–735 ms de GPU por frame en Chromium/SwiftShader con el panel de instrumentación activado. Es una carga de renderizado software y el panel añade instrumentación; no es un resultado representativo de Android/PC con GPU física. Sí confirma que el modo de prueba headless no sirve para evaluar el objetivo de 60 FPS.
-
-## Costes añadidos que requieren medición
-
-- La máscara de pendiente/distancia se calcula sobre una cuadrícula de 256×256 texels durante la composición inicial del terreno. Debe medirse el tiempo CPU de arranque en Android.
-- Havok crea un colisionador de malla estático para terreno y montañas, más un conjunto limitado de cilindros para troncos/árboles/rocas grandes. Debe medirse el coste de inicialización y consultas físicas por mundo.
-- La cámara XR ahora pasa por el controlador físico; falta medir latencia y estabilidad en visor.
-
-## No medido todavía
-
-| Métrica | Android | PC |
-|---|---|---|
-| FPS sostenidos por mundo | Pendiente | Pendiente |
-| CPU total / actualización | Pendiente | Parcial: el panel mide solo actualización JS |
-| Tiempo GPU | Pendiente | Pendiente |
-| Draw calls reales | Pendiente | Pendiente |
-| RAM del proceso | Pendiente | Pendiente |
-| VRAM | No expuesta de forma universal | No expuesta de forma universal |
-| Temperatura/estabilidad prolongada | Pendiente | Pendiente |
-| Coste de WebXR | Pendiente en visor físico | Pendiente en visor físico |
-
-## Criterio de aceptación
-
-No se declarará 60 FPS ni mejora de rendimiento sin medir cada mundo en hardware identificado, con perfil de calidad, resolución, duración y condiciones de prueba registradas. No se reducirá arbitrariamente la calidad de los dinosaurios o terrenos para hacer pasar una prueba.
+**Objetivo de diseño: 60 FPS; no se declara alcanzado sin medición en hardware físico.** Si el perfil único no sostiene el objetivo, optimizar su coste sin reintroducir selectores de calidad.

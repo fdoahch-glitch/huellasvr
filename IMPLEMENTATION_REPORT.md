@@ -1,55 +1,34 @@
 # Informe de implementación — Huellas VR
 
-**Estado general: en curso. No es una declaración de finalización.**
+**Estado: migración en desarrollo; no declarada finalizada.**
+Rama: `perf/ultra-60fps`. Motor: Babylon.js 9.37.2 + WebGL2 + Havok Physics V2. Perfil: uno solo, **Equilibrado**.
 
-## Cambios aplicados en esta tanda
+## Arquitectura
+Experiencia web móvil/escritorio en HTTPS; cinco mundos (Atacamatitan, Arackar, Gonkoken, Stegouros y Chilesaurus). Babylon.js es el único motor 3D activo. Havok proporciona física del terreno/montañas y controlador cápsula del jugador. Las manadas usan agentes cinemáticos con evitación de obstáculos; los dinosaurios no son cuerpos Havok articulados individuales.
 
-1. **Orientación por especie:** se sustituyó el uso de una bandera genérica `flip` por el campo explícito `forwardYaw` en las cinco configuraciones. La orientación de Atacamatitan se corrigió a `-PI/2` porque el GLB inspeccionado sitúa cabeza y cuello hacia +X; el giro anterior de +PI/2 lo orientaba en sentido contrario al avance +Z. Las otras cuatro especies conservan la orientación individual equivalente a su configuración previa, ahora expresada explícitamente.
-2. **Resolución de clips clonados:** se agregó `resolveDinoClip()`, que normaliza nombres y sufijos numéricos para reconocer `Idle-0`, `Walk-0`, `Run-0` y `Neck_Look-0`.
-3. **Transiciones de animación:** se incorporó un crossfade de 240 ms entre el clip anterior y el nuevo, con ponderación de animatables y detención del clip anterior al terminar la transición.
-4. **Ritmo de locomoción:** se retiró la inversión de velocidad del clip de Stegouros y se mantiene un ratio positivo calculado según la velocidad efectiva del individuo.
-5. **Base de montañas:** el muestreo de altura para la base del anillo ahora busca puntos de terreno válidos hacia el interior antes de recurrir al nivel cero, en vez de depender directamente de una altura aproximada de celdas inválidas.
-6. **Cache busting:** `index.html` se actualizó progresivamente; la referencia actual del motor incluye los últimos cambios.
-7. **Havok Physics V2:** se añadió `HavokPhysics_umd.js`, se inicializa `BABYLON.HavokPlugin`, se activa gravedad, se crea un colisionador estático de malla para el terreno y un `PhysicsCharacterController` cápsula para el jugador. Las montañas también registran colisionadores estáticos.
-8. **Locomoción y spawn:** se amplió el radio de terreno válido al colocar cada dinosaurio para que el área de apoyo sea coherente con su tamaño; el radio fijo anterior podía permitir un spawn que luego fallaba al intentar caminar.
-9. **Diagnóstico y pruebas:** el panel expone estado de animación, orientación, posición y estado Havok. Se añadió un API de prueba activado solo con `?test=1` para probar los cuatro clips y desplazamiento de Walk/Run.
-10. **Pruebas reales de navegador:** GitHub Actions instaló Chromium y Playwright en Ubuntu 24.04; la ejecución `45348814252` terminó correctamente y cargó los cinco mundos con WebGL2/SwiftShader, Havok, dinosaurios y sus clips.
-11. **Domo del panorama:** se detectó por captura que el domo original de diámetro 900 quedaba fuera de `camera.maxZ=320`; se redujo a diámetro 500 para que el panorama quede dentro del plano lejano.
-12. **Material del terreno:** se incorporó una máscara de detalle por pendiente estimada desde el heightmap y una atenuación aproximada por distancia desde la cámara inicial. No reemplaza todavía el shader v19 dinámico ni la mezcla por altura.
-13. **Colisiones ambientales:** se agregaron colisionadores cilíndricos simplificados y limitados para araucarias adultas, troncos grandes y rocas grandes. La cantidad se limita por grupo para no convertir cada hoja/helecho en un cuerpo físico.
-14. **WebXR:** el movimiento de la cámara XR se sincroniza con el controlador Havok para aplicar el desplazamiento mediante la consulta física. Esta ruta no se ha validado en un visor físico.
+## Implementado
+1. Orientación explícita por especie con `forwardYaw`.
+2. Normalización de nombres de clips clonados, incluidos sufijos numéricos.
+3. Crossfade entre animaciones.
+4. Ritmo positivo de locomoción y corrección de Stegouros.
+5. Muestreo mejorado para apoyar montañas sobre terreno válido.
+6. Havok V2, gravedad, colisionadores estáticos de terreno/montañas y controlador cápsula.
+7. Diagnóstico de orientación, animaciones, terreno, física, memoria y renderizado.
+8. Perfil gráfico único Equilibrado, badge fijo y resolución dinámica.
+9. Pruebas de auditoría, navegador, estabilidad y rendimiento.
+10. Dependencias Babylon, cargadores y Havok empaquetadas localmente.
 
-## Commits aplicados
+## Perfil gráfico
+La etiqueta pública es Equilibrado. `quality='media'` se conserva únicamente como identificador interno compatible con ramas existentes del motor; no es una segunda opción seleccionable. No documentar ni utilizar `?q=alta/media/baja`.
 
-- `9db1e131fb7bd00e72fbf4f0c3a05018efef6fd1` — orientación, clips y base de montañas.
-- `fc5df0d8184b3beb8e7b127ee29335e9d24e8b79` — normalización de sufijos numéricos.
-- `565bddd98f7865bb1b4456784dc01fe9812aa4be` — cache busting.
+## Validación y límites
+La auditoría estática y la carga funcional de cinco mundos en Chromium/WebGL2 constan como aprobadas en la ejecución CI consultada. Verificar Actions para el estado del commit actual. Esto no acredita calidad visual completa, FPS en GPU física, respuesta total de colisiones ni sesión WebXR en visor real. SwiftShader no es benchmark de hardware.
 
-## Pendiente de implementación
+## Pendiente
+- Inspección visual de los cinco mundos: terreno, montañas, agua, sombras, panorama y vegetación.
+- Orientación anatómica y locomoción de cada especie en ejecución.
+- Pruebas prolongadas de separación, navegación e interacciones de manada.
+- Colisiones, pendientes y movimiento en móvil/estereoscópico/WebXR.
+- Benchmark Android/PC y memoria al cambiar mundos.
 
-- Restaurar la mezcla de materiales del terreno de v19, incluyendo mezcla controlada por pendiente/altura/distancia y mapas normales separados por capa.
-- Validar las cinco orientaciones y afinar los perfiles de animación con reproducción real.
-- Reconstruir y validar las uniones de montañas/volcanes con el terreno.
-- Integrar Havok Physics V2 y controlador de personaje.
-- Verificar materiales PBR/IBL, agua, audio, WebXR y liberación de recursos.
-- Completar diagnóstico CPU/GPU y pruebas automatizadas de navegador.
-
-## Estado de validación
-
-Los commits están en GitHub. La auditoría estática y la prueba de navegador Chromium pasaron. La prueba reproduce Idle, Walk, Run y Neck_Look en una instancia de dinosaurio por mundo y verifica desplazamiento durante Walk/Run. También comprueba que Havok y el controlador cápsula se inicializan. Esto no sustituye la inspección visual de las capturas, las pruebas de colisión/pendientes ni los ensayos en Android, PC físico o visor VR. No se declara resuelta la calidad visual de los terrenos ni la paridad completa con v19.
-
-## Panel de diagnóstico ampliado
-
-El panel `?debug=1` usa `SceneInstrumentation` y `EngineInstrumentation` cuando están disponibles. Muestra FPS, tiempo de actualización JavaScript, frame/render/física, draw calls, GPU frame time, mallas activas, texturas, partículas, heap JS, versión WebGL, resolución, estado de panorama/terreno, Havok, soporte, colisionadores, posición del jugador y clips activos de dinosaurios. VRAM se marca como no disponible en el navegador; el tiempo GPU se muestra como N/D cuando el navegador no expone el timer query.
-
-## Restauración visual y colisiones — nueva tanda
-
-- Se eliminó la máscara de detalle del terreno dependiente de la posición inicial de la cámara. Ahora la cobertura de arena, grava y roca se deriva de la pendiente y una variación procedural estable, por lo que el detalle no desaparece a partir de una distancia fija ni queda anclado a la posición de inicio.
-- Se elevó moderadamente la lectura de la fotografía base con saturación, contraste y exposición controladas, conservando el panorama y las texturas originales.
-- El terreno usa `PBRMaterial` con albedo compuesto, normal map, metalness 0 y roughness alta; conserva `StandardMaterial` únicamente como compatibilidad si la clase PBR no está disponible.
-- Montañas y agua pasan a materiales PBR cuando Babylon los expone. Las montañas participan en el mapa de sombras y mantienen su geometría/colores geológicos procedurales.
-- El agua conserva las formas de ríos y lagunas y usa un material PBR de baja metalicidad y rugosidad controlada, con animación de textura existente.
-- Se registran zonas de colisión de árboles/rocas y se añade evitación de colisiones para la locomoción de dinosaurios, incluyendo separación entre individuos. No sustituye un cuerpo Havok articulado por dinosaurio: las manadas siguen locomoción cinemática y evitan los obstáculos antes de mover su raíz.
-- Se amplió el diagnóstico de terreno para mostrar el tipo de material PBR y comprobar el píxel del albedo.
-
-**Pendiente de validar en Chromium:** asignación/render real del PBR en los cinco mundos, prueba automatizada de la zona de colisión, estabilidad visual del agua y sombras. La auditoría estática no equivale a prueba de escena.
+No convertir la presencia de una función en el código en una prueba aprobada. Solo declarar cierre con evidencia de ejecución y pruebas físicas correspondientes.
