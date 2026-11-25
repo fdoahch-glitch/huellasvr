@@ -52,7 +52,7 @@ test("cada módulo de mundo está conectado al identificador correcto en la fáb
 test("la geometría comparte la misma función de altura para terreno y elementos apoyados", async () => {
   const geometry = await readFile(new URL("../src/worlds/common/ProceduralWorld.ts", import.meta.url), "utf8");
   assert.match(geometry, /function terrainHeight\(/);
-  assert.match(geometry, /positions\.push\(px, terrainHeight\(world, px, pz\), pz\)/);
+  assert.match(geometry, /const elevation = terrainHeight\(world, px, pz\);[\s\S]*positions\.push\(px, elevation, pz\)/);
   assert.match(geometry, /terrainHeight\(world, x, z\), scale, world\.vegetation/);
   assert.match(geometry, /terrainHeight\(world, x, z\), z, 1\.1/);
   assert.match(geometry, /terrainHeight\(world, poi\.position\[0\], poi\.position\[2\]\)/);
