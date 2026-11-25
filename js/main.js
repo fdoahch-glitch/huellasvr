@@ -580,7 +580,36 @@ async function drainVegetationSimplificationQueue(tasks){
   pump();
  });
 }
-function mergeVegetationCellMeshes(meshes,cell,name){
+function repairMergedVegetationMaterial(mesh,sourceFile){
+ if(!mesh)return 0;
+ const fallbackColor=sourceFile.includes('rock')||sourceFile.includes('pebble')||sourceFile.includes('cerro_desierto')
+  ?BABYLON.Color3.FromHexString(({atacamatitan:'#a96e52',arackar:'#96836d',patagonia:'#8b9382',stegouros:'#8d8b72',aysen:'#727b78'}[worldKey]||'#898579'))
+  :sourceFile.includes('fern')?BABYLON.Color3.FromHexString('#718b4f')
+  :sourceFile.includes('dead_tree')?BABYLON.Color3.FromHexString('#72513a')
+  :BABYLON.Color3.FromHexString('#607b48');
+ const materials=mesh.material?.subMaterials||[mesh.material];let repaired=0;
+ for(const material of materials){
+  if(!material)continue;
+  const textures=material.getActiveTextures?.()||[];
+  const hasReadyTexture=textures.some(texture=>texture?.isReady?.());
+  const color=material.albedoColor||material.diffuseColor;
+  const black=color&&color.r<.012&&color.g<.012&&color.b<.012;
+  if(black&&!hasReadyTexture){
+   if(material.albedoColor)material.albedoColor.copyFrom(fallbackColor);
+   if(material.diffuseColor)material.diffuseColor.copyFrom(fallbackColor);
+   if(material.emissiveColor)material.emissiveColor=fallbackColor.scale(.035);
+   repaired++;
+  }
+ }
+ if(!mesh.material){
+  const material=new BABYLON.StandardMaterial('vegetation-safe-material-'+worldKey+'-'+mesh.name,scene);
+  material.diffuseColor=fallbackColor;material.specularColor=new BABYLON.Color3(.025,.025,.02);material.backFaceCulling=false;
+  mesh.material=material;repaired++;
+ }
+ mesh.metadata={...(mesh.metadata||{}),materialFallbackRepairs:repaired};
+ return repaired;
+}
+function mergeVegetationCellMeshes(meshes,cell,name,sourceFile){
  if(!meshes?.length)return null;
  meshes.forEach(mesh=>mesh.computeWorldMatrix(true));
  let merged=null;
@@ -590,6 +619,7 @@ function mergeVegetationCellMeshes(meshes,cell,name){
  catch(error){console.warn('[Huellas VR] Falló la fusión espacial de geometría GLB.',name,error);return null;}
  if(!merged)return null;
  merged.name=name;merged.isPickable=false;merged.checkCollisions=false;merged.receiveShadows=true;
+ repairMergedVegetationMaterial(merged,sourceFile||'');
  const positions=merged.getVerticesData(BABYLON.VertexBuffer.PositionKind);
  if(positions?.length){
   for(let i=0;i<positions.length;i+=3){positions[i]-=cell.x;positions[i+2]-=cell.z;}
@@ -737,12 +767,12 @@ async function addVegetation(){
   for(const [cellKey,cell] of spatialBatches){
    if(!cell.meshes.length)continue;
    const batchName='vegetation-batch-'+worldKey+'-'+si+'-'+cellKey;
-   const merged=mergeVegetationCellMeshes(cell.meshes,cell,batchName);
+   const merged=mergeVegetationCellMeshes(cell.meshes,cell,batchName,a.file);
    if(merged){
     const lodMerged=[];
     if(assetHasLod&&cell.lodMeshes[0].length===cell.meshes.length&&cell.lodMeshes[1].length===cell.meshes.length){
-     lodMerged.push(mergeVegetationCellMeshes(cell.lodMeshes[0],cell,batchName+'-lod-near'));
-     lodMerged.push(mergeVegetationCellMeshes(cell.lodMeshes[1],cell,batchName+'-lod-far'));
+     lodMerged.push(mergeVegetationCellMeshes(cell.lodMeshes[0],cell,batchName+'-lod-near',a.file));
+     lodMerged.push(mergeVegetationCellMeshes(cell.lodMeshes[1],cell,batchName+'-lod-far',a.file));
     }
     if(lodMerged.length!==2||lodMerged.some(mesh=>!mesh)){
      lodMerged.filter(Boolean).forEach(mesh=>mesh.dispose(false,false));
