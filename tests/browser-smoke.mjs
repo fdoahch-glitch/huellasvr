@@ -96,7 +96,7 @@ try{
   if(!state.diagnostics)throw new Error(world+' no expuso el diagnóstico');
   if(state.diagnostics.webglVersion!==2)throw new Error(world+' no usó WebGL2: '+state.diagnostics.webglVersion);
   if(!state.diagnostics.visual?.pipeline)throw new Error(world+' no activó el pipeline visual Babylon: '+JSON.stringify(state.diagnostics.visual));
-  const paleo=state.diagnostics.paleogeography;if(!paleo||paleo.world!==world||paleo.vertices<5000||paleo.triangles<8000||!state.diagnostics.terrain?.mesh?.startsWith?.('paleogeography-ground-'))throw new Error(world+' no completó la reconstrucción geométrica paleogeográfica: '+JSON.stringify({paleo,terrain:state.diagnostics.terrain}));
+  const paleo=state.diagnostics.paleogeography;if(!paleo||paleo.world!==world||paleo.vertices<5000||paleo.triangles<8000||paleo.rockInstances<50||!state.diagnostics.terrain?.mesh?.startsWith?.('paleogeography-ground-'))throw new Error(world+' no completó la reconstrucción geométrica paleogeográfica: '+JSON.stringify({paleo,terrain:state.diagnostics.terrain}));
   if(!['gpu','cpu'].includes(state.diagnostics.visual?.particleBackend))throw new Error(world+' no informó backend de partículas válido: '+JSON.stringify(state.diagnostics.visual));
   if(state.diagnostics.quality!=='Equilibrado'||state.diagnostics.visual?.ssao||state.diagnostics.visual?.ssr)throw new Error('El perfil único equilibrado debe evitar efectos pesados: '+JSON.stringify(state.diagnostics.visual));
   if(visualMode&&!state.diagnostics.visual?.environmentReady)throw new Error(world+' no terminó de cargar IBL local: '+JSON.stringify(state.diagnostics.visual));
