@@ -1,4 +1,6 @@
 import { ArcRotateCamera, Scene, TransformNode } from "@babylonjs/core";
+import { WebXRDefaultExperience } from "@babylonjs/core/XR/webXRDefaultExperience";
+import "@babylonjs/core/Materials/Node/Blocks";
 
 export interface WorldControls { dispose: () => void; }
 type Direction = "left" | "right" | "up" | "down" | "zoom-in" | "zoom-out";
@@ -66,7 +68,7 @@ export async function setupWorldControls(
   }
 
   let disposed = false;
-  let xrExperience: Awaited<ReturnType<Scene["createDefaultXRExperienceAsync"]>> | null = null;
+  let xrExperience: Awaited<ReturnType<typeof WebXRDefaultExperience.CreateAsync>> | null = null;
   const vrButton = document.querySelector<HTMLButtonElement>("#vr-button");
   if (vrButton) {
     vrButton.disabled = true;
@@ -76,7 +78,7 @@ export async function setupWorldControls(
       const supported = Boolean(xrNavigator.xr && await xrNavigator.xr.isSessionSupported("immersive-vr"));
       if (supported && !disposed) {
         const floorMeshes = worldRoot.getChildMeshes(false).filter((mesh) => mesh.name.includes("terrain"));
-        xrExperience = await scene.createDefaultXRExperienceAsync({ floorMeshes });
+        xrExperience = await WebXRDefaultExperience.CreateAsync(scene, { floorMeshes, disableDefaultUI: true });
         xrExperience.baseExperience.onStateChangedObservable.add((state) => {
           if (!vrButton) return;
           if (state === 2) vrButton.textContent = "Salir de VR";
