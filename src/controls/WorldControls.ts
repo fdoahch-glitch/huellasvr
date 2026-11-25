@@ -11,7 +11,7 @@ const keyDirections: Record<string, Direction> = {
 };
 
 function moveCamera(camera: ArcRotateCamera, direction: Direction): void {
-  const rotation = 0.055;
+  const rotation = 0.025;
   switch (direction) {
     case "left": camera.alpha -= rotation; break;
     case "right": camera.alpha += rotation; break;
@@ -77,6 +77,11 @@ export async function setupWorldControls(
       if (supported && !disposed) {
         const floorMeshes = worldRoot.getChildMeshes(false).filter((mesh) => mesh.name.includes("terrain"));
         xrExperience = await scene.createDefaultXRExperienceAsync({ floorMeshes });
+        xrExperience.baseExperience.onStateChangedObservable.add((state) => {
+          if (!vrButton) return;
+          if (state === 2) vrButton.textContent = "Salir de VR";
+          else if (state === 0) vrButton.textContent = "Entrar en VR";
+        });
         if (!disposed) {
           vrButton.disabled = false;
           vrButton.textContent = "Entrar en VR";
@@ -128,7 +133,6 @@ export async function setupWorldControls(
       vrButton?.removeEventListener("click", enterOrExitVR);
       if (vrButton) { vrButton.disabled = true; vrButton.textContent = "Entrar en VR"; }
       if (xrExperience) {
-        void xrExperience.baseExperience.exitXRAsync().catch(() => undefined);
         xrExperience.dispose();
         xrExperience = null;
       }
