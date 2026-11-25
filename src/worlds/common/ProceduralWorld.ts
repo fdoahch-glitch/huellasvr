@@ -61,7 +61,7 @@ function makeTerrain(scene: Scene, root: TransformNode, world: WorldDefinition):
   mesh.material = groundMaterial;
   mesh.useVertexColors = true;
   mesh.parent = root;
-  mesh.isPickable = false;
+  mesh.isPickable = true;
 }
 
 function addRock(scene: Scene, root: TransformNode, mat: StandardMaterial, x: number, y: number, z: number, scale: number, seed: number): Mesh {
