@@ -192,13 +192,15 @@ uniform float huellasWindStrength;`};
   const shrubScale=i=>{const h=.8+(i%4)*.16;return{x:h,y:h,z:h};};
   function dynamicBatch(mesh,points,mat,name,scaleFn,maxDistance){
    mesh.name=name;mesh.material=mat;mesh.isVisible=points.length>0;mesh.isPickable=false;mesh.checkCollisions=false;
-   const buffer=new Float32Array(points.length*16);
+   const buffer=new Float32Array(points.length*16),visibleMatrices=new Array(points.length),hiddenMatrices=new Array(points.length);
    points.forEach((p,i)=>{
-    const sc=scaleFn(i),m=B.Matrix.Compose(new B.Vector3(sc.x,sc.y,sc.z),B.Quaternion.RotationYawPitchRoll(p.yaw||0,0,p.tilt||0),new B.Vector3(p.x,p.y,p.z));
-    buffer.set(m.m,i*16);
+    const sc=scaleFn(i),rotation=B.Quaternion.RotationYawPitchRoll(p.yaw||0,0,p.tilt||0),position=new B.Vector3(p.x,p.y,p.z);
+    const visible=B.Matrix.Compose(new B.Vector3(sc.x,sc.y,sc.z),rotation,position);
+    const hidden=B.Matrix.Compose(B.Vector3.Zero(),rotation,position);
+    visibleMatrices[i]=visible.m.slice();hiddenMatrices[i]=hidden.m.slice();buffer.set(visible.m,i*16);
    });
    mesh.thinInstanceSetBuffer('matrix',buffer,16,true);mesh.thinInstanceRefreshBoundingInfo(true);
-   return {mesh,points,buffer,scaleFn,maxDistance};
+   return {mesh,points,buffer,scaleFn,maxDistance,visibleMatrices,hiddenMatrices};
   }
   const foliageBatches=[
    dynamicBatch(grassGeo,grass,grassMat,'procedural-grass-thin-'+api.worldKey,grassScale,30),
@@ -213,13 +215,14 @@ uniform float huellasWindStrength;`};
   const farScale=i=>{const h=.9+(i%4)*.13;return{x:h,y:h,z:h};};
   function treeBatch(mesh,points,mat,name,scaleFn){
    mesh.name=name;mesh.material=mat;mesh.isVisible=points.length>0;mesh.isPickable=false;mesh.checkCollisions=false;
-   const buffer=new Float32Array(points.length*16);
+   const buffer=new Float32Array(points.length*16),visibleMatrices=new Array(points.length),hiddenMatrices=new Array(points.length);
    points.forEach((p,i)=>{
-    const sc=scaleFn(i),m=B.Matrix.Compose(new B.Vector3(sc.x,sc.y,sc.z),B.Quaternion.RotationYawPitchRoll(p.yaw||0,0,p.tilt||0),new B.Vector3(p.x,p.y,p.z));
-    buffer.set(m.m,i*16);
+    const sc=scaleFn(i),rotation=B.Quaternion.RotationYawPitchRoll(p.yaw||0,0,p.tilt||0),position=new B.Vector3(p.x,p.y,p.z);
+    const visible=B.Matrix.Compose(new B.Vector3(sc.x,sc.y,sc.z),rotation,position),hidden=B.Matrix.Compose(B.Vector3.Zero(),rotation,position);
+    visibleMatrices[i]=visible.m.slice();hiddenMatrices[i]=hidden.m.slice();buffer.set(visible.m,i*16);
    });
    mesh.thinInstanceSetBuffer('matrix',buffer,16,true);mesh.thinInstanceRefreshBoundingInfo(true);
-   return buffer;
+   return {buffer,visibleMatrices,hiddenMatrices};
   }
   const nearWood=treeBatch(treeNearGeo.wood,trees,trunkMat,'procedural-tree-near-wood-'+api.worldKey,nearScale);
   const nearLeaves=treeBatch(treeNearGeo.foliage,trees,canopyMat,'procedural-tree-near-crown-'+api.worldKey,nearScale);
@@ -246,9 +249,7 @@ uniform float huellasWindStrength;`};
      let inView=true;
      if(forward&&distSq>64){const inv=1/Math.sqrt(distSq);inView=(dx*forward.x+dz*forward.z)*inv>-.28;}
      const visible=inView&&distSq<=batch.maxDistance*batch.maxDistance;
-     const sc=batch.scaleFn(i),factor=visible?1:0;
-     const matrix=B.Matrix.Compose(new B.Vector3(sc.x*factor,sc.y*factor,sc.z*factor),B.Quaternion.RotationYawPitchRoll(p.yaw||0,0,p.tilt||0),new B.Vector3(p.x,p.y,p.z));
-     batch.buffer.set(matrix.m,i*16);
+     batch.buffer.set(visible?batch.visibleMatrices[i]:batch.hiddenMatrices[i],i*16);
     });
     batch.mesh.thinInstanceBufferUpdated('matrix');
    });
@@ -260,19 +261,14 @@ uniform float huellasWindStrength;`};
     const near=inView&&distSq<=48*48;
     const far=inView&&distSq>48*48&&distSq<=145*145;
     if(near)visibleNear++;else if(far)visibleFar++;
-    const nearFactor=near?1:0,farFactor=far?1:0;
     for(let b=0;b<2;b++){
-     const n=nearFactor,idx=i*16,buf=buffers[b];
-     const sc=nearScale(i),m=B.Matrix.Compose(new B.Vector3(sc.x*n,sc.y*n,sc.z*n),B.Quaternion.RotationYawPitchRoll(p.yaw||0,0,p.tilt||0),new B.Vector3(p.x,p.y,p.z));
-     buf.set(m.m,idx);
+     const batch=buffers[b];batch.buffer.set(near?batch.visibleMatrices[i]:batch.hiddenMatrices[i],i*16);
     }
     for(let b=2;b<4;b++){
-     const n=farFactor,idx=i*16,buf=buffers[b],sc=farScale(i);
-     const m=B.Matrix.Compose(new B.Vector3(sc.x*n,sc.y*n,sc.z*n),B.Quaternion.RotationYawPitchRoll(p.yaw||0,0,p.tilt||0),new B.Vector3(p.x,p.y,p.z));
-     buf.set(m.m,idx);
+     const batch=buffers[b];batch.buffer.set(far?batch.visibleMatrices[i]:batch.hiddenMatrices[i],i*16);
     }
    });
-   treeMeshes.forEach(mesh=>mesh.thinInstanceBufferUpdated('matrix'));
+   treeMeshes.forEach((mesh,index)=>mesh.thinInstanceBufferUpdated('matrix'));
    lastCamera.position=pos.clone();lastCamera.forward=forward?forward.clone():null;lastCamera.time=now;
   }
   refreshTreeLod(true);
