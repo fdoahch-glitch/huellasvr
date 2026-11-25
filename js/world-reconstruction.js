@@ -118,7 +118,7 @@ function createRidges(scene,worldKey,heightAt){
  return mesh;
 }
 function createRockFields(scene,worldKey,heightAt,validAt,waterDistanceAt){
- const P=PALEO[worldKey],palette=P.rock.map(color),batches=[];
+ const P=PALEO[worldKey],palette=P.rock.map(color),batches=[],collisionPoints=[];
  // Rocas propias de la paleogeografía: malla irregular facetada, sin GLB heredados
  // ni poliedros genéricos. Cada arquetipo comparte geometría/material por Thin Instances.
  const archetypes=[
@@ -165,12 +165,12 @@ function createRockFields(scene,worldKey,heightAt,validAt,waterDistanceAt){
    const scale=new B.Vector3(base*sc[0],base*sc[1],base*sc[2]);
    const rotation=B.Quaternion.RotationYawPitchRoll(hash(attempt+1,kind,P.seed)*Math.PI*2,(hash(attempt+2,kind,P.seed)*.34)-.17,(hash(attempt+3,kind,P.seed)*.34)-.17);
    const y=heightAt(x,z),position=new B.Vector3(x,y+scale.y*.38,z);
-   matrices.push(...B.Matrix.Compose(scale,rotation,position).toArray());i++;
+   matrices.push(...B.Matrix.Compose(scale,rotation,position).toArray());if(kind<4)collisionPoints.push({x,z,radius:Math.max(.55,Math.min(2.4,Math.max(scale.x,scale.z)*.32),height:Math.max(.7,scale.y*1.2)});i++;
   }
   if(matrices.length){mesh.thinInstanceSetBuffer('matrix',new Float32Array(matrices),16,true);mesh.thinInstanceRefreshBoundingInfo(true);mesh.metadata={paleogeography:true,world:worldKey,rockArchetype:spec.name,instances:matrices.length/16};batches.push({mesh,count:matrices.length/16});}
   else mesh.dispose();
  }
- return batches;
+ return {batches,collisionPoints};
 }
 function rebuild(options){
  const {scene,worldKey,heightAt,validAt,waterDistanceAt}=options;
@@ -182,7 +182,7 @@ function rebuild(options){
  const oldMountains=scene.getMeshByName('original-mountain-ring-'+(worldKey==='patagonia'?'gonkoken':worldKey));
  if(oldMountains){oldMountains.isVisible=false;oldMountains.setEnabled(false);}
  const ridges=createRidges(scene,worldKey,heightAt),rocks=createRockFields(scene,worldKey,heightAt,validAt,waterDistanceAt);
- return {ground,ridges,rockBatches:rocks.length,rockInstances:rocks.reduce((n,item)=>n+item.count,0),vertices:ground.getTotalVertices(),triangles:Math.floor(ground.getTotalIndices()/3),world:worldKey};
+ return {ground,ridges,rockBatches:rocks.batches.length,rockInstances:rocks.batches.reduce((n,item)=>n+item.count,0),collisionPoints:rocks.collisionPoints,vertices:ground.getTotalVertices(),triangles:Math.floor(ground.getTotalIndices()/3),world:worldKey};
 }
 window.HuellasPaleogeography={rebuild,worlds:Object.keys(PALEO)};
 })();
