@@ -748,7 +748,6 @@ function getVegetationGeometryLODDiagnostics(){
   const isVisible=batch.mesh?batch.active&&batch.mesh.isEnabled():batch.active;
   if(isVisible){visibleBatches++;if(meta.originalGeometry)visibleOriginalTriangles+=meta.originalGeometry.triangles;const selected=batch.mesh?.getLOD?.(camera)||batch.mesh;if(selected)visibleTriangles+=Math.floor((selected.getTotalIndices?.()||0)/3);}
   if(meta.originalGeometry&&samples.length<32)samples.push({source,cell:batch.cellKey,instances:batch.instanceCount||0,status,originalTriangles:meta.originalGeometry.triangles,originalVertices:meta.originalGeometry.vertices,originalBytes:meta.originalGeometry.gpuBytes,lodLevels:meta.lodLevels||0,lodStats:(meta.lodStats||[]).map(lod=>({distance:lod.distance,triangles:lod.triangles,vertices:lod.vertices,gpuBytes:lod.gpuBytes,boundsDriftPercent:lod.boundsDriftPercent,silhouetteRatios:lod.silhouetteRatios,valid:lod.valid,reasons:lod.reasons}))});
-  }
  }
  const queue=scene?._simplificationQueue;
  const memoryBudgetMB=VEGETATION_LOD_MEMORY_BUDGET_BYTES/1048576;
