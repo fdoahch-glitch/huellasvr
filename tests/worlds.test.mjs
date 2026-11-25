@@ -57,3 +57,31 @@ test("la geometría comparte la misma función de altura para terreno y elemento
   assert.match(geometry, /terrainHeight\(world, x, z\), z, 1\.1/);
   assert.match(geometry, /terrainHeight\(world, poi\.position\[0\], poi\.position\[2\]\)/);
 });
+
+
+test("el terreno se dibuja desde la cámara superior y usa normales de doble cara", async () => {
+  const geometry = await readFile(new URL("../src/worlds/common/ProceduralWorld.ts", import.meta.url), "utf8");
+  assert.match(geometry, /groundMaterial\.backFaceCulling = false/);
+  assert.match(geometry, /groundMaterial\.twoSidedLighting = true/);
+  assert.match(geometry, /VertexData\.ComputeNormals\(positions, indices, normals\)/);
+});
+
+test("los cuerpos de agua siguen el relieve y los ríos son continuos", async () => {
+  const geometry = await readFile(new URL("../src/worlds/common/ProceduralWorld.ts", import.meta.url), "utf8");
+  assert.match(geometry, /function addPond\(/);
+  assert.match(geometry, /function addRiver\(/);
+  assert.match(geometry, /MeshBuilder\.CreateRibbon/);
+  assert.match(geometry, /terrainHeight\(world, x, z\) \+ 0\.28/);
+  assert.match(geometry, /terrainHeight\(world, leftX, z\) \+ 0\.3/);
+  assert.match(geometry, /terrainHeight\(world, rightX, z\) \+ 0\.3/);
+});
+
+test("la vegetación tiene formas distintas para matorral, helechos y ribera", async () => {
+  const geometry = await readFile(new URL("../src/worlds/common/ProceduralWorld.ts", import.meta.url), "utf8");
+  assert.match(geometry, /type === "sparse" \|\| type === "low"/);
+  assert.match(geometry, /type === "ferns"/);
+  assert.match(geometry, /type === "riparian" \? 5 : 4/);
+  assert.match(geometry, /fern-frond-/);
+  assert.match(geometry, /shrub-/);
+  assert.match(geometry, /canopy-/);
+});
