@@ -106,7 +106,7 @@ function addRock(transforms: InstanceTransform[], x: number, y: number, z: numbe
   });
 }
 
-function addTree(transforms: { foliage: InstanceTransform[]; trunks: InstanceTransform[]; fronds: InstanceTransform[] }, x: number, z: number, groundY: number, scale: number, type: string, i: number): void {
+function addTree(transforms: { foliage: InstanceTransform[]; trunks: InstanceTransform[]; fronds: InstanceTransform[] }, x: number, z: number, groundY: number, scale: number, type: string): void {
   if (type === "sparse" || type === "low") {
     const clusters = type === "sparse" ? 3 : 5;
     for (let j = 0; j < clusters; j++) {
@@ -292,7 +292,7 @@ export function buildProceduralWorld(scene: Scene, world: WorldDefinition): Buil
     const x = (rand() - 0.5) * 190, z = (rand() - 0.5) * 180;
     if (Math.abs(x) < 20 && z > -15 && z < 18) continue;
     const scale = 2.2 + rand() * (world.vegetation === "sparse" ? 2.5 : 4.2);
-    addTree(vegetationBatches, x, z, terrainHeight(world, x, z), scale, world.vegetation, i);
+    addTree(vegetationBatches, x, z, terrainHeight(world, x, z), scale, world.vegetation);
   }
   for (let i = 0; i < 78; i++) {
     const x = (rand() - 0.5) * 200, z = (rand() - 0.5) * 190;
