@@ -73,6 +73,7 @@ export async function setupWorldControls(
   const explorer = document.querySelector<HTMLElement>("#explorer");
   const cardboardButton = document.querySelector<HTMLButtonElement>("#cardboard-button");
   let cardboardActive = false;
+  let disposed = false;
   let orientationBaseline: { alpha: number; beta: number; cameraAlpha: number; cameraBeta: number } | null = null;
 
   const onDeviceOrientation = (event: DeviceOrientationEvent) => {
@@ -94,6 +95,7 @@ export async function setupWorldControls(
   async function enableCardboard(): Promise<void> {
     if (cardboardActive) return;
     try {
+      if (typeof DeviceOrientationEvent === "undefined") throw new Error("Este navegador no ofrece sensores de orientación");
       const orientationApi = DeviceOrientationEvent as typeof DeviceOrientationEvent & {
         requestPermission?: () => Promise<"granted" | "denied">
       };
@@ -101,6 +103,7 @@ export async function setupWorldControls(
         const permission = await orientationApi.requestPermission();
         if (permission !== "granted") throw new Error("Permiso de orientación denegado");
       }
+      if (disposed) return;
       camera.setCameraRigMode(Camera.RIG_MODE_STEREOSCOPIC_SIDEBYSIDE_PARALLEL, { interaxialDistance: 0.064 });
       cardboardActive = true;
       orientationBaseline = null;
@@ -153,6 +156,7 @@ export async function setupWorldControls(
 
   return {
     dispose: () => {
+      disposed = true;
       scene.onBeforeRenderObservable.remove(renderObserver);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
