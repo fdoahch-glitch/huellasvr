@@ -35,13 +35,11 @@ La compilación sirve la aplicación desde archivos estáticos. Babylon.js se re
 
 - **PC:** arrastrar con ratón para orbitar, rueda para zoom y teclas WASD o flechas para mover la cámara.
 - **Móvil/tablet:** arrastrar y pellizcar sobre el escenario, más cruceta táctil y botones de zoom con pulsación continua.
-- **VR:** entrada/salida WebXR `immersive-vr`, suelo `local-floor`, selección de hitos y soporte de mandos mediante la experiencia XR de Babylon.js.
-- **Compatibilidad:** el botón VR comprueba primero `navigator.xr.isSessionSupported("immersive-vr")`. En navegadores sin WebXR se mantiene el modo 3D y se informa que VR no está disponible. WebXR requiere contexto seguro (HTTPS o localhost), navegador compatible, permisos y visor compatible.
-- **Ciclo de vida:** al salir de un mundo se detienen entradas, intervalos táctiles, observadores y la experiencia XR, y se libera el control de cámara.
+- **Casco Cardboard sencillo:** botón «Modo casco» con dos vistas estereoscópicas lado a lado y orientación mediante giroscopio/acelerómetro (`DeviceOrientationEvent`). No utiliza WebXR ni requiere un visor avanzado.
+- **Permisos y compatibilidad:** el modo casco necesita HTTPS (o localhost), sensores disponibles y permiso del usuario cuando el navegador lo solicita. Si se deniega el permiso o no hay sensores, la exploración 3D normal sigue disponible.
+- **Ciclo de vida:** al salir de un mundo se detienen entradas, intervalos táctiles, observadores y sensores; al salir del modo casco se restaura la cámara normal.
 
-La disponibilidad WebXR depende del navegador, sistema operativo y visor; la integración de software no equivale a una certificación en hardware físico.
-
-Los cinco escenarios combinan reconstrucción procedural y el modelo GLB original de su especie, con esqueleto y clips de animación integrados. Los archivos se sirven desde `public/models/` y se incluyen en el build: Atacamatitan, Arackar, Chilesaurus, Gonkoken y Stegouros. En cada mundo se puede alternar entre `Idle`, `Walk`, `Run` y `Neck_Look`; el Chilesaurus conserva además su clip original `Run_Dino`. Los modelos se normalizan de escala y se apoyan sobre el terreno propio del mundo. La compatibilidad WebXR, el rendimiento en dispositivos reales y la integración en atrapacuentos.cl se validarán en sus etapas correspondientes.
+Los cinco escenarios combinan reconstrucción procedural y el modelo GLB original de su especie, con esqueleto y clips de animación integrados. Los archivos se sirven desde `public/models/` y se incluyen en el build: Atacamatitan, Arackar, Chilesaurus, Gonkoken y Stegouros. En cada mundo se puede alternar entre `Idle`, `Walk`, `Run` y `Neck_Look`; el Chilesaurus conserva además su clip original `Run_Dino`. Los modelos se normalizan de escala y se apoyan sobre el terreno propio del mundo. La comprobación automatizada cubre Chromium/WebGL2 y el flujo Cardboard simulado; la validación final en teléfonos físicos y la distorsión óptica del visor sencillo requieren pruebas en hardware.
 
 ## Documentación
 
@@ -50,3 +48,8 @@ Los cinco escenarios combinan reconstrucción procedural y el modelo GLB origina
 - Diseño UX: `docs/03-diseno-interfaz-experiencia.md`
 - Arquitectura: `docs/04-arquitectura-tecnica-babylon-webgl2.md`
 - Construcción de mundos: `docs/05-construccion-cinco-mundos.md`
+
+
+## Integración en atrapacuentos.cl
+
+El repositorio genera un plugin instalable para WordPress en el artefacto de GitHub Actions `huellas-vr-wordpress-plugin`. Una vez instalado y activado en WordPress, inserta la experiencia en una página con el shortcode `[huellas_vr]`. Consulta `integration/wordpress/huellas-vr/README.md` para el procedimiento completo. La publicación en producción requiere instalar el ZIP desde el administrador de WordPress.
