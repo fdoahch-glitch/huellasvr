@@ -17,7 +17,7 @@
       </section>
       <section id="explorer" class="screen hidden">
         <canvas id="world-canvas" tabindex="0" aria-label="Escenario 3D interactivo"></canvas>
-        <div class="world-topbar"><button id="back-button" class="ui-button secondary">← Mundos</button><div><strong id="world-title"></strong><small id="world-subtitle"></small></div><button id="vr-button" class="ui-button secondary" type="button" disabled>Comprobando VR…</button><button id="reset-camera" class="ui-button secondary" title="Restablecer cámara">◎</button></div>
+        <div class="world-topbar"><button id="back-button" class="ui-button secondary">← Mundos</button><div><strong id="world-title"></strong><small id="world-subtitle"></small></div><button id="cardboard-button" class="ui-button secondary" type="button" aria-pressed="false">Modo casco</button><button id="reset-camera" class="ui-button secondary" title="Restablecer cámara">◎</button></div>
         <div id="animation-controls" class="animation-controls" role="group" aria-label="Animaciones del dinosaurio">
           <button class="animation-button active" type="button" data-animation="Idle" aria-pressed="true">Reposo</button>
           <button class="animation-button" type="button" data-animation="Walk" aria-pressed="false">Caminar</button>
@@ -37,7 +37,7 @@
           </div>
         </div>
         <aside id="world-info" class="info-panel"><span class="eyebrow">EXPLORACIÓN</span><h2 id="info-title">Observa el paisaje</h2><p id="info-copy">Arrastra para mirar alrededor. Selecciona los hitos luminosos para aprender sobre el entorno.</p><div id="evidence-tag" class="evidence-tag">Reconstrucción ambiental</div></aside>
-        <div class="world-controls"><span>PC: WASD/flechas · Móvil: botones o gesto · VR: visor y mandos</span><span id="render-status">Preparando escenario…</span></div>
+        <div class="world-controls"><span>PC: WASD/flechas · Móvil: táctil · Casco: pantalla doble + giroscopio</span><span id="render-status">Preparando escenario…</span></div>
       </section>
     </main>
     <script type="module" src="/src/main.ts"></script>
