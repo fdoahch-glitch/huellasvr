@@ -80,6 +80,8 @@ async function enterWorld(id: WorldId): Promise<void> {
     activeWorld = id;
     scene = new Scene(engine!);
     const built = buildWorld(scene, id);
+    // Only the small POI markers need ray-picking; skip terrain and decorative geometry.
+    scene.pointerDownPredicate = (mesh) => Boolean((mesh.metadata as { poiId?: string } | null)?.poiId);
     activeDinosaur = await loadDinosaur(scene, id, built.root);
     worldControls = await setupWorldControls(scene, built.camera, canvas, built.root, status);
     if (import.meta.env.DEV) {
