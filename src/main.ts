@@ -93,7 +93,7 @@ async function enterWorld(id: WorldId): Promise<void> {
     title.textContent = definition.title;
     subtitle.textContent = `${definition.species} · ${definition.period}`;
     infoTitle.textContent = "Bienvenido a " + definition.title;
-    infoCopy.textContent = definition.summary + " PC: WASD/flechas y arrastre con ratón; móvil: controles táctiles y gestos. En un casco sencillo para celular, activa Modo casco para ver dos imágenes y mirar moviendo la cabeza. Selecciona un marcador dorado para explorar un hito."
+    infoCopy.textContent = definition.summary + " PC: WASD/flechas y arrastre con ratón; móvil: controles táctiles y gestos. En un casco sencillo para celular, abre esta página mediante HTTPS, activa Modo casco y acepta el permiso de movimiento para ver una imagen por ojo y mirar moviendo la cabeza. Selecciona un marcador dorado para explorar un hito."
     evidenceTag.textContent = "Paisaje reconstruido a partir de evidencia";
     home.classList.add("hidden"); explorer.classList.remove("hidden");
     engine!.resize();
