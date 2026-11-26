@@ -21,7 +21,7 @@ test("abre, renderiza y permite salir de los cinco mundos con WebGL2", async ({ 
     await expect(page.locator("#world-title")).toHaveText(title);
     await expect(page.locator("#world-subtitle")).toContainText(species);
     await expect(page.locator("#render-status")).toContainText("Dinosaurio cargado");
-    await expect(page.locator("#vr-button")).toBeVisible();
+    await expect(page.locator("#cardboard-button")).toBeVisible();
     await expect(page.locator("#touch-controls")).toBeAttached();
     await page.locator("#world-canvas").focus();
     const cameraBeforeKeyboard = await page.evaluate(() => window.__HUELLAS_TEST_CAMERA__?.());
@@ -114,18 +114,20 @@ test("el selector y el HUD caben en una pantalla móvil", async ({ page }, testI
   await page.screenshot({ path: testInfo.outputPath("mundo-movil.png") });
 });
 
-test("mantiene la exploración 3D cuando WebXR no está disponible", async ({ page }) => {
+test("mantiene la exploración normal si el navegador no ofrece giroscopio", async ({ page }) => {
   await page.addInitScript(() => {
-    Object.defineProperty(navigator, "xr", {
+    Object.defineProperty(window, "DeviceOrientationEvent", {
       configurable: true,
-      value: { isSessionSupported: async () => false }
+      value: undefined
     });
   });
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
   await page.locator(".world-card").filter({ hasText: "Cuenca de Tolar" }).click();
   await expect(page.locator("#render-status")).toContainText("Dinosaurio cargado");
-  await expect(page.locator("#vr-button")).toBeDisabled();
-  await expect(page.locator("#vr-button")).toHaveText("VR no disponible en este dispositivo");
+  await expect(page.locator("#cardboard-button")).toBeEnabled();
+  await page.locator("#cardboard-button").click();
+  await expect(page.locator("#render-status")).toContainText("no ofrece sensores de orientación");
+  await expect(page.locator("#explorer")).not.toHaveClass(/cardboard-mode/);
   await expect(page.locator("#world-canvas")).toBeVisible();
 });
