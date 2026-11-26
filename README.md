@@ -41,6 +41,10 @@ La compilación sirve la aplicación desde archivos estáticos. Babylon.js se re
 
 Los cinco escenarios combinan reconstrucción procedural y el modelo GLB original de su especie, con esqueleto y clips de animación integrados. Los archivos se sirven desde `public/models/` y se incluyen en el build: Atacamatitan, Arackar, Chilesaurus, Gonkoken y Stegouros. En cada mundo se puede alternar entre `Idle`, `Walk`, `Run` y `Neck_Look`; el Chilesaurus conserva además su clip original `Run_Dino`. Los modelos se normalizan de escala y se apoyan sobre el terreno propio del mundo. La comprobación automatizada cubre Chromium/WebGL2 y el flujo Cardboard simulado; la validación final en teléfonos físicos y la distorsión óptica del visor sencillo requieren pruebas en hardware.
 
+### Medición de rendimiento
+
+Entra a cualquier mundo y usa el botón «Medir rendimiento». La herramienta descarta dos segundos de estabilización, mide diez segundos de tiempos de cuadro del renderizado y descarga un informe HTML local con FPS derivados, frame-time promedio y p95, número de frames, tiempo de carga del mundo, memoria JavaScript (si el navegador la expone), GPU (si está disponible) y datos del dispositivo. No mide CPU, tiempo GPU ni VRAM porque el navegador no ofrece esas métricas de forma fiable. El informe no se envía a ningún servidor.
+
 ## Documentación
 
 - Investigación paleontológica: `docs/01-investigacion-paleontologica.md`
@@ -48,8 +52,3 @@ Los cinco escenarios combinan reconstrucción procedural y el modelo GLB origina
 - Diseño UX: `docs/03-diseno-interfaz-experiencia.md`
 - Arquitectura: `docs/04-arquitectura-tecnica-babylon-webgl2.md`
 - Construcción de mundos: `docs/05-construccion-cinco-mundos.md`
-
-
-## Integración en atrapacuentos.cl
-
-El repositorio genera un plugin instalable para WordPress en el artefacto de GitHub Actions `huellas-vr-wordpress-plugin`. Una vez instalado y activado en WordPress, inserta la experiencia en una página con el shortcode `[huellas_vr]`. Consulta `integration/wordpress/huellas-vr/README.md` para el procedimiento completo. La publicación en producción requiere instalar el ZIP desde el administrador de WordPress.
