@@ -66,3 +66,24 @@ test("Cardboard mode enables stereo, follows phone orientation and exits cleanly
   await expect(button).toHaveAttribute("aria-pressed", "false");
   await expect(button).toHaveText("Modo casco");
 });
+
+
+test("a denied motion permission leaves normal exploration usable", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "DeviceOrientationEvent", {
+      configurable: true,
+      value: Object.assign(class extends Event {}, { requestPermission: async () => "denied" })
+    });
+  });
+  await page.goto("/");
+  await page.locator(".world-card").first().click();
+  await expect(page.locator("#render-status")).toContainText("Dinosaurio cargado");
+  const button = page.locator("#cardboard-button");
+  await button.click();
+  await expect(page.locator("#render-status")).toContainText("Permiso de orientación denegado");
+  await expect(page.locator("#explorer")).not.toHaveClass(/cardboard-mode/);
+  await expect(button).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("#world-canvas")).toBeVisible();
+  await page.locator("#back-button").click();
+  await expect(page.locator("#home")).toBeVisible();
+});
