@@ -85,7 +85,7 @@ async function enterWorld(id: WorldId): Promise<void> {
     if (import.meta.env.DEV) {
       Object.defineProperty(window, "__HUELLAS_TEST_CAMERA__", {
         configurable: true,
-        value: () => ({ alpha: built.camera.alpha, beta: built.camera.beta, radius: built.camera.radius })
+        value: () => ({ alpha: built.camera.alpha, beta: built.camera.beta, radius: built.camera.radius, rigCameraCount: built.camera.rigCameras.length, rigMode: built.camera.cameraRigMode })
       });
     }
     cameraHome = { alpha: built.camera.alpha, beta: built.camera.beta, radius: built.camera.radius };
@@ -121,7 +121,7 @@ async function enterWorld(id: WorldId): Promise<void> {
 }
 
 function disposeWorld(): void {
-  if (import.meta.env.DEV) delete (window as Window & { __HUELLAS_TEST_CAMERA__?: () => { alpha: number; beta: number; radius: number } }).__HUELLAS_TEST_CAMERA__;
+  if (import.meta.env.DEV) delete (window as Window & { __HUELLAS_TEST_CAMERA__?: () => { alpha: number; beta: number; radius: number; rigCameraCount: number; rigMode: number } }).__HUELLAS_TEST_CAMERA__;
   worldControls?.dispose();
   worldControls = null;
   activeDinosaur?.dispose();
