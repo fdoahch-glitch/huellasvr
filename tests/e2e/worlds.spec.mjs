@@ -23,9 +23,21 @@ test("abre, renderiza y permite salir de los cinco mundos con WebGL2", async ({ 
     await expect(page.locator("#render-status")).toContainText("Dinosaurio cargado");
     await expect(page.locator("#vr-button")).toBeVisible();
     await expect(page.locator("#touch-controls")).toBeAttached();
+    const cameraBeforeKeyboard = await page.evaluate(() => window.__HUELLAS_TEST_CAMERA__?.());
+    expect(cameraBeforeKeyboard).toBeTruthy();
     await page.keyboard.down("ArrowLeft");
-    await page.waitForTimeout(80);
+    await page.waitForTimeout(120);
     await page.keyboard.up("ArrowLeft");
+    const cameraAfterKeyboard = await page.evaluate(() => window.__HUELLAS_TEST_CAMERA__?.());
+    expect(cameraAfterKeyboard.alpha).toBeLessThan(cameraBeforeKeyboard.alpha);
+
+    const cameraBeforeTouch = await page.evaluate(() => window.__HUELLAS_TEST_CAMERA__());
+    const touchLeft = page.locator("#touch-controls [data-control=left]");
+    await touchLeft.dispatchEvent("pointerdown", { pointerId: 7, pointerType: "touch", isPrimary: true, button: 0 });
+    await page.waitForTimeout(120);
+    await touchLeft.dispatchEvent("pointerup", { pointerId: 7, pointerType: "touch", isPrimary: true, button: 0 });
+    const cameraAfterTouch = await page.evaluate(() => window.__HUELLAS_TEST_CAMERA__());
+    expect(cameraAfterTouch.alpha).toBeLessThan(cameraBeforeTouch.alpha);
     for (const [animation, label] of [["Idle", "Reposo"], ["Walk", "Caminar"], ["Run", "Correr"], ["Neck_Look", "Mirar"]]) {
       const button = page.locator(`[data-animation="${animation}"]`);
       await button.click();
@@ -100,8 +112,13 @@ test("el selector y el HUD caben en una pantalla móvil", async ({ page }, testI
   expect(uiBounds.info.bottom).toBeLessThan(uiBounds.animations.top);
   await expect(page.locator("#touch-controls")).toBeVisible();
   await expect(page.locator("#touch-controls [data-control]")).toHaveCount(6);
+  const cameraBefore = await page.evaluate(() => window.__HUELLAS_TEST_CAMERA__());
   const leftTouch = page.locator("#touch-controls [data-control=left]");
-  await leftTouch.click();
+  await leftTouch.dispatchEvent("pointerdown", { pointerId: 11, pointerType: "touch", isPrimary: true, button: 0 });
+  await page.waitForTimeout(100);
+  await leftTouch.dispatchEvent("pointerup", { pointerId: 11, pointerType: "touch", isPrimary: true, button: 0 });
+  const cameraAfter = await page.evaluate(() => window.__HUELLAS_TEST_CAMERA__());
+  expect(cameraAfter.alpha).toBeLessThan(cameraBefore.alpha);
   expect(uiBounds.controls.bottom).toBeLessThanOrEqual(uiBounds.viewport.height);
   await page.screenshot({ path: testInfo.outputPath("mundo-movil.png") });
 });
