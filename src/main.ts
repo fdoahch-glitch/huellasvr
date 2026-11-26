@@ -18,6 +18,8 @@ const evidenceTag = document.querySelector<HTMLElement>("#evidence-tag")!;
 const status = document.querySelector<HTMLElement>("#render-status")!;
 const backButton = document.querySelector<HTMLButtonElement>("#back-button")!;
 const resetButton = document.querySelector<HTMLButtonElement>("#reset-camera")!;
+const performanceButton = document.querySelector<HTMLButtonElement>("#performance-button")!;
+let lastWorldLoadMs: number | null = null;
 
 let engine: Engine | null = null;
 let scene: Scene | null = null;
@@ -79,7 +81,7 @@ async function enterWorld(id: WorldId): Promise<void> {
     status.textContent = "Construyendo paisaje…";
     await ensureEngine();
     if (requestId !== worldLoadSequence) return;
-    disposeWorld(false);
+    disposeWorld();
     activeWorld = id;
     const worldScene = new Scene(engine!);
     scene = worldScene;
@@ -130,7 +132,7 @@ async function enterWorld(id: WorldId): Promise<void> {
       evidenceTag.textContent = evidenceLabels[poi.evidence];
     });
     engine!.runRenderLoop(() => scene?.render());
-    status.textContent = `Dinosaurio cargado · ${activeDinosaur.definition.displayName} · animación Idle`;
+    lastWorldLoadMs = performance.now() - loadStartedAt;\n    status.textContent = `Dinosaurio cargado · ${activeDinosaur.definition.displayName} · animación Idle`;
   } catch (error) {
     disposeWorld();
     home.classList.remove("hidden"); explorer.classList.add("hidden");
