@@ -12,18 +12,18 @@ test("los controles de escritorio cubren flechas y WASD en los dos ejes", async 
   }
 });
 
-test("WebXR comprueba immersive-vr antes de crear la experiencia y ofrece entrar y salir", async () => {
+test("Cardboard ofrece estéreo lado a lado y seguimiento de orientación sin WebXR", async () => {
   const source = await readFile(new URL("../src/controls/WorldControls.ts", import.meta.url), "utf8");
-  assert.ok(source.includes('isSessionSupported("immersive-vr")'));
-  assert.ok(source.includes("WebXRDefaultExperience.CreateAsync"));
-  assert.ok(source.includes("WebXRState.IN_XR"));
-  assert.ok(source.includes("WebXRState.NOT_IN_XR"));
-  assert.ok(source.includes("disableDefaultUI: true"));
-  assert.ok(source.includes("@babylonjs/core/Materials/Node/Blocks"));
-  assert.ok(source.includes('enterXRAsync("immersive-vr", "local-floor")'));
-  assert.ok(source.includes("exitXRAsync"));
-  assert.ok(source.includes("onStateChangedObservable"));
-  assert.ok(source.includes("VR no disponible"));
+  assert.ok(source.includes("Camera.RIG_MODE_STEREOSCOPIC_SIDEBYSIDE_PARALLEL"));
+  assert.ok(source.includes('window.addEventListener("deviceorientation"'));
+  assert.ok(source.includes("requestPermission"));
+  assert.ok(source.includes("angleDelta(event.alpha, orientationBaseline.alpha)"));
+  assert.ok(source.includes("camera.setCameraRigMode(Camera.RIG_MODE_NONE, {})"));
+  assert.ok(source.includes('cardboardButton.textContent = "Salir del casco"'));
+  assert.ok(!source.includes("WebXRDefaultExperience"));
+  const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  assert.ok(html.includes('id="cardboard-button"'));
+  assert.ok(html.includes("pantalla doble + giroscopio"));
 });
 
 test("los controles táctiles detienen la repetición y se liberan al salir del mundo", async () => {
@@ -40,10 +40,11 @@ test("los controles táctiles detienen la repetición y se liberan al salir del 
   assert.ok(main.includes("setupWorldControls(scene, built.camera, canvas, built.root, status)"));
 });
 
-test("el terreno navegable se ofrece como superficie de teletransporte VR", async () => {
+test("los hitos del escenario siguen siendo seleccionables en el modo de navegador", async () => {
   const world = await readFile(new URL("../src/worlds/common/ProceduralWorld.ts", import.meta.url), "utf8");
-  const controls = await readFile(new URL("../src/controls/WorldControls.ts", import.meta.url), "utf8");
+  const main = await readFile(new URL("../src/main.ts", import.meta.url), "utf8");
   assert.ok(world.includes("mesh.isPickable = true"));
-  assert.ok(controls.includes('mesh.name.includes("terrain")'));
-  assert.ok(controls.includes("floorMeshes, disableDefaultUI: true"));
+  assert.ok(main.includes("PointerEventTypes.POINTERPICK"));
+  assert.ok(main.includes("metadata.poiId"));
+  assert.ok(main.includes("definition.landmarks.find"));
 });
