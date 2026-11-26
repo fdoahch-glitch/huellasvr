@@ -62,6 +62,7 @@ function makeTerrain(scene: Scene, root: TransformNode, world: WorldDefinition):
   mesh.useVertexColors = true;
   mesh.parent = root;
   mesh.isPickable = true;
+  mesh.freezeWorldMatrix();
 }
 
 type InstanceTransform = { position: Vector3; scaling: Vector3; rotation?: Vector3 };
@@ -89,6 +90,7 @@ function flushThinInstances(
     matrix.copyToArray(matrices, index * 16);
   });
   mesh.thinInstanceSetBuffer("matrix", matrices, 16, true);
+  mesh.thinInstanceRefreshBoundingInfo(true);
   mesh.material = materialRef;
   mesh.parent = root;
   mesh.isPickable = false;
