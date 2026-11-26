@@ -53,3 +53,18 @@ jobs:
           retention-days: 14
       - name: Production build
         run: npm run build
+      - name: Package WordPress plugin with production application
+        run: |
+          mkdir -p release/huellas-vr/app
+          cp integration/wordpress/huellas-vr/huellas-vr.php release/huellas-vr/
+          cp integration/wordpress/huellas-vr/README.md release/huellas-vr/
+          cp -R dist/. release/huellas-vr/app/
+          cd release
+          zip -qr huellas-vr-wordpress.zip huellas-vr
+      - name: Upload installable WordPress plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: huellas-vr-wordpress-plugin
+          path: release/huellas-vr-wordpress.zip
+          if-no-files-found: error
+          retention-days: 30
