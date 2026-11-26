@@ -1,6 +1,6 @@
 import {
-  ArcRotateCamera, Color3, Color4, DirectionalLight, HemisphericLight, Mesh, MeshBuilder,
-  Scene, StandardMaterial, TransformNode, Vector3, VertexData
+  ArcRotateCamera, Color3, Color4, DirectionalLight, HemisphericLight, Matrix, Mesh, MeshBuilder,
+  Quaternion, Scene, StandardMaterial, TransformNode, Vector3, VertexData
 } from "@babylonjs/core";
 import type { WorldDefinition } from "../../domain/worlds";
 
@@ -64,46 +64,75 @@ function makeTerrain(scene: Scene, root: TransformNode, world: WorldDefinition):
   mesh.isPickable = true;
 }
 
-function addRock(scene: Scene, root: TransformNode, mat: StandardMaterial, x: number, y: number, z: number, scale: number, seed: number): Mesh {
-  const rock = MeshBuilder.CreatePolyhedron(`rock-${seed}`, { type: 1, size: scale, flat: true }, scene);
-  rock.position.set(x, y + scale * 0.36, z);
-  rock.scaling.set(1.1 + (seed % 3) * 0.12, 0.65 + (seed % 4) * 0.12, 0.9);
-  rock.rotation.y = seed * 0.73;
-  rock.material = mat; rock.parent = root; rock.isPickable = false;
-  return rock;
+type InstanceTransform = { position: Vector3; scaling: Vector3; rotation?: Vector3 };
+
+function flushThinInstances(
+  scene: Scene, root: TransformNode, name: string, materialRef: StandardMaterial,
+  transforms: InstanceTransform[], geometry: "box" | "sphere" | "cylinder" | "rock"
+): Mesh | null {
+  if (!transforms.length) return null;
+  const mesh = geometry === "box"
+    ? MeshBuilder.CreateBox(name, { size: 1 }, scene)
+    : geometry === "sphere"
+      ? MeshBuilder.CreateSphere(name, { diameter: 1, segments: 7 }, scene)
+      : geometry === "cylinder"
+        ? MeshBuilder.CreateCylinder(name, { height: 1, diameter: 1, tessellation: 7 }, scene)
+        : MeshBuilder.CreatePolyhedron(name, { type: 1, size: 1, flat: true }, scene);
+  const matrices = new Float32Array(transforms.length * 16);
+  transforms.forEach((item, index) => {
+    const rotation = item.rotation ?? Vector3.Zero();
+    const matrix = Matrix.Compose(
+      item.scaling,
+      Quaternion.RotationYawPitchRoll(rotation.y, rotation.x, rotation.z),
+      item.position
+    );
+    matrix.copyToArray(matrices, index * 16);
+  });
+  mesh.thinInstanceSetBuffer("matrix", matrices, 16, true);
+  mesh.material = materialRef;
+  mesh.parent = root;
+  mesh.isPickable = false;
+  mesh.freezeWorldMatrix();
+  return mesh;
 }
 
-function addTree(scene: Scene, root: TransformNode, trunkMat: StandardMaterial, leafMat: StandardMaterial, x: number, z: number, groundY: number, scale: number, type: string, i: number): void {
+function addRock(transforms: InstanceTransform[], x: number, y: number, z: number, scale: number, seed: number): void {
+  transforms.push({
+    position: new Vector3(x, y + scale * 0.36, z),
+    scaling: new Vector3(scale * (1.1 + (seed % 3) * 0.12), scale * (0.65 + (seed % 4) * 0.12), scale * 0.9),
+    rotation: new Vector3(0, seed * 0.73, 0)
+  });
+}
+
+function addTree(transforms: { foliage: InstanceTransform[]; trunks: InstanceTransform[]; fronds: InstanceTransform[] }, x: number, z: number, groundY: number, scale: number, type: string, i: number): void {
   if (type === "sparse" || type === "low") {
     const clusters = type === "sparse" ? 3 : 5;
     for (let j = 0; j < clusters; j++) {
       const angle = j / clusters * Math.PI * 2;
-      const shrub = MeshBuilder.CreateSphere(`shrub-${i}-${j}`, { diameter: scale * (type === "sparse" ? 0.52 : 0.42), segments: 6 }, scene);
-      shrub.position.set(x + Math.cos(angle) * scale * 0.22, groundY + scale * 0.28, z + Math.sin(angle) * scale * 0.22);
-      shrub.scaling.y = 0.58;
-      shrub.material = leafMat; shrub.parent = root; shrub.isPickable = false;
+      const diameter = scale * (type === "sparse" ? 0.52 : 0.42);
+      transforms.foliage.push({
+        position: new Vector3(x + Math.cos(angle) * scale * 0.22, groundY + scale * 0.28, z + Math.sin(angle) * scale * 0.22),
+        scaling: new Vector3(diameter, diameter * 0.58, diameter)
+      });
     }
     return;
   }
 
-  const trunk = MeshBuilder.CreateCylinder(`trunk-${i}`, { height: scale * (type === "ferns" ? 0.32 : 2.1), diameterTop: scale * 0.12, diameterBottom: scale * 0.28, tessellation: 7 }, scene);
-  trunk.position.set(x, groundY + scale * (type === "ferns" ? 0.16 : 1.05), z);
-  trunk.material = trunkMat; trunk.parent = root; trunk.isPickable = false;
+  const trunkHeight = scale * (type === "ferns" ? 0.32 : 2.1);
+  transforms.trunks.push({
+    position: new Vector3(x, groundY + trunkHeight * 0.5, z),
+    scaling: new Vector3(scale * 0.2, trunkHeight, scale * 0.2)
+  });
 
   if (type === "ferns") {
     for (let j = 0; j < 7; j++) {
       const angle = j / 7 * Math.PI * 2;
       const reach = scale * (0.78 + (j % 3) * 0.08);
-      const frond = MeshBuilder.CreateCylinder(`fern-frond-${i}-${j}`, {
-        height: reach,
-        diameterTop: scale * 0.025,
-        diameterBottom: scale * 0.2,
-        tessellation: 6
-      }, scene);
-      frond.position.set(x + Math.cos(angle) * reach * 0.3, groundY + scale * 0.52, z + Math.sin(angle) * reach * 0.3);
-      frond.rotation.z = Math.cos(angle) * 0.82;
-      frond.rotation.x = Math.sin(angle) * 0.82;
-      frond.material = leafMat; frond.parent = root; frond.isPickable = false;
+      transforms.fronds.push({
+        position: new Vector3(x + Math.cos(angle) * reach * 0.3, groundY + scale * 0.52, z + Math.sin(angle) * reach * 0.3),
+        scaling: new Vector3(scale * 0.12, reach, scale * 0.12),
+        rotation: new Vector3(Math.sin(angle) * 0.82, 0, Math.cos(angle) * 0.82)
+      });
     }
     return;
   }
@@ -111,31 +140,28 @@ function addTree(scene: Scene, root: TransformNode, trunkMat: StandardMaterial, 
   const canopyCount = type === "riparian" ? 5 : 4;
   for (let j = 0; j < canopyCount; j++) {
     const angle = j / canopyCount * Math.PI * 2;
-    const canopy = MeshBuilder.CreateSphere(`canopy-${i}-${j}`, { diameter: scale * (j === 0 ? 1.12 : 0.92), segments: 7 }, scene);
-    canopy.position.set(
-      x + Math.cos(angle) * scale * 0.36,
-      groundY + scale * (1.55 + (j % 2) * 0.18),
-      z + Math.sin(angle) * scale * 0.36
-    );
-    canopy.scaling.y = 0.82;
-    canopy.material = leafMat; canopy.parent = root; canopy.isPickable = false;
+    const diameter = scale * (j === 0 ? 1.12 : 0.92);
+    transforms.foliage.push({
+      position: new Vector3(x + Math.cos(angle) * scale * 0.36, groundY + scale * (1.55 + (j % 2) * 0.18), z + Math.sin(angle) * scale * 0.36),
+      scaling: new Vector3(diameter, diameter * 0.82, diameter)
+    });
   }
 }
 
-function addStrata(scene: Scene, root: TransformNode, rockMat: StandardMaterial, accentMat: StandardMaterial, world: WorldDefinition): void {
+function addStrata(world: WorldDefinition, batches: { rock: InstanceTransform[]; accent: InstanceTransform[] }): void {
   const rand = seeded(world.id.length * 191);
   for (let i = 0; i < 17; i++) {
     const side = i % 2 ? 1 : -1;
     const x = side * (57 + rand() * 30), z = -82 + rand() * 155;
     const h = 9 + rand() * 24, w = 13 + rand() * 18, d = 12 + rand() * 25;
-    const mesa = MeshBuilder.CreateBox(`outcrop-${world.id}-${i}`, { width: w, height: h, depth: d }, scene);
     const groundY = terrainHeight(world, x, z);
-    mesa.position.set(x, groundY + h / 2, z); mesa.rotation.y = (rand() - 0.5) * 0.22;
-    mesa.material = i % 4 === 0 ? accentMat : rockMat; mesa.parent = root; mesa.isPickable = false;
+    const target = i % 4 === 0 ? batches.accent : batches.rock;
+    target.push({ position: new Vector3(x, groundY + h / 2, z), scaling: new Vector3(w, h, d), rotation: new Vector3(0, (rand() - 0.5) * 0.22, 0) });
     for (let band = 0; band < 2; band++) {
-      const ledge = MeshBuilder.CreateBox(`stratum-${world.id}-${i}-${band}`, { width: w * 1.04, height: 0.7, depth: d * 1.04 }, scene);
-      ledge.position.set(x, groundY + h * (0.28 + band * 0.32), z); ledge.material = band ? accentMat : rockMat;
-      ledge.parent = root; ledge.isPickable = false;
+      (band ? batches.accent : batches.rock).push({
+        position: new Vector3(x, groundY + h * (0.28 + band * 0.32), z),
+        scaling: new Vector3(w * 1.04, 0.7, d * 1.04)
+      });
     }
   }
 }
@@ -250,22 +276,31 @@ export function buildProceduralWorld(scene: Scene, world: WorldDefinition): Buil
   waterMat.alpha = 0.88;
   const markerMat = material(scene, `marker-${world.id}`, "#f4d35e", 0.5);
   makeTerrain(scene, root, world);
-  addStrata(scene, root, rockMat, accentMat, world);
+  const strataBatches: { rock: InstanceTransform[]; accent: InstanceTransform[] } = { rock: [], accent: [] };
+  addStrata(world, strataBatches);
+  flushThinInstances(scene, root, `strata-rock-${world.id}`, rockMat, strataBatches.rock, "box");
+  flushThinInstances(scene, root, `strata-accent-${world.id}`, accentMat, strataBatches.accent, "box");
   addWater(scene, root, world, waterMat);
 
   const rand = seeded(world.id.length * 733);
+  const vegetationBatches = { foliage: [] as InstanceTransform[], trunks: [] as InstanceTransform[], fronds: [] as InstanceTransform[] };
+  const rockInstances: InstanceTransform[] = [];
   const vegetationCount = world.vegetation === "sparse" ? 22 : world.vegetation === "low" ? 30 : 54;
   for (let i = 0; i < vegetationCount; i++) {
     const x = (rand() - 0.5) * 190, z = (rand() - 0.5) * 180;
     if (Math.abs(x) < 20 && z > -15 && z < 18) continue;
     const scale = 2.2 + rand() * (world.vegetation === "sparse" ? 2.5 : 4.2);
-    addTree(scene, root, trunkMat, leafMat, x, z, terrainHeight(world, x, z), scale, world.vegetation, i);
+    addTree(vegetationBatches, x, z, terrainHeight(world, x, z), scale, world.vegetation, i);
   }
   for (let i = 0; i < 78; i++) {
     const x = (rand() - 0.5) * 200, z = (rand() - 0.5) * 190;
     if (Math.abs(x) < 17 && z > -18 && z < 18) continue;
-    addRock(scene, root, rockMat, x, terrainHeight(world, x, z), z, 1.1 + rand() * 3.4, i);
+    addRock(rockInstances, x, terrainHeight(world, x, z), z, 1.1 + rand() * 3.4, i);
   }
+  flushThinInstances(scene, root, `foliage-${world.id}`, leafMat, vegetationBatches.foliage, "sphere");
+  flushThinInstances(scene, root, `trunks-${world.id}`, trunkMat, vegetationBatches.trunks, "cylinder");
+  flushThinInstances(scene, root, `fern-fronds-${world.id}`, leafMat, vegetationBatches.fronds, "cylinder");
+  flushThinInstances(scene, root, `rocks-${world.id}`, rockMat, rockInstances, "rock");
   world.landmarks.forEach((poi, i) => addLandmark(scene, root, world, i, poi, markerMat));
 
   const camera = new ArcRotateCamera(`camera-${world.id}`, -Math.PI / 2, 1.08, 60, new Vector3(0, 3, 0), scene);
