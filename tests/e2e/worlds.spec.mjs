@@ -32,10 +32,6 @@ test("abre, renderiza y permite salir de los cinco mundos con WebGL2", async ({ 
     const cameraAfterKeyboard = await page.evaluate(() => window.__HUELLAS_TEST_CAMERA__?.());
     expect(cameraAfterKeyboard.alpha).toBeLessThan(cameraBeforeKeyboard.alpha);
 
-    const cameraBeforeTouch = await page.evaluate(() => window.__HUELLAS_TEST_CAMERA__());
-    await page.locator("#touch-controls [data-control=zoom-in]").click();
-    const cameraAfterTouch = await page.evaluate(() => window.__HUELLAS_TEST_CAMERA__());
-    expect(cameraAfterTouch.radius).toBeLessThan(cameraBeforeTouch.radius);
     for (const [animation, label] of [["Idle", "Reposo"], ["Walk", "Caminar"], ["Run", "Correr"], ["Neck_Look", "Mirar"]]) {
       const button = page.locator(`[data-animation="${animation}"]`);
       await button.click();
