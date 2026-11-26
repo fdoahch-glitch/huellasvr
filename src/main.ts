@@ -81,6 +81,12 @@ async function enterWorld(id: WorldId): Promise<void> {
     const built = buildWorld(scene, id);
     activeDinosaur = await loadDinosaur(scene, id, built.root);
     worldControls = await setupWorldControls(scene, built.camera, canvas, built.root, status);
+    if (import.meta.env.DEV) {
+      Object.defineProperty(window, "__HUELLAS_TEST_CAMERA__", {
+        configurable: true,
+        value: () => ({ alpha: built.camera.alpha, beta: built.camera.beta, radius: built.camera.radius })
+      });
+    }
     cameraHome = { alpha: built.camera.alpha, beta: built.camera.beta, radius: built.camera.radius };
     const definition = worlds.find((item) => item.id === id)!;
     title.textContent = definition.title;
@@ -114,6 +120,7 @@ async function enterWorld(id: WorldId): Promise<void> {
 }
 
 function disposeWorld(): void {
+  if (import.meta.env.DEV) delete (window as Window & { __HUELLAS_TEST_CAMERA__?: () => { alpha: number; beta: number; radius: number } }).__HUELLAS_TEST_CAMERA__;
   worldControls?.dispose();
   worldControls = null;
   activeDinosaur?.dispose();
