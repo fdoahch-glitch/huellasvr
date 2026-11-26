@@ -76,6 +76,7 @@ function onVisibility(): void {
 }
 
 async function enterWorld(id: WorldId): Promise<void> {
+  const loadStartedAt = performance.now();
   const requestId = ++worldLoadSequence;
   try {
     status.textContent = "Construyendo paisaje…";
@@ -159,6 +160,69 @@ function disposeWorld(): void {
   activeWorld = null;
   cameraHome = null;
 }
+
+performanceButton.addEventListener("click", async () => {
+  if (!engine || !scene || !activeWorld) {
+    window.alert("Abre un mundo antes de medir el rendimiento.");
+    return;
+  }
+  performanceButton.disabled = true;
+  const originalLabel = performanceButton.textContent;
+  performanceButton.textContent = "Midiendo…";
+  const samples: number[] = [];
+  const startedAt = performance.now();
+  const sample = () => {
+    if (!engine || !scene) return;
+    samples.push(engine.getFps());
+  };
+  sample();
+  await new Promise<void>((resolve) => {
+    const interval = window.setInterval(sample, 250);
+    window.setTimeout(() => {
+      window.clearInterval(interval);
+      resolve();
+    }, 10000);
+  });
+  const elapsedMs = performance.now() - startedAt;
+  const sorted = [...samples].sort((a, b) => a - b);
+  const averageFps = samples.length ? samples.reduce((sum, value) => sum + value, 0) / samples.length : 0;
+  const minimumFps = samples.length ? Math.min(...samples) : 0;
+  const lowPercentileFps = sorted.length ? sorted[Math.floor((sorted.length - 1) * 0.05)] : 0;
+  const memory = (performance as Performance & { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
+  const gl = (engine as Engine & { _gl?: WebGL2RenderingContext })._gl;
+  const debugInfo = gl?.getExtension("WEBGL_debug_renderer_info");
+  const gpu = debugInfo ? gl?.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "No disponible";
+  const memoryText = memory
+    ? `${(memory.usedJSHeapSize / 1048576).toFixed(1)} MB usados / ${(memory.totalJSHeapSize / 1048576).toFixed(1)} MB asignados`
+    : "El navegador no expone métricas de memoria JavaScript";
+  const rows = [
+    ["Fecha", new Date().toLocaleString()],
+    ["Mundo", activeWorld ?? "No disponible"],
+    ["Duración de medición", `${(elapsedMs / 1000).toFixed(1)} s`],
+    ["FPS promedio", averageFps.toFixed(1)],
+    ["FPS mínimo muestreado", minimumFps.toFixed(1)],
+    ["FPS percentil bajo (5 %)", lowPercentileFps.toFixed(1)],
+    ["Muestras", String(samples.length)],
+    ["Carga del último mundo", lastWorldLoadMs === null ? "No registrada" : `${lastWorldLoadMs.toFixed(0)} ms`],
+    ["Memoria JavaScript", memoryText],
+    ["GPU", String(gpu ?? "No disponible")],
+    ["Navegador", navigator.userAgent],
+    ["Plataforma", navigator.platform],
+    ["Pantalla", `${window.innerWidth} × ${window.innerHeight} · DPR ${window.devicePixelRatio}`],
+    ["WebGL", "WebGL2"]
+  ];
+  const html = `<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Informe de rendimiento HUELLAS VR</title><style>body{font:16px system-ui;max-width:850px;margin:40px auto;padding:0 18px;color:#20352d}h1{color:#17664c}table{width:100%;border-collapse:collapse}td{padding:10px;border-bottom:1px solid #d9e2dc;vertical-align:top}td:first-child{font-weight:700;width:38%}p{line-height:1.5;color:#53665d}</style><h1>HUELLAS VR — Informe de rendimiento</h1><p>Medición local realizada en este dispositivo mientras el mundo permaneció abierto. Los resultados dependen del equipo, navegador, temperatura y carga del sistema.</p><table>${rows.map(([key, value]) => `<tr><td>${key}</td><td>${String(value).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]!)}</td></tr>`).join("")}</table><p>Nota: los FPS se muestrean cada 250 ms; la memoria solo se informa si el navegador la expone. Este informe no se envía a ningún servidor.</p></html>`;
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `huellas-vr-rendimiento-${new Date().toISOString().replace(/[:.]/g, "-")}.html`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+  performanceButton.disabled = false;
+  performanceButton.textContent = originalLabel;
+  status.textContent = `Medición lista · ${averageFps.toFixed(1)} FPS promedio`;
+});
 
 backButton.addEventListener("click", () => {
   disposeWorld();
