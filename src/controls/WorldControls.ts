@@ -75,8 +75,14 @@ export async function setupWorldControls(
   let cardboardActive = false;
   let cardboardPending = false;
   let disposed = false;
-  let orientationBaseline: { alpha: number; beta: number; cameraAlpha: number; cameraBeta: number } | null = null;
+  let orientationBaseline: { alpha: number; beta: number; gamma: number; screenAngle: number; cameraAlpha: number; cameraBeta: number } | null = null;
   let sensorTimeout: number | null = null;
+
+  const getScreenAngle = (): number => {
+    const angle = Number(screen.orientation?.angle ?? 0);
+    return ((angle % 360) + 360) % 360;
+  };
+  const resetOrientationBaseline = () => { orientationBaseline = null; };
 
   const onDeviceOrientation = (event: DeviceOrientationEvent) => {
     if (!cardboardActive || event.alpha === null || event.beta === null) return;
@@ -84,13 +90,23 @@ export async function setupWorldControls(
       window.clearTimeout(sensorTimeout);
       sensorTimeout = null;
     }
+    const gamma = event.gamma ?? 0;
+    const screenAngle = getScreenAngle();
     if (!orientationBaseline) {
-      orientationBaseline = { alpha: event.alpha, beta: event.beta, cameraAlpha: camera.alpha, cameraBeta: camera.beta };
+      orientationBaseline = { alpha: event.alpha, beta: event.beta, gamma, screenAngle, cameraAlpha: camera.alpha, cameraBeta: camera.beta };
       status.textContent = "Modo casco activo · sensor conectado";
       return;
     }
+    if (screenAngle !== orientationBaseline.screenAngle) {
+      orientationBaseline = { alpha: event.alpha, beta: event.beta, gamma, screenAngle, cameraAlpha: camera.alpha, cameraBeta: camera.beta };
+      return;
+    }
     const yaw = angleDelta(event.alpha, orientationBaseline.alpha);
-    const pitch = event.beta - orientationBaseline.beta;
+    const betaDelta = event.beta - orientationBaseline.beta;
+    const gammaDelta = gamma - orientationBaseline.gamma;
+    const screenRadians = screenAngle * radians;
+    // Rotate the phone tilt axes into the current screen orientation (0/90/180/270°).
+    const pitch = betaDelta * Math.cos(screenRadians) + gammaDelta * Math.sin(screenRadians);
     camera.alpha = orientationBaseline.cameraAlpha - yaw * radians;
     camera.beta = clamp(
       orientationBaseline.cameraBeta + pitch * radians,
@@ -118,6 +134,8 @@ export async function setupWorldControls(
       cardboardActive = true;
       orientationBaseline = null;
       window.addEventListener("deviceorientation", onDeviceOrientation, true);
+      screen.orientation?.addEventListener("change", resetOrientationBaseline);
+      window.addEventListener("orientationchange", resetOrientationBaseline);
       camera.detachControl();
       explorer?.classList.add("cardboard-mode");
       if (cardboardButton) {
@@ -149,6 +167,8 @@ export async function setupWorldControls(
     if (sensorTimeout !== null) window.clearTimeout(sensorTimeout);
     sensorTimeout = null;
     window.removeEventListener("deviceorientation", onDeviceOrientation, true);
+    screen.orientation?.removeEventListener("change", resetOrientationBaseline);
+    window.removeEventListener("orientationchange", resetOrientationBaseline);
     camera.setCameraRigMode(Camera.RIG_MODE_NONE, {});
     camera.attachControl(canvas, true);
     explorer?.classList.remove("cardboard-mode");
