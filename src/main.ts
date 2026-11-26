@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { ArcRotateCamera, Engine, Scene, PointerEventTypes, type Observer, type PointerInfo } from "@babylonjs/core";
 import { worlds, type WorldId } from "./domain/worlds";
 import { buildWorld } from "./worlds/WorldFactory";
