@@ -62,12 +62,27 @@ export async function setupWorldControls(
     button.classList.add("pressed");
     timers.set(button, window.setInterval(() => moveCamera(camera, direction), 45));
   };
+  const touchHandlers = new Map<HTMLElement, {
+    pointerdown: (event: PointerEvent) => void;
+    pointerup: () => void;
+    pointercancel: () => void;
+    lostpointercapture: () => void;
+    contextmenu: (event: MouseEvent) => void;
+  }>();
   for (const button of touchButtons) {
-    button.addEventListener("pointerdown", (event) => { event.preventDefault(); button.setPointerCapture(event.pointerId); startTouch(button); });
-    button.addEventListener("pointerup", () => stopTouch(button));
-    button.addEventListener("pointercancel", () => stopTouch(button));
-    button.addEventListener("lostpointercapture", () => stopTouch(button));
-    button.addEventListener("contextmenu", (event) => event.preventDefault());
+    const handlers = {
+      pointerdown: (event: PointerEvent) => { event.preventDefault(); button.setPointerCapture(event.pointerId); startTouch(button); },
+      pointerup: () => stopTouch(button),
+      pointercancel: () => stopTouch(button),
+      lostpointercapture: () => stopTouch(button),
+      contextmenu: (event: MouseEvent) => event.preventDefault()
+    };
+    touchHandlers.set(button, handlers);
+    button.addEventListener("pointerdown", handlers.pointerdown);
+    button.addEventListener("pointerup", handlers.pointerup);
+    button.addEventListener("pointercancel", handlers.pointercancel);
+    button.addEventListener("lostpointercapture", handlers.lostpointercapture);
+    button.addEventListener("contextmenu", handlers.contextmenu);
   }
 
   const explorer = document.querySelector<HTMLElement>("#explorer");
@@ -204,7 +219,18 @@ export async function setupWorldControls(
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
-      for (const button of touchButtons) stopTouch(button);
+      for (const button of touchButtons) {
+        stopTouch(button);
+        const handlers = touchHandlers.get(button);
+        if (handlers) {
+          button.removeEventListener("pointerdown", handlers.pointerdown);
+          button.removeEventListener("pointerup", handlers.pointerup);
+          button.removeEventListener("pointercancel", handlers.pointercancel);
+          button.removeEventListener("lostpointercapture", handlers.lostpointercapture);
+          button.removeEventListener("contextmenu", handlers.contextmenu);
+          touchHandlers.delete(button);
+        }
+      }
       cardboardButton?.removeEventListener("click", toggleCardboard);
       disableCardboard();
       if (cardboardButton) {
