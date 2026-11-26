@@ -31,6 +31,14 @@ test("abre, renderiza y permite salir de los cinco mundos con WebGL2", async ({ 
     await page.keyboard.up("ArrowLeft");
     const cameraAfterKeyboard = await page.evaluate(() => window.__HUELLAS_TEST_CAMERA__?.());
     expect(cameraAfterKeyboard.alpha).toBeLessThan(cameraBeforeKeyboard.alpha);
+    await page.locator("#reset-camera").click();
+    const cameraAfterReset = await page.evaluate(() => window.__HUELLAS_TEST_CAMERA__?.());
+    expect(cameraAfterReset.alpha).toBeCloseTo(cameraBeforeKeyboard.alpha, 4);
+    expect(cameraAfterReset.beta).toBeCloseTo(cameraBeforeKeyboard.beta, 4);
+    expect(cameraAfterReset.radius).toBeCloseTo(cameraBeforeKeyboard.radius, 4);
+    expect(cameraAfterReset.targetX).toBeCloseTo(cameraBeforeKeyboard.targetX, 4);
+    expect(cameraAfterReset.targetY).toBeCloseTo(cameraBeforeKeyboard.targetY, 4);
+    expect(cameraAfterReset.targetZ).toBeCloseTo(cameraBeforeKeyboard.targetZ, 4);
 
     for (const [animation, label] of [["Idle", "Reposo"], ["Walk", "Caminar"], ["Run", "Correr"], ["Neck_Look", "Mirar"]]) {
       const button = page.locator(`[data-animation="${animation}"]`);
@@ -146,5 +154,17 @@ test("libera y reconstruye escenas al cambiar repetidamente de mundo", async ({ 
     await expect(page.locator("#home")).toBeVisible();
     await expect(page.locator("#explorer")).toHaveClass(/hidden/);
   }
+  expect(errors).toEqual([]);
+});
+
+
+test("la última selección de mundo prevalece si se pulsa rápidamente", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto("/");
+  await page.locator(".world-card").filter({ hasText: "Cuenca de Tolar" }).dispatchEvent("click");
+  await page.locator(".world-card").filter({ hasText: "Canal de Dorotea" }).dispatchEvent("click");
+  await expect(page.locator("#world-title")).toHaveText("Canal de Dorotea");
+  await expect(page.locator("#render-status")).toContainText("Dinosaurio cargado");
   expect(errors).toEqual([]);
 });
