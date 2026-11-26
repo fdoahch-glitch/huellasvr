@@ -17,6 +17,9 @@ test("Cardboard mode enables stereo, follows phone orientation and exits cleanly
       }
     });
   });
+  await page.addInitScript(() => {
+    Object.defineProperty(screen.orientation, "angle", { configurable: true, value: 0 });
+  });
   await page.goto("/");
   await page.locator(".world-card").first().click();
   await expect(page.locator("#explorer")).toBeVisible();
@@ -41,6 +44,22 @@ test("Cardboard mode enables stereo, follows phone orientation and exits cleanly
     window.dispatchEvent(moved);
   });
   await expect.poll(async () => page.evaluate(() => (window as Window & { __HUELLAS_TEST_CAMERA__?: () => { alpha: number; beta: number; radius: number } }).__HUELLAS_TEST_CAMERA__?.())).not.toEqual(before);
+
+  // In landscape (90°), tilt around the phone's gamma axis must control camera pitch.
+  await page.evaluate(() => {
+    Object.defineProperty(screen.orientation, "angle", { configurable: true, value: 90 });
+    window.dispatchEvent(new Event("orientationchange"));
+    const baseline = new Event("deviceorientation") as DeviceOrientationEvent;
+    Object.defineProperties(baseline, { alpha: { value: 50 }, beta: { value: 90 }, gamma: { value: 15 } });
+    window.dispatchEvent(baseline);
+  });
+  const landscapeBaseline = await page.evaluate(() => (window as Window & { __HUELLAS_TEST_CAMERA__?: () => { alpha: number; beta: number; radius: number } }).__HUELLAS_TEST_CAMERA__?.());
+  await page.evaluate(() => {
+    const tilted = new Event("deviceorientation") as DeviceOrientationEvent;
+    Object.defineProperties(tilted, { alpha: { value: 50 }, beta: { value: 90 }, gamma: { value: 25 } });
+    window.dispatchEvent(tilted);
+  });
+  await expect.poll(async () => page.evaluate(() => (window as Window & { __HUELLAS_TEST_CAMERA__?: () => { alpha: number; beta: number; radius: number } }).__HUELLAS_TEST_CAMERA__?.().beta)).not.toBe(landscapeBaseline?.beta);
 
   await button.click();
   await expect(page.locator("#explorer")).not.toHaveClass(/cardboard-mode/);
