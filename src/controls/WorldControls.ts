@@ -79,7 +79,8 @@ export async function setupWorldControls(
   let sensorTimeout: number | null = null;
 
   const getScreenAngle = (): number => {
-    const angle = Number(screen.orientation?.angle ?? 0);
+    const legacyAngle = (window as Window & { orientation?: number }).orientation ?? 0;
+    const angle = Number(screen.orientation?.angle ?? legacyAngle);
     return ((angle % 360) + 360) % 360;
   };
   const resetOrientationBaseline = () => { orientationBaseline = null; };
