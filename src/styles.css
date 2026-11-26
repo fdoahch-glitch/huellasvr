@@ -29,3 +29,19 @@
   .touch-controls{left:8px;bottom:52px}
   .animation-controls{left:8px;right:8px;bottom:145px}
 }
+
+/* Stage 7: simple phone-in-headset (Cardboard) mode */
+#cardboard-button{font-size:11px;padding:9px 11px;white-space:nowrap}
+#cardboard-button[aria-pressed="true"]{background:#e2bd73;color:#182820;border-color:#f4d89b}
+#explorer.cardboard-mode .world-topbar{top:8px;left:8px;right:auto}
+#explorer.cardboard-mode .world-topbar>:not(#cardboard-button),
+#explorer.cardboard-mode .animation-controls,
+#explorer.cardboard-mode .touch-controls,
+#explorer.cardboard-mode .info-panel,
+#explorer.cardboard-mode .world-controls{display:none!important}
+#explorer.cardboard-mode:after{content:"";position:absolute;z-index:3;top:0;bottom:0;left:50%;width:1px;background:#ffffff32;pointer-events:none}
+#explorer.cardboard-mode #world-canvas{touch-action:none}
+@media(max-width:900px),(pointer:coarse){
+  #cardboard-button{font-size:10px;padding:8px 10px}
+  #explorer.cardboard-mode .world-topbar{top:5px;left:5px}
+}
