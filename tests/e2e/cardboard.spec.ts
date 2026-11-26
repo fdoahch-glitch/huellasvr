@@ -26,12 +26,14 @@ test("Cardboard mode enables stereo, follows phone orientation and exits cleanly
   await expect(page.locator("#explorer")).toHaveClass(/cardboard-mode/);
   await expect(button).toHaveAttribute("aria-pressed", "true");
   await expect(button).toHaveText("Salir del casco");
+  await expect.poll(async () => page.evaluate(() => (window as Window & { __HUELLAS_TEST_CAMERA__?: () => { rigCameraCount: number } }).__HUELLAS_TEST_CAMERA__?.().rigCameraCount)).toBe(2);
 
   await page.evaluate(() => {
     const baseline = new Event("deviceorientation") as DeviceOrientationEvent;
     Object.defineProperties(baseline, { alpha: { value: 40 }, beta: { value: 80 } });
     window.dispatchEvent(baseline);
   });
+  await expect(page.locator("#render-status")).toContainText("sensor conectado");
   const before = await page.evaluate(() => (window as Window & { __HUELLAS_TEST_CAMERA__?: () => { alpha: number; beta: number; radius: number } }).__HUELLAS_TEST_CAMERA__?.());
   await page.evaluate(() => {
     const moved = new Event("deviceorientation") as DeviceOrientationEvent;
