@@ -120,7 +120,7 @@ export async function setupWorldControls(
       }
       status.textContent = "Modo casco activo · esperando orientación del celular";
     } catch (error) {
-      camera.setCameraRigMode(Camera.RIG_MODE_NONE);
+      camera.setCameraRigMode(Camera.RIG_MODE_NONE, {});
       const reason = error instanceof Error ? error.message : "No se pudo activar la orientación";
       status.textContent = `No se pudo activar el modo casco: ${reason}`;
     } finally {
@@ -134,7 +134,7 @@ export async function setupWorldControls(
     cardboardActive = false;
     orientationBaseline = null;
     window.removeEventListener("deviceorientation", onDeviceOrientation, true);
-    camera.setCameraRigMode(Camera.RIG_MODE_NONE);
+    camera.setCameraRigMode(Camera.RIG_MODE_NONE, {});
     camera.attachControl(canvas, true);
     explorer?.classList.remove("cardboard-mode");
     if (cardboardButton) {
