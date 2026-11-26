@@ -23,7 +23,7 @@ test("abre, renderiza y permite salir de los cinco mundos con WebGL2", async ({ 
     await expect(page.locator("#render-status")).toContainText("Dinosaurio cargado");
     await expect(page.locator("#vr-button")).toBeVisible();
     await expect(page.locator("#touch-controls")).toBeAttached();
-    await page.evaluate(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); });
+    await page.locator("#world-canvas").focus();
     const cameraBeforeKeyboard = await page.evaluate(() => window.__HUELLAS_TEST_CAMERA__?.());
     expect(cameraBeforeKeyboard).toBeTruthy();
     await page.keyboard.down("ArrowLeft");
