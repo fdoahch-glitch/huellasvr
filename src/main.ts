@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { ArcRotateCamera, Engine, Scene, PointerEventTypes, type Observer, type PointerInfo } from "@babylonjs/core";
+import { ArcRotateCamera, Engine, Scene, Vector3, PointerEventTypes, type Observer, type PointerInfo } from "@babylonjs/core";
 import { worlds, type WorldId } from "./domain/worlds";
 import { buildWorld } from "./worlds/WorldFactory";
 import { loadDinosaur, type DinosaurAnimation, type LoadedDinosaur } from "./dinosaurs/DinosaurManager";
@@ -24,7 +24,8 @@ let scene: Scene | null = null;
 let activeWorld: WorldId | null = null;
 let activeDinosaur: LoadedDinosaur | null = null;
 let worldControls: WorldControls | null = null;
-let cameraHome: { alpha: number; beta: number; radius: number } | null = null;
+let cameraHome: { alpha: number; beta: number; radius: number; target: Vector3 } | null = null;
+let worldLoadSequence = 0;
 let pointerObserver: Observer<PointerInfo> | null = null;
 
 const evidenceLabels = {
@@ -73,27 +74,41 @@ function onVisibility(): void {
 }
 
 async function enterWorld(id: WorldId): Promise<void> {
+  const requestId = ++worldLoadSequence;
   try {
     status.textContent = "Construyendo paisaje…";
     await ensureEngine();
-    disposeWorld();
+    if (requestId !== worldLoadSequence) return;
+    disposeWorld(false);
     activeWorld = id;
-    scene = new Scene(engine!);
+    const worldScene = new Scene(engine!);
+    scene = worldScene;
     const built = buildWorld(scene, id);
     // Only the small POI markers need ray-picking; skip terrain and decorative geometry.
     const isLandmark = (mesh: { metadata?: unknown }) => Boolean((mesh.metadata as { poiId?: string } | null)?.poiId);
     scene.pointerDownPredicate = isLandmark;
     scene.pointerUpPredicate = isLandmark;
     scene.skipPointerMovePicking = true;
-    activeDinosaur = await loadDinosaur(scene, id, built.root);
-    worldControls = await setupWorldControls(scene, built.camera, canvas, built.root, status);
+    const dinosaur = await loadDinosaur(worldScene, id, built.root);
+    if (requestId !== worldLoadSequence) {
+      dinosaur.dispose();
+      return;
+    }
+    const controls = await setupWorldControls(worldScene, built.camera, canvas, built.root, status);
+    if (requestId !== worldLoadSequence) {
+      controls.dispose();
+      dinosaur.dispose();
+      return;
+    }
+    activeDinosaur = dinosaur;
+    worldControls = controls;
     if (import.meta.env.DEV) {
       Object.defineProperty(window, "__HUELLAS_TEST_CAMERA__", {
         configurable: true,
-        value: () => ({ alpha: built.camera.alpha, beta: built.camera.beta, radius: built.camera.radius, rigCameraCount: built.camera.rigCameras.length, rigMode: built.camera.cameraRigMode })
+        value: () => { const target = built.camera.getTarget(); return { alpha: built.camera.alpha, beta: built.camera.beta, radius: built.camera.radius, targetX: target.x, targetY: target.y, targetZ: target.z, rigCameraCount: built.camera.rigCameras.length, rigMode: built.camera.cameraRigMode }; }
       });
     }
-    cameraHome = { alpha: built.camera.alpha, beta: built.camera.beta, radius: built.camera.radius };
+    cameraHome = { alpha: built.camera.alpha, beta: built.camera.beta, radius: built.camera.radius, target: built.camera.getTarget().clone() };
     const definition = worlds.find((item) => item.id === id)!;
     title.textContent = definition.title;
     subtitle.textContent = `${definition.species} · ${definition.period}`;
@@ -174,7 +189,7 @@ resetButton.addEventListener("click", () => {
     camera.alpha = cameraHome.alpha;
     camera.beta = cameraHome.beta;
     camera.radius = cameraHome.radius;
-    camera.setTarget(camera.getTarget());
+    camera.setTarget(cameraHome.target.clone());
   }
 });
 window.addEventListener("pagehide", () => {
