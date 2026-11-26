@@ -33,11 +33,16 @@ test("los controles táctiles detienen la repetición y se liberan al salir del 
   assert.ok(source.includes("pointerup"));
   assert.ok(source.includes("pointercancel"));
   assert.ok(source.includes("clearInterval"));
+  assert.ok(source.includes("const touchHandlers = new Map"));
+  assert.ok(source.includes('button.removeEventListener("pointerdown", handlers.pointerdown)'));
+  assert.ok(source.includes('button.removeEventListener("pointercancel", handlers.pointercancel)'));
   assert.ok(source.includes("camera.detachControl()"));
   assert.ok(source.includes(`removeByType("ArcRotateCameraKeyboardMoveInput")`));
   const main = await readFile(new URL("../src/main.ts", import.meta.url), "utf8");
   assert.ok(main.includes("worldControls?.dispose()"));
-  assert.ok(main.includes("setupWorldControls(scene, built.camera, canvas, built.root, status)"));
+  assert.ok(main.includes("setupWorldControls(worldScene, built.camera, canvas, built.root, status)"));
+  assert.ok(main.includes("if (requestId !== worldLoadSequence) return;"));
+  assert.ok(main.includes("disposeWorld(false)"));
 });
 
 test("los hitos del escenario siguen siendo seleccionables en el modo de navegador", async () => {
@@ -47,4 +52,16 @@ test("los hitos del escenario siguen siendo seleccionables en el modo de navegad
   assert.ok(main.includes("PointerEventTypes.POINTERPICK"));
   assert.ok(main.includes("metadata.poiId"));
   assert.ok(main.includes("definition.landmarks.find"));
+});
+
+test("la medición usa frame-times, estabilización y restaura controles incluso ante error", async () => {
+  const main = await readFile(new URL("../src/main.ts", import.meta.url), "utf8");
+  assert.ok(main.includes("const warmupMs = 2000"));
+  assert.ok(main.includes("const measurementMs = 10000"));
+  assert.ok(main.includes("measuredScene.onBeforeRenderObservable.add"));
+  assert.ok(main.includes("measuredEngine.getDeltaTime()"));
+  assert.ok(main.includes("finally {"));
+  assert.ok(main.includes("performanceMeasuring = false"));
+  assert.ok(main.includes("CPU, GPU time, VRAM y memoria física"));
+  assert.ok(!main.includes("engine.getFps()"));
 });
