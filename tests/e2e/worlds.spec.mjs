@@ -131,3 +131,20 @@ test("mantiene la exploración normal si el navegador no ofrece giroscopio", asy
   await expect(page.locator("#explorer")).not.toHaveClass(/cardboard-mode/);
   await expect(page.locator("#world-canvas")).toBeVisible();
 });
+
+
+test("libera y reconstruye escenas al cambiar repetidamente de mundo", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  for (const title of ["Cuenca de Tolar", "Cuenca de Hornitos", "Cuenca de Toqui", "Llanura de Dorotea", "Canal de Dorotea", "Cuenca de Tolar"]) {
+    await page.locator(".world-card").filter({ hasText: title }).click();
+    await expect(page.locator("#render-status")).toContainText("Dinosaurio cargado");
+    await expect(page.locator("#world-canvas")).toHaveCount(1);
+    await page.locator("#back-button").click();
+    await expect(page.locator("#home")).toBeVisible();
+    await expect(page.locator("#explorer")).toHaveClass(/hidden/);
+  }
+  expect(errors).toEqual([]);
+});
