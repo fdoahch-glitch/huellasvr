@@ -73,6 +73,7 @@ export async function setupWorldControls(
   const explorer = document.querySelector<HTMLElement>("#explorer");
   const cardboardButton = document.querySelector<HTMLButtonElement>("#cardboard-button");
   let cardboardActive = false;
+  let cardboardPending = false;
   let disposed = false;
   let orientationBaseline: { alpha: number; beta: number; cameraAlpha: number; cameraBeta: number } | null = null;
 
@@ -80,6 +81,7 @@ export async function setupWorldControls(
     if (!cardboardActive || event.alpha === null || event.beta === null) return;
     if (!orientationBaseline) {
       orientationBaseline = { alpha: event.alpha, beta: event.beta, cameraAlpha: camera.alpha, cameraBeta: camera.beta };
+      status.textContent = "Modo casco activo · sensor conectado";
       return;
     }
     const yaw = angleDelta(event.alpha, orientationBaseline.alpha);
@@ -93,7 +95,9 @@ export async function setupWorldControls(
   };
 
   async function enableCardboard(): Promise<void> {
-    if (cardboardActive) return;
+    if (cardboardActive || cardboardPending || disposed) return;
+    cardboardPending = true;
+    if (cardboardButton) cardboardButton.disabled = true;
     try {
       if (typeof DeviceOrientationEvent === "undefined") throw new Error("Este navegador no ofrece sensores de orientación");
       const orientationApi = DeviceOrientationEvent as typeof DeviceOrientationEvent & {
@@ -114,11 +118,14 @@ export async function setupWorldControls(
         cardboardButton.textContent = "Salir del casco";
         cardboardButton.setAttribute("aria-pressed", "true");
       }
-      status.textContent = "Modo Cardboard activo · mueve el celular para mirar";
+      status.textContent = "Modo casco activo · esperando orientación del celular";
     } catch (error) {
       camera.setCameraRigMode(Camera.RIG_MODE_NONE);
       const reason = error instanceof Error ? error.message : "No se pudo activar la orientación";
       status.textContent = `No se pudo activar el modo casco: ${reason}`;
+    } finally {
+      cardboardPending = false;
+      if (cardboardButton && !disposed) cardboardButton.disabled = false;
     }
   }
 
@@ -164,7 +171,11 @@ export async function setupWorldControls(
       for (const button of touchButtons) stopTouch(button);
       cardboardButton?.removeEventListener("click", toggleCardboard);
       disableCardboard();
-      if (cardboardButton) { cardboardButton.disabled = true; cardboardButton.textContent = "Modo casco"; }
+      if (cardboardButton) {
+        cardboardButton.disabled = true;
+        cardboardButton.textContent = "Modo casco";
+        cardboardButton.setAttribute("aria-pressed", "false");
+      }
       camera.detachControl();
     }
   };
