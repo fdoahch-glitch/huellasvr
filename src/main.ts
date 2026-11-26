@@ -81,7 +81,10 @@ async function enterWorld(id: WorldId): Promise<void> {
     scene = new Scene(engine!);
     const built = buildWorld(scene, id);
     // Only the small POI markers need ray-picking; skip terrain and decorative geometry.
-    scene.pointerDownPredicate = (mesh) => Boolean((mesh.metadata as { poiId?: string } | null)?.poiId);
+    const isLandmark = (mesh: { metadata?: unknown }) => Boolean((mesh.metadata as { poiId?: string } | null)?.poiId);
+    scene.pointerDownPredicate = isLandmark;
+    scene.pointerUpPredicate = isLandmark;
+    scene.skipPointerMovePicking = true;
     activeDinosaur = await loadDinosaur(scene, id, built.root);
     worldControls = await setupWorldControls(scene, built.camera, canvas, built.root, status);
     if (import.meta.env.DEV) {
