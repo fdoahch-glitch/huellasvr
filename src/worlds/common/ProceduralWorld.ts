@@ -69,7 +69,7 @@ type InstanceTransform = { position: Vector3; scaling: Vector3; rotation?: Vecto
 
 function flushThinInstances(
   scene: Scene, root: TransformNode, name: string, materialRef: StandardMaterial,
-  transforms: InstanceTransform[], geometry: "box" | "sphere" | "cylinder" | "rock"
+  transforms: InstanceTransform[], geometry: "box" | "sphere" | "cylinder" | "frond" | "rock"
 ): Mesh | null {
   if (!transforms.length) return null;
   const mesh = geometry === "box"
@@ -77,8 +77,10 @@ function flushThinInstances(
     : geometry === "sphere"
       ? MeshBuilder.CreateSphere(name, { diameter: 1, segments: 7 }, scene)
       : geometry === "cylinder"
-        ? MeshBuilder.CreateCylinder(name, { height: 1, diameter: 1, tessellation: 7 }, scene)
-        : MeshBuilder.CreatePolyhedron(name, { type: 1, size: 1, flat: true }, scene);
+        ? MeshBuilder.CreateCylinder(name, { height: 1, diameterTop: 0.12, diameterBottom: 0.28, tessellation: 7 }, scene)
+        : geometry === "frond"
+          ? MeshBuilder.CreateCylinder(name, { height: 1, diameterTop: 0.025, diameterBottom: 0.2, tessellation: 6 }, scene)
+          : MeshBuilder.CreatePolyhedron(name, { type: 1, size: 1, flat: true }, scene);
   const matrices = new Float32Array(transforms.length * 16);
   transforms.forEach((item, index) => {
     const rotation = item.rotation ?? Vector3.Zero();
@@ -123,7 +125,7 @@ function addTree(transforms: { foliage: InstanceTransform[]; trunks: InstanceTra
   const trunkHeight = scale * (type === "ferns" ? 0.32 : 2.1);
   transforms.trunks.push({
     position: new Vector3(x, groundY + trunkHeight * 0.5, z),
-    scaling: new Vector3(scale * 0.2, trunkHeight, scale * 0.2)
+    scaling: new Vector3(scale, trunkHeight, scale)
   });
 
   if (type === "ferns") {
@@ -132,7 +134,7 @@ function addTree(transforms: { foliage: InstanceTransform[]; trunks: InstanceTra
       const reach = scale * (0.78 + (j % 3) * 0.08);
       transforms.fronds.push({
         position: new Vector3(x + Math.cos(angle) * reach * 0.3, groundY + scale * 0.52, z + Math.sin(angle) * reach * 0.3),
-        scaling: new Vector3(scale * 0.12, reach, scale * 0.12),
+        scaling: new Vector3(scale, reach, scale),
         rotation: new Vector3(Math.sin(angle) * 0.82, 0, Math.cos(angle) * 0.82)
       });
     }
@@ -301,7 +303,7 @@ export function buildProceduralWorld(scene: Scene, world: WorldDefinition): Buil
   }
   flushThinInstances(scene, root, `foliage-${world.id}`, leafMat, vegetationBatches.foliage, "sphere");
   flushThinInstances(scene, root, `trunks-${world.id}`, trunkMat, vegetationBatches.trunks, "cylinder");
-  flushThinInstances(scene, root, `fern-fronds-${world.id}`, leafMat, vegetationBatches.fronds, "cylinder");
+  flushThinInstances(scene, root, `fern-fronds-${world.id}`, leafMat, vegetationBatches.fronds, "frond");
   flushThinInstances(scene, root, `rocks-${world.id}`, rockMat, rockInstances, "rock");
   world.landmarks.forEach((poi, i) => addLandmark(scene, root, world, i, poi, markerMat));
 
