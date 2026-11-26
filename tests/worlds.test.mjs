@@ -97,3 +97,11 @@ test("la vegetación, rocas y estratos se agrupan en lotes de thin instances", a
   assert.match(geometry, /flushThinInstances\(scene, root, `strata-rock-/);
   assert.match(geometry, /mesh\.freezeWorldMatrix\(\)/);
 });
+
+
+test("el ray picking se limita a hitos y omite eventos de movimiento", async () => {
+  const app = await readFile(new URL("../src/main.ts", import.meta.url), "utf8");
+  assert.match(app, /scene\.pointerDownPredicate = isLandmark/);
+  assert.match(app, /scene\.pointerUpPredicate = isLandmark/);
+  assert.match(app, /scene\.skipPointerMovePicking = true/);
+});
