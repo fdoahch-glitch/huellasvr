@@ -1,7 +1,4 @@
-import { ArcRotateCamera, Scene, TransformNode } from "@babylonjs/core";
-import { WebXRDefaultExperience } from "@babylonjs/core/XR/webXRDefaultExperience";
-import { WebXRState } from "@babylonjs/core/XR/webXRTypes";
-import "@babylonjs/core/Materials/Node/Blocks";
+import { ArcRotateCamera, Camera, Scene, TransformNode } from "@babylonjs/core";
 
 export interface WorldControls { dispose: () => void; }
 type Direction = "left" | "right" | "up" | "down" | "zoom-in" | "zoom-out";
@@ -12,6 +9,9 @@ const keyDirections: Record<string, Direction> = {
   ArrowUp: "up", w: "up", W: "up",
   ArrowDown: "down", s: "down", S: "down"
 };
+const radians = Math.PI / 180;
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const angleDelta = (value: number, origin: number) => ((value - origin + 540) % 360) - 180;
 
 function moveCamera(camera: ArcRotateCamera, direction: Direction): void {
   const rotation = 0.025;
@@ -27,7 +27,7 @@ function moveCamera(camera: ArcRotateCamera, direction: Direction): void {
 
 export async function setupWorldControls(
   scene: Scene, camera: ArcRotateCamera, canvas: HTMLCanvasElement,
-  worldRoot: TransformNode, status: HTMLElement
+  _worldRoot: TransformNode, status: HTMLElement
 ): Promise<WorldControls> {
   camera.inputs.removeByType("ArcRotateCameraKeyboardMoveInput");
   camera.attachControl(canvas, true);
@@ -70,54 +70,78 @@ export async function setupWorldControls(
     button.addEventListener("contextmenu", (event) => event.preventDefault());
   }
 
-  let disposed = false;
-  let xrExperience: Awaited<ReturnType<typeof WebXRDefaultExperience.CreateAsync>> | null = null;
-  const vrButton = document.querySelector<HTMLButtonElement>("#vr-button");
-  if (vrButton) {
-    vrButton.disabled = true;
-    vrButton.textContent = "Comprobando VR…";
-    const xrNavigator = navigator as Navigator & { xr?: { isSessionSupported: (mode: string) => Promise<boolean> } };
+  const explorer = document.querySelector<HTMLElement>("#explorer");
+  const cardboardButton = document.querySelector<HTMLButtonElement>("#cardboard-button");
+  let cardboardActive = false;
+  let orientationBaseline: { alpha: number; beta: number; cameraAlpha: number; cameraBeta: number } | null = null;
+
+  const onDeviceOrientation = (event: DeviceOrientationEvent) => {
+    if (!cardboardActive || event.alpha === null || event.beta === null) return;
+    if (!orientationBaseline) {
+      orientationBaseline = { alpha: event.alpha, beta: event.beta, cameraAlpha: camera.alpha, cameraBeta: camera.beta };
+      return;
+    }
+    const yaw = angleDelta(event.alpha, orientationBaseline.alpha);
+    const pitch = event.beta - orientationBaseline.beta;
+    camera.alpha = orientationBaseline.cameraAlpha - yaw * radians;
+    camera.beta = clamp(
+      orientationBaseline.cameraBeta + pitch * radians,
+      camera.lowerBetaLimit ?? 0.15,
+      camera.upperBetaLimit ?? Math.PI - 0.15
+    );
+  };
+
+  async function enableCardboard(): Promise<void> {
+    if (cardboardActive) return;
     try {
-      const supported = Boolean(xrNavigator.xr && await xrNavigator.xr.isSessionSupported("immersive-vr"));
-      if (supported && !disposed) {
-        const floorMeshes = worldRoot.getChildMeshes(false).filter((mesh) => mesh.name.includes("terrain"));
-        xrExperience = await WebXRDefaultExperience.CreateAsync(scene, { floorMeshes, disableDefaultUI: true });
-        xrExperience.baseExperience.onStateChangedObservable.add((state) => {
-          if (!vrButton) return;
-          if (state === WebXRState.IN_XR) vrButton.textContent = "Salir de VR";
-          else if (state === WebXRState.NOT_IN_XR) vrButton.textContent = "Entrar en VR";
-        });
-        if (!disposed) {
-          vrButton.disabled = false;
-          vrButton.textContent = "Entrar en VR";
-          vrButton.addEventListener("click", enterOrExitVR);
-          status.textContent = "WebXR disponible · controles de visor y mandos preparados";
-        }
-      } else if (!disposed) {
-        vrButton.textContent = "VR no disponible en este dispositivo";
-        status.textContent = "Modo 3D · este navegador o dispositivo no ofrece WebXR inmersivo";
+      const orientationApi = DeviceOrientationEvent as typeof DeviceOrientationEvent & {
+        requestPermission?: () => Promise<"granted" | "denied">
+      };
+      if (typeof orientationApi.requestPermission === "function") {
+        const permission = await orientationApi.requestPermission();
+        if (permission !== "granted") throw new Error("Permiso de orientación denegado");
       }
-    } catch {
-      if (!disposed) {
-        vrButton.textContent = "VR no disponible";
-        status.textContent = "Modo 3D · WebXR no pudo inicializarse";
+      camera.setCameraRigMode(Camera.RIG_MODE_STEREOSCOPIC_SIDEBYSIDE_PARALLEL, { interaxialDistance: 0.064 });
+      cardboardActive = true;
+      orientationBaseline = null;
+      window.addEventListener("deviceorientation", onDeviceOrientation, true);
+      camera.detachControl();
+      explorer?.classList.add("cardboard-mode");
+      if (cardboardButton) {
+        cardboardButton.textContent = "Salir del casco";
+        cardboardButton.setAttribute("aria-pressed", "true");
       }
+      status.textContent = "Modo Cardboard activo · mueve el celular para mirar";
+    } catch (error) {
+      camera.setCameraRigMode(Camera.RIG_MODE_NONE);
+      const reason = error instanceof Error ? error.message : "No se pudo activar la orientación";
+      status.textContent = `No se pudo activar el modo casco: ${reason}`;
     }
   }
 
-  async function enterOrExitVR(): Promise<void> {
-    if (!xrExperience || !vrButton) return;
-    try {
-      if (xrExperience.baseExperience.state === WebXRState.IN_XR) {
-        await xrExperience.baseExperience.exitXRAsync();
-        vrButton.textContent = "Entrar en VR";
-      } else {
-        await xrExperience.baseExperience.enterXRAsync("immersive-vr", "local-floor");
-        vrButton.textContent = "Salir de VR";
-      }
-    } catch {
-      status.textContent = "No se pudo iniciar VR · comprueba HTTPS, permisos y compatibilidad del visor";
+  function disableCardboard(): void {
+    if (!cardboardActive) return;
+    cardboardActive = false;
+    orientationBaseline = null;
+    window.removeEventListener("deviceorientation", onDeviceOrientation, true);
+    camera.setCameraRigMode(Camera.RIG_MODE_NONE);
+    camera.attachControl(canvas, true);
+    explorer?.classList.remove("cardboard-mode");
+    if (cardboardButton) {
+      cardboardButton.textContent = "Modo casco";
+      cardboardButton.setAttribute("aria-pressed", "false");
     }
+    status.textContent = "Modo 3D normal · controles de PC y móvil activos";
+  }
+
+  const toggleCardboard = () => {
+    if (cardboardActive) disableCardboard();
+    else void enableCardboard();
+  };
+  if (cardboardButton) {
+    cardboardButton.disabled = false;
+    cardboardButton.addEventListener("click", toggleCardboard);
+    cardboardButton.setAttribute("aria-pressed", "false");
   }
 
   const renderObserver = scene.onBeforeRenderObservable.add(() => {
@@ -129,18 +153,14 @@ export async function setupWorldControls(
 
   return {
     dispose: () => {
-      disposed = true;
       scene.onBeforeRenderObservable.remove(renderObserver);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
       for (const button of touchButtons) stopTouch(button);
-      vrButton?.removeEventListener("click", enterOrExitVR);
-      if (vrButton) { vrButton.disabled = true; vrButton.textContent = "Entrar en VR"; }
-      if (xrExperience) {
-        xrExperience.dispose();
-        xrExperience = null;
-      }
+      cardboardButton?.removeEventListener("click", toggleCardboard);
+      disableCardboard();
+      if (cardboardButton) { cardboardButton.disabled = true; cardboardButton.textContent = "Modo casco"; }
       camera.detachControl();
     }
   };
