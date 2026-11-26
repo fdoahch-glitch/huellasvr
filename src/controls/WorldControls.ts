@@ -76,9 +76,14 @@ export async function setupWorldControls(
   let cardboardPending = false;
   let disposed = false;
   let orientationBaseline: { alpha: number; beta: number; cameraAlpha: number; cameraBeta: number } | null = null;
+  let sensorTimeout: number | null = null;
 
   const onDeviceOrientation = (event: DeviceOrientationEvent) => {
     if (!cardboardActive || event.alpha === null || event.beta === null) return;
+    if (sensorTimeout !== null) {
+      window.clearTimeout(sensorTimeout);
+      sensorTimeout = null;
+    }
     if (!orientationBaseline) {
       orientationBaseline = { alpha: event.alpha, beta: event.beta, cameraAlpha: camera.alpha, cameraBeta: camera.beta };
       status.textContent = "Modo casco activo · sensor conectado";
@@ -99,6 +104,7 @@ export async function setupWorldControls(
     cardboardPending = true;
     if (cardboardButton) cardboardButton.disabled = true;
     try {
+      if (!window.isSecureContext) throw new Error("El modo casco necesita una conexión HTTPS segura para acceder a los sensores del celular.");
       if (typeof DeviceOrientationEvent === "undefined") throw new Error("Este navegador no ofrece sensores de orientación");
       const orientationApi = DeviceOrientationEvent as typeof DeviceOrientationEvent & {
         requestPermission?: () => Promise<"granted" | "denied">
@@ -119,6 +125,13 @@ export async function setupWorldControls(
         cardboardButton.setAttribute("aria-pressed", "true");
       }
       status.textContent = "Modo casco activo · esperando orientación del celular";
+      sensorTimeout = window.setTimeout(() => {
+        sensorTimeout = null;
+        if (!orientationBaseline && cardboardActive) {
+          disableCardboard();
+          status.textContent = "No se detectó el giroscopio. Revisa los permisos del navegador y vuelve a intentarlo."; 
+        }
+      }, 5000);
     } catch (error) {
       camera.setCameraRigMode(Camera.RIG_MODE_NONE, {});
       const reason = error instanceof Error ? error.message : "No se pudo activar la orientación";
@@ -133,6 +146,8 @@ export async function setupWorldControls(
     if (!cardboardActive) return;
     cardboardActive = false;
     orientationBaseline = null;
+    if (sensorTimeout !== null) window.clearTimeout(sensorTimeout);
+    sensorTimeout = null;
     window.removeEventListener("deviceorientation", onDeviceOrientation, true);
     camera.setCameraRigMode(Camera.RIG_MODE_NONE, {});
     camera.attachControl(canvas, true);
