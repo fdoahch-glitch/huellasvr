@@ -97,7 +97,8 @@ export async function loadDinosaur(
 ): Promise<LoadedDinosaur> {
   const definition = dinosaurs[worldId];
   const world = getWorld(worldId);
-  const result = await SceneLoader.ImportMeshAsync(null, "/models/", definition.file, scene);
+  const modelBaseUrl = new URL(`${import.meta.env.BASE_URL}models/`, document.baseURI).href;
+  const result = await SceneLoader.ImportMeshAsync(null, modelBaseUrl, definition.file, scene);
   const root = new TransformNode(`dinosaur-${worldId}`, scene);
   root.parent = worldRoot;
   root.rotation.y = definition.yaw;
