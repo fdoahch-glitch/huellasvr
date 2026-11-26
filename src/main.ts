@@ -20,6 +20,7 @@ const backButton = document.querySelector<HTMLButtonElement>("#back-button")!;
 const resetButton = document.querySelector<HTMLButtonElement>("#reset-camera")!;
 const performanceButton = document.querySelector<HTMLButtonElement>("#performance-button")!;
 let lastWorldLoadMs: number | null = null;
+let performanceMeasuring = false;
 
 let engine: Engine | null = null;
 let scene: Scene | null = null;
@@ -76,13 +77,14 @@ function onVisibility(): void {
 }
 
 async function enterWorld(id: WorldId): Promise<void> {
+  if (performanceMeasuring) return;
   const loadStartedAt = performance.now();
   const requestId = ++worldLoadSequence;
   try {
     status.textContent = "Construyendo paisaje…";
     await ensureEngine();
     if (requestId !== worldLoadSequence) return;
-    disposeWorld();
+    disposeWorld(false);
     activeWorld = id;
     const worldScene = new Scene(engine!);
     scene = worldScene;
@@ -136,7 +138,9 @@ async function enterWorld(id: WorldId): Promise<void> {
     lastWorldLoadMs = performance.now() - loadStartedAt;
     status.textContent = `Dinosaurio cargado · ${activeDinosaur.definition.displayName} · animación Idle`;
   } catch (error) {
-    disposeWorld();
+    // A stale request must never dispose or hide a newer world.
+    if (requestId !== worldLoadSequence) return;
+    disposeWorld(false);
     home.classList.remove("hidden"); explorer.classList.add("hidden");
     const message = error instanceof Error ? error.message : "No se pudo iniciar el escenario.";
     window.alert(message);
@@ -144,7 +148,8 @@ async function enterWorld(id: WorldId): Promise<void> {
   }
 }
 
-function disposeWorld(): void {
+function disposeWorld(invalidatePendingLoads = true): void {
+  if (invalidatePendingLoads) worldLoadSequence++;
   if (import.meta.env.DEV) delete (window as Window & { __HUELLAS_TEST_CAMERA__?: () => { alpha: number; beta: number; radius: number; rigCameraCount: number; rigMode: number } }).__HUELLAS_TEST_CAMERA__;
   worldControls?.dispose();
   worldControls = null;
@@ -162,66 +167,100 @@ function disposeWorld(): void {
 }
 
 performanceButton.addEventListener("click", async () => {
-  if (!engine || !scene || !activeWorld) {
-    window.alert("Abre un mundo antes de medir el rendimiento.");
+  if (!engine || !scene || !activeWorld || performanceMeasuring) {
+    if (!performanceMeasuring) window.alert("Abre un mundo antes de medir el rendimiento.");
     return;
   }
-  performanceButton.disabled = true;
+  const measuredWorld = activeWorld;
+  const measuredLoadMs = lastWorldLoadMs;
+  const measuredScene = scene;
+  const measuredEngine = engine;
   const originalLabel = performanceButton.textContent;
-  performanceButton.textContent = "Midiendo…";
-  const samples: number[] = [];
+  const backWasDisabled = backButton.disabled;
+  const cardboardButton = document.querySelector<HTMLButtonElement>("#cardboard-button");
+  const cardboardWasDisabled = cardboardButton?.disabled ?? false;
+  const resetWasDisabled = resetButton.disabled;
+  const frameTimes: number[] = [];
+  const warmupMs = 2000;
+  const measurementMs = 10000;
   const startedAt = performance.now();
-  const sample = () => {
-    if (!engine || !scene) return;
-    samples.push(engine.getFps());
-  };
-  sample();
-  await new Promise<void>((resolve) => {
-    const interval = window.setInterval(sample, 250);
-    window.setTimeout(() => {
-      window.clearInterval(interval);
-      resolve();
-    }, 10000);
-  });
-  const elapsedMs = performance.now() - startedAt;
-  const sorted = [...samples].sort((a, b) => a - b);
-  const averageFps = samples.length ? samples.reduce((sum, value) => sum + value, 0) / samples.length : 0;
-  const minimumFps = samples.length ? Math.min(...samples) : 0;
-  const lowPercentileFps = sorted.length ? sorted[Math.floor((sorted.length - 1) * 0.05)] : 0;
-  const memory = (performance as Performance & { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
-  const gl = (engine as Engine & { _gl?: WebGL2RenderingContext })._gl;
-  const debugInfo = gl?.getExtension("WEBGL_debug_renderer_info");
-  const gpu = debugInfo ? gl?.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "No disponible";
-  const memoryText = memory
-    ? `${(memory.usedJSHeapSize / 1048576).toFixed(1)} MB usados / ${(memory.totalJSHeapSize / 1048576).toFixed(1)} MB asignados`
-    : "El navegador no expone métricas de memoria JavaScript";
-  const rows = [
-    ["Fecha", new Date().toLocaleString()],
-    ["Mundo", activeWorld ?? "No disponible"],
-    ["Duración de medición", `${(elapsedMs / 1000).toFixed(1)} s`],
-    ["FPS promedio", averageFps.toFixed(1)],
-    ["FPS mínimo muestreado", minimumFps.toFixed(1)],
-    ["FPS percentil bajo (5 %)", lowPercentileFps.toFixed(1)],
-    ["Muestras", String(samples.length)],
-    ["Carga del último mundo", lastWorldLoadMs === null ? "No registrada" : `${lastWorldLoadMs.toFixed(0)} ms`],
-    ["Memoria JavaScript", memoryText],
-    ["GPU", String(gpu ?? "No disponible")],
-    ["Navegador", navigator.userAgent],
-    ["Plataforma", navigator.platform],
-    ["Pantalla", `${window.innerWidth} × ${window.innerHeight} · DPR ${window.devicePixelRatio}`],
-    ["WebGL", "WebGL2"]
-  ];
-  const html = `<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Informe de rendimiento HUELLAS VR</title><style>body{font:16px system-ui;max-width:850px;margin:40px auto;padding:0 18px;color:#20352d}h1{color:#17664c}table{width:100%;border-collapse:collapse}td{padding:10px;border-bottom:1px solid #d9e2dc;vertical-align:top}td:first-child{font-weight:700;width:38%}p{line-height:1.5;color:#53665d}</style><h1>HUELLAS VR — Informe de rendimiento</h1><p>Medición local realizada en este dispositivo mientras el mundo permaneció abierto. Los resultados dependen del equipo, navegador, temperatura y carga del sistema.</p><table>${rows.map(([key, value]) => `<tr><td>${key}</td><td>${String(value).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]!)}</td></tr>`).join("")}</table><p>Nota: los FPS se muestrean cada 250 ms; la memoria solo se informa si el navegador la expone. Este informe no se envía a ningún servidor.</p></html>`;
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `huellas-vr-rendimiento-${new Date().toISOString().replace(/[:.]/g, "-")}.html`;
-  link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-  performanceButton.disabled = false;
-  performanceButton.textContent = originalLabel;
-  status.textContent = `Medición lista · ${averageFps.toFixed(1)} FPS promedio`;
+  let observer: Observer<Scene> | null = null;
+  performanceMeasuring = true;
+  performanceButton.disabled = true;
+  performanceButton.textContent = "Preparando medición…";
+  backButton.disabled = true;
+  resetButton.disabled = true;
+  if (cardboardButton) cardboardButton.disabled = true;
+  try {
+    performanceButton.textContent = "Estabilizando…";
+    observer = measuredScene.onBeforeRenderObservable.add(() => {
+      const elapsed = performance.now() - startedAt;
+      if (elapsed >= warmupMs && elapsed < warmupMs + measurementMs) {
+        const frameMs = measuredEngine.getDeltaTime();
+        if (Number.isFinite(frameMs) && frameMs > 0) frameTimes.push(frameMs);
+      }
+    });
+    await new Promise<void>((resolve) => window.setTimeout(resolve, warmupMs + measurementMs));
+    const elapsedMs = performance.now() - startedAt;
+    const sorted = [...frameTimes].sort((a, b) => a - b);
+    const averageFrameMs = frameTimes.length ? frameTimes.reduce((sum, value) => sum + value, 0) / frameTimes.length : null;
+    const p95FrameMs = sorted.length ? sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)] : null;
+    const averageFps = averageFrameMs ? 1000 / averageFrameMs : null;
+    const p95Fps = p95FrameMs ? 1000 / p95FrameMs : null;
+    const memory = (performance as Performance & { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
+    const gl = measuredEngine.getRenderingCanvas()?.getContext("webgl2") as WebGL2RenderingContext | null;
+    const debugInfo = gl?.getExtension("WEBGL_debug_renderer_info");
+    const gpu = debugInfo ? gl?.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "No disponible en este navegador";
+    const memoryText = memory
+      ? `${(memory.usedJSHeapSize / 1048576).toFixed(1)} MB usados / ${(memory.totalJSHeapSize / 1048576).toFixed(1)} MB asignados (heap JS)`
+      : "No disponible: el navegador no expone performance.memory";
+    const rows: Array<[string, string]> = [
+      ["Fecha", new Date().toLocaleString()],
+      ["Mundo medido", measuredWorld],
+      ["Estabilización previa", `${warmupMs / 1000} s`],
+      ["Duración de medición", `${(elapsedMs - warmupMs) / 1000} s`],
+      ["FPS promedio calculado por tiempo de frame", averageFps === null ? "No disponible" : averageFps.toFixed(1)],
+      ["FPS equivalente al percentil 95 de frame-time", p95Fps === null ? "No disponible" : p95Fps.toFixed(1)],
+      ["Frame-time promedio", averageFrameMs === null ? "No disponible" : `${averageFrameMs.toFixed(2)} ms`],
+      ["Frame-time p95", p95FrameMs === null ? "No disponible" : `${p95FrameMs.toFixed(2)} ms`],
+      ["Frames registrados", String(frameTimes.length)],
+      ["Carga del mundo (última entrada)", measuredLoadMs === null ? "No registrada" : `${measuredLoadMs.toFixed(0)} ms`],
+      ["Memoria JavaScript", memoryText],
+      ["GPU", String(gpu ?? "No disponible en este navegador")],
+      ["Navegador", navigator.userAgent],
+      ["Plataforma", navigator.platform || "No informada"],
+      ["Pantalla", `${window.innerWidth} × ${window.innerHeight} · DPR ${window.devicePixelRatio}`],
+      ["WebGL", "WebGL2"],
+      ["Métricas no medidas", "CPU, GPU time, VRAM y memoria física del dispositivo no son expuestas de forma fiable por los navegadores web."]
+    ];
+    const escapeHtml = (value: string) => value.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]!);
+    const html = `<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Informe de rendimiento HUELLAS VR</title><style>body{font:16px system-ui;max-width:850px;margin:40px auto;padding:0 18px;color:#20352d}h1{color:#17664c}table{width:100%;border-collapse:collapse}td{padding:10px;border-bottom:1px solid #d9e2dc;vertical-align:top}td:first-child{font-weight:700;width:38%}p{line-height:1.5;color:#53665d}</style><h1>HUELLAS VR — Informe de rendimiento</h1><p>Medición local de un solo mundo. Se descartan los primeros dos segundos para estabilización. Los frame-times se capturan desde el ciclo de renderizado de Babylon.js. Los resultados dependen del equipo, navegador, temperatura y carga del sistema.</p><table>${rows.map(([key, value]) => `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(value)}</td></tr>`).join("")}</table><p>Las métricas no disponibles se identifican expresamente. No se mide CPU, tiempo GPU, VRAM ni memoria física. El informe no se envía a ningún servidor.</p></html>`;
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    try {
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `huellas-vr-rendimiento-${new Date().toISOString().replace(/[:.]/g, "-")}.html`;
+      link.click();
+    } finally {
+      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+    status.textContent = frameTimes.length
+      ? `Medición lista · ${averageFps!.toFixed(1)} FPS promedio · ${frameTimes.length} frames`
+      : "Informe descargado · no se registraron frames; revisa si la pestaña estuvo en segundo plano";
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Error desconocido";
+    status.textContent = `No se pudo generar el informe: ${message}`;
+    window.alert("No se pudo completar la medición de rendimiento. " + message);
+  } finally {
+    if (observer) measuredScene.onBeforeRenderObservable.remove(observer);
+    performanceMeasuring = false;
+    performanceButton.disabled = false;
+    performanceButton.textContent = originalLabel;
+    backButton.disabled = backWasDisabled;
+    resetButton.disabled = resetWasDisabled;
+    if (cardboardButton) cardboardButton.disabled = cardboardWasDisabled;
+  }
 });
 
 backButton.addEventListener("click", () => {
