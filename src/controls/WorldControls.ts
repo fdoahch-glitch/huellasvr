@@ -36,6 +36,7 @@ export async function setupWorldControls(
     const direction = keyDirections[event.key];
     if (!direction || (event.target instanceof HTMLElement && /INPUT|TEXTAREA|BUTTON|SELECT/.test(event.target.tagName))) return;
     event.preventDefault();
+    if (!activeKeys.has(event.key)) moveCamera(camera, direction);
     activeKeys.add(event.key);
   };
   const onKeyUp = (event: KeyboardEvent) => { activeKeys.delete(event.key); };
