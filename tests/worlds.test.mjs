@@ -53,8 +53,8 @@ test("la geometría comparte la misma función de altura para terreno y elemento
   const geometry = await readFile(new URL("../src/worlds/common/ProceduralWorld.ts", import.meta.url), "utf8");
   assert.match(geometry, /function terrainHeight\(/);
   assert.match(geometry, /const elevation = terrainHeight\(world, px, pz\);[\s\S]*positions\.push\(px, elevation, pz\)/);
-  assert.match(geometry, /terrainHeight\(world, x, z\), scale, world\.vegetation/);
-  assert.match(geometry, /terrainHeight\(world, x, z\), z, 1\.1/);
+  assert.match(geometry, /addTree\(vegetationBatches, x, z, terrainHeight\(world, x, z\), scale, world\.vegetation/);
+  assert.match(geometry, /addRock\(rockInstances, x, terrainHeight\(world, x, z\), z, 1\.1/);
   assert.match(geometry, /terrainHeight\(world, poi\.position\[0\], poi\.position\[2\]\)/);
 });
 
@@ -81,7 +81,19 @@ test("la vegetación tiene formas distintas para matorral, helechos y ribera", a
   assert.match(geometry, /type === "sparse" \|\| type === "low"/);
   assert.match(geometry, /type === "ferns"/);
   assert.match(geometry, /type === "riparian" \? 5 : 4/);
-  assert.match(geometry, /fern-frond-/);
-  assert.match(geometry, /shrub-/);
-  assert.match(geometry, /canopy-/);
+  assert.match(geometry, /transforms\.fronds\.push/);
+  assert.match(geometry, /transforms\.foliage\.push/);
+  assert.match(geometry, /flushThinInstances\(scene, root, `foliage-/);
+  assert.match(geometry, /flushThinInstances\(scene, root, `fern-fronds-/);
+  assert.match(geometry, /thinInstanceRefreshBoundingInfo\(true\)/);
+});
+
+
+test("la vegetación, rocas y estratos se agrupan en lotes de thin instances", async () => {
+  const geometry = await readFile(new URL("../src/worlds/common/ProceduralWorld.ts", import.meta.url), "utf8");
+  assert.match(geometry, /function flushThinInstances\(/);
+  assert.match(geometry, /thinInstanceSetBuffer\("matrix"/);
+  assert.match(geometry, /flushThinInstances\(scene, root, `rocks-/);
+  assert.match(geometry, /flushThinInstances\(scene, root, `strata-rock-/);
+  assert.match(geometry, /mesh\.freezeWorldMatrix\(\)/);
 });
