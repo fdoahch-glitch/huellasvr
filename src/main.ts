@@ -132,7 +132,8 @@ async function enterWorld(id: WorldId): Promise<void> {
       evidenceTag.textContent = evidenceLabels[poi.evidence];
     });
     engine!.runRenderLoop(() => scene?.render());
-    lastWorldLoadMs = performance.now() - loadStartedAt;\n    status.textContent = `Dinosaurio cargado · ${activeDinosaur.definition.displayName} · animación Idle`;
+    lastWorldLoadMs = performance.now() - loadStartedAt;
+    status.textContent = `Dinosaurio cargado · ${activeDinosaur.definition.displayName} · animación Idle`;
   } catch (error) {
     disposeWorld();
     home.classList.remove("hidden"); explorer.classList.add("hidden");
